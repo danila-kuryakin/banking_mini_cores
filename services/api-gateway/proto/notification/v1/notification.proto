@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package notification.v1;
+
+option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/notification/v1;notificationv1";
+
+import "common/v1/pagination.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+service NotificationService {
+  rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse) {
+    option (google.api.http) = {get: "/v1/notifications"};
+  }
+}
+
+enum NotificationChannel {
+  NOTIFICATION_CHANNEL_UNSPECIFIED = 0;
+  NOTIFICATION_CHANNEL_EMAIL = 1;
+  NOTIFICATION_CHANNEL_SMS = 2;
+  NOTIFICATION_CHANNEL_PUSH = 3;
+}
+
+enum NotificationStatus {
+  NOTIFICATION_STATUS_UNSPECIFIED = 0;
+  NOTIFICATION_STATUS_PENDING = 1;
+  NOTIFICATION_STATUS_SENT = 2;
+  NOTIFICATION_STATUS_FAILED = 3;
+}
+
+message Notification {
+  string notification_id = 1;
+  string customer_id = 2;
+  string event_id = 3;
+  string event_type = 4;
+  NotificationChannel channel = 5;
+  NotificationStatus status = 6;
+  string subject = 7;
+  string body = 8;
+  int32 attempts = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp sent_at = 11;
+}
+
+message ListNotificationsRequest {
+  string customer_id = 1;
+  NotificationStatus status = 2;
+  common.v1.PageRequest page = 3;
+}
+
+message ListNotificationsResponse {
+  repeated Notification notifications = 1;
+  common.v1.PageResponse page = 2;
+}

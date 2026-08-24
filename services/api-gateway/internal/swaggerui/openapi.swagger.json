@@ -1,0 +1,2665 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "common/v1/money.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "AccountService"
+    },
+    {
+      "name": "AntifraudService"
+    },
+    {
+      "name": "AuthService"
+    },
+    {
+      "name": "CustomerService"
+    },
+    {
+      "name": "DocumentService"
+    },
+    {
+      "name": "KycService"
+    },
+    {
+      "name": "LedgerService"
+    },
+    {
+      "name": "NotificationService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/accounts": {
+      "get": {
+        "operationId": "AccountService_ListAccounts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListAccountsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACCOUNT_STATUS_UNSPECIFIED",
+              "ACCOUNT_STATUS_ACTIVE",
+              "ACCOUNT_STATUS_BLOCKED",
+              "ACCOUNT_STATUS_CLOSED"
+            ],
+            "default": "ACCOUNT_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "page.page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "page.page_token",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AccountService"
+        ]
+      },
+      "post": {
+        "operationId": "AccountService_OpenAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1OpenAccountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1OpenAccountRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AccountService"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}": {
+      "get": {
+        "operationId": "AccountService_GetAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetAccountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AccountService"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/balance": {
+      "get": {
+        "operationId": "AccountService_GetBalance",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/accountV1GetBalanceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AccountService"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}:block": {
+      "post": {
+        "operationId": "AccountService_BlockAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BlockAccountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AccountServiceBlockAccountBody"
+            }
+          }
+        ],
+        "tags": [
+          "AccountService"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}:close": {
+      "post": {
+        "operationId": "AccountService_CloseAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CloseAccountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AccountServiceCloseAccountBody"
+            }
+          }
+        ],
+        "tags": [
+          "AccountService"
+        ]
+      }
+    },
+    "/v1/antifraud/checks": {
+      "get": {
+        "operationId": "AntifraudService_ListChecks",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListChecksResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "verdict",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "VERDICT_UNSPECIFIED",
+              "VERDICT_ALLOW",
+              "VERDICT_DENY"
+            ],
+            "default": "VERDICT_UNSPECIFIED"
+          },
+          {
+            "name": "page.page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "page.page_token",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AntifraudService"
+        ]
+      }
+    },
+    "/v1/antifraud/rules": {
+      "get": {
+        "operationId": "AntifraudService_ListRules",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRulesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page.page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "page.page_token",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AntifraudService"
+        ]
+      }
+    },
+    "/v1/antifraud/rules/{rule_id}": {
+      "patch": {
+        "operationId": "AntifraudService_UpdateRule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "rule_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AntifraudServiceUpdateRuleBody"
+            }
+          }
+        ],
+        "tags": [
+          "AntifraudService"
+        ]
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "operationId": "AuthService_Login",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LoginResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LoginRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthService_Logout",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LogoutResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LogoutRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/officers": {
+      "post": {
+        "operationId": "AuthService_CreateOfficer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateOfficerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateOfficerRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthService_Refresh",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RefreshResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RefreshRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/register": {
+      "post": {
+        "operationId": "AuthService_Register",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RegisterResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RegisterRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/customers": {
+      "get": {
+        "operationId": "CustomerService_ListCustomers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCustomersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "CUSTOMER_STATUS_UNSPECIFIED",
+              "CUSTOMER_STATUS_NEW",
+              "CUSTOMER_STATUS_PROFILE_FILLED",
+              "CUSTOMER_STATUS_ON_KYC",
+              "CUSTOMER_STATUS_ACTIVE",
+              "CUSTOMER_STATUS_REJECTED",
+              "CUSTOMER_STATUS_BLOCKED"
+            ],
+            "default": "CUSTOMER_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "page.page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "page.page_token",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CustomerService"
+        ]
+      }
+    },
+    "/v1/customers/{customer_id}": {
+      "get": {
+        "operationId": "CustomerService_GetCustomer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCustomerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CustomerService"
+        ]
+      },
+      "patch": {
+        "operationId": "CustomerService_UpdateProfile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateProfileResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CustomerServiceUpdateProfileBody"
+            }
+          }
+        ],
+        "tags": [
+          "CustomerService"
+        ]
+      }
+    },
+    "/v1/customers/{customer_id}/documents": {
+      "get": {
+        "operationId": "DocumentService_ListDocuments",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListDocumentsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "DOCUMENT_TYPE_UNSPECIFIED",
+                "DOCUMENT_TYPE_PASSPORT",
+                "DOCUMENT_TYPE_SELFIE",
+                "DOCUMENT_TYPE_PROOF_OF_ADDRESS"
+              ]
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "page.page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "page.page_token",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DocumentService"
+        ]
+      }
+    },
+    "/v1/customers/{customer_id}/status": {
+      "get": {
+        "operationId": "CustomerService_GetCustomerStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCustomerStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CustomerService"
+        ]
+      }
+    },
+    "/v1/documents/{document_id}/download-url": {
+      "get": {
+        "operationId": "DocumentService_GetDownloadUrl",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetDownloadUrlResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DocumentService"
+        ]
+      }
+    },
+    "/v1/documents/{document_id}:confirm": {
+      "post": {
+        "operationId": "DocumentService_ConfirmUpload",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConfirmUploadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DocumentServiceConfirmUploadBody"
+            }
+          }
+        ],
+        "tags": [
+          "DocumentService"
+        ]
+      }
+    },
+    "/v1/documents:initUpload": {
+      "post": {
+        "operationId": "DocumentService_InitUpload",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1InitUploadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1InitUploadRequest"
+            }
+          }
+        ],
+        "tags": [
+          "DocumentService"
+        ]
+      }
+    },
+    "/v1/kyc/applications": {
+      "get": {
+        "operationId": "KycService_ListApplications",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListApplicationsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "APPLICATION_STATUS_UNSPECIFIED",
+              "APPLICATION_STATUS_DRAFT",
+              "APPLICATION_STATUS_SUBMITTED",
+              "APPLICATION_STATUS_AUTO_CHECKS",
+              "APPLICATION_STATUS_AUTO_REJECTED",
+              "APPLICATION_STATUS_IN_REVIEW",
+              "APPLICATION_STATUS_DOCS_REQUESTED",
+              "APPLICATION_STATUS_APPROVED",
+              "APPLICATION_STATUS_REJECTED"
+            ],
+            "default": "APPLICATION_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "assigned_officer_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "page.page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "page.page_token",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "KycService"
+        ]
+      },
+      "post": {
+        "operationId": "KycService_SubmitApplication",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubmitApplicationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SubmitApplicationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "KycService"
+        ]
+      }
+    },
+    "/v1/kyc/applications/{application_id}": {
+      "get": {
+        "operationId": "KycService_GetApplication",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetApplicationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "include_events",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "KycService"
+        ]
+      }
+    },
+    "/v1/kyc/applications/{application_id}:approve": {
+      "post": {
+        "operationId": "KycService_ApproveApplication",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ApproveApplicationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/KycServiceApproveApplicationBody"
+            }
+          }
+        ],
+        "tags": [
+          "KycService"
+        ]
+      }
+    },
+    "/v1/kyc/applications/{application_id}:claim": {
+      "post": {
+        "operationId": "KycService_ClaimApplication",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ClaimApplicationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/KycServiceClaimApplicationBody"
+            }
+          }
+        ],
+        "tags": [
+          "KycService"
+        ]
+      }
+    },
+    "/v1/kyc/applications/{application_id}:reject": {
+      "post": {
+        "operationId": "KycService_RejectApplication",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RejectApplicationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/KycServiceRejectApplicationBody"
+            }
+          }
+        ],
+        "tags": [
+          "KycService"
+        ]
+      }
+    },
+    "/v1/kyc/applications/{application_id}:requestDocuments": {
+      "post": {
+        "operationId": "KycService_RequestMoreDocuments",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RequestMoreDocumentsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/KycServiceRequestMoreDocumentsBody"
+            }
+          }
+        ],
+        "tags": [
+          "KycService"
+        ]
+      }
+    },
+    "/v1/ledger/accounts/{account_id}/transactions": {
+      "get": {
+        "operationId": "LedgerService_ListTransactions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListTransactionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "from_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "to_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "page.page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "page.page_token",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "LedgerService"
+        ]
+      }
+    },
+    "/v1/ledger/deposits": {
+      "post": {
+        "operationId": "LedgerService_Deposit",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DepositResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DepositRequest"
+            }
+          }
+        ],
+        "tags": [
+          "LedgerService"
+        ]
+      }
+    },
+    "/v1/ledger/transactions/{transaction_id}": {
+      "get": {
+        "operationId": "LedgerService_GetTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetTransactionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "LedgerService"
+        ]
+      }
+    },
+    "/v1/ledger/transfers": {
+      "post": {
+        "operationId": "LedgerService_Transfer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TransferResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1TransferRequest"
+            }
+          }
+        ],
+        "tags": [
+          "LedgerService"
+        ]
+      }
+    },
+    "/v1/notifications": {
+      "get": {
+        "operationId": "NotificationService_ListNotifications",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListNotificationsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "NOTIFICATION_STATUS_UNSPECIFIED",
+              "NOTIFICATION_STATUS_PENDING",
+              "NOTIFICATION_STATUS_SENT",
+              "NOTIFICATION_STATUS_FAILED"
+            ],
+            "default": "NOTIFICATION_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "page.page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "page.page_token",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "NotificationService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "AccountServiceBlockAccountBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "AccountServiceCloseAccountBody": {
+      "type": "object",
+      "properties": {
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "AntifraudServiceUpdateRuleBody": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "CustomerServiceUpdateProfileBody": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/definitions/v1Profile"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "DocumentServiceConfirmUploadBody": {
+      "type": "object",
+      "properties": {
+        "sha256": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "KycServiceApproveApplicationBody": {
+      "type": "object",
+      "properties": {
+        "comment": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "KycServiceClaimApplicationBody": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "KycServiceRejectApplicationBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "KycServiceRequestMoreDocumentsBody": {
+      "type": "object",
+      "properties": {
+        "requested_types": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1DocumentType"
+          }
+        },
+        "comment": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "accountV1GetBalanceResponse": {
+      "type": "object",
+      "properties": {
+        "balance": {
+          "$ref": "#/definitions/v1Money"
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "antifraudV1Check": {
+      "type": "object",
+      "properties": {
+        "check_id": {
+          "type": "string"
+        },
+        "transaction_id": {
+          "type": "string"
+        },
+        "from_account_id": {
+          "type": "string"
+        },
+        "to_account_id": {
+          "type": "string"
+        },
+        "amount": {
+          "$ref": "#/definitions/v1Money"
+        },
+        "verdict": {
+          "$ref": "#/definitions/v1Verdict"
+        },
+        "triggered_rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TriggeredRule"
+          }
+        },
+        "checked_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "kycV1Check": {
+      "type": "object",
+      "properties": {
+        "check_id": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1CheckType"
+        },
+        "result": {
+          "$ref": "#/definitions/v1CheckResult"
+        },
+        "details": {
+          "type": "string"
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "typeDate": {
+      "type": "object",
+      "properties": {
+        "year": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Year of the date. Must be from 1 to 9999, or 0 to specify a date without\na year."
+        },
+        "month": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Month of a year. Must be from 1 to 12, or 0 to specify a year without a\nmonth and day."
+        },
+        "day": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Day of a month. Must be from 1 to 31 and valid for the year and month, or 0\nto specify a year by itself or a year and month where the day isn't\nsignificant."
+        }
+      },
+      "description": "* A full date, with non-zero year, month, and day values.\n* A month and day, with a zero year (for example, an anniversary).\n* A year on its own, with a zero month and a zero day.\n* A year and month, with a zero day (for example, a credit card expiration\n  date).\n\nRelated types:\n\n* [google.type.TimeOfDay][google.type.TimeOfDay]\n* [google.type.DateTime][google.type.DateTime]\n* [google.protobuf.Timestamp][google.protobuf.Timestamp]",
+      "title": "Represents a whole or partial calendar date, such as a birthday. The time of\nday and time zone are either specified elsewhere or are insignificant. The\ndate is relative to the Gregorian Calendar. This can represent one of the\nfollowing:"
+    },
+    "v1Account": {
+      "type": "object",
+      "properties": {
+        "account_id": {
+          "type": "string"
+        },
+        "customer_id": {
+          "type": "string"
+        },
+        "account_number": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1AccountStatus"
+        },
+        "block_reason": {
+          "type": "string"
+        },
+        "opened_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "closed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1AccountStatus": {
+      "type": "string",
+      "enum": [
+        "ACCOUNT_STATUS_UNSPECIFIED",
+        "ACCOUNT_STATUS_ACTIVE",
+        "ACCOUNT_STATUS_BLOCKED",
+        "ACCOUNT_STATUS_CLOSED"
+      ],
+      "default": "ACCOUNT_STATUS_UNSPECIFIED",
+      "description": "ACTIVE  -\u003e BLOCKED -\u003e ACTIVE\n  ACTIVE  -\u003e CLOSED\n\nCLOSED is terminal.",
+      "title": "AccountStatus transitions:"
+    },
+    "v1Address": {
+      "type": "object",
+      "properties": {
+        "country": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "street": {
+          "type": "string"
+        },
+        "building": {
+          "type": "string"
+        },
+        "postal_code": {
+          "type": "string"
+        }
+      }
+    },
+    "v1Application": {
+      "type": "object",
+      "properties": {
+        "application_id": {
+          "type": "string"
+        },
+        "customer_id": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1ApplicationStatus"
+        },
+        "assigned_officer_id": {
+          "type": "string"
+        },
+        "decision_reason": {
+          "type": "string"
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/kycV1Check"
+          }
+        },
+        "requested_document_types": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1DocumentType"
+          }
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "submitted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ApplicationEvent": {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string"
+        },
+        "application_id": {
+          "type": "string"
+        },
+        "from_status": {
+          "$ref": "#/definitions/v1ApplicationStatus"
+        },
+        "to_status": {
+          "$ref": "#/definitions/v1ApplicationStatus"
+        },
+        "actor_user_id": {
+          "type": "string"
+        },
+        "comment": {
+          "type": "string"
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ApplicationStatus": {
+      "type": "string",
+      "enum": [
+        "APPLICATION_STATUS_UNSPECIFIED",
+        "APPLICATION_STATUS_DRAFT",
+        "APPLICATION_STATUS_SUBMITTED",
+        "APPLICATION_STATUS_AUTO_CHECKS",
+        "APPLICATION_STATUS_AUTO_REJECTED",
+        "APPLICATION_STATUS_IN_REVIEW",
+        "APPLICATION_STATUS_DOCS_REQUESTED",
+        "APPLICATION_STATUS_APPROVED",
+        "APPLICATION_STATUS_REJECTED"
+      ],
+      "default": "APPLICATION_STATUS_UNSPECIFIED",
+      "description": "DRAFT           -\u003e SUBMITTED\n  SUBMITTED       -\u003e AUTO_CHECKS\n  AUTO_CHECKS     -\u003e AUTO_REJECTED | IN_REVIEW\n  IN_REVIEW       -\u003e APPROVED | REJECTED | DOCS_REQUESTED\n  DOCS_REQUESTED  -\u003e SUBMITTED\n\nAPPROVED, REJECTED and AUTO_REJECTED are terminal.",
+      "title": "ApplicationStatus is the explicit state machine of a KYC application.\nLegal transitions, and nothing else:"
+    },
+    "v1ApproveApplicationResponse": {
+      "type": "object",
+      "properties": {
+        "application": {
+          "$ref": "#/definitions/v1Application"
+        }
+      }
+    },
+    "v1BlockAccountResponse": {
+      "type": "object",
+      "properties": {
+        "account": {
+          "$ref": "#/definitions/v1Account"
+        }
+      }
+    },
+    "v1CheckResult": {
+      "type": "string",
+      "enum": [
+        "CHECK_RESULT_UNSPECIFIED",
+        "CHECK_RESULT_PENDING",
+        "CHECK_RESULT_PASSED",
+        "CHECK_RESULT_FAILED",
+        "CHECK_RESULT_ERROR"
+      ],
+      "default": "CHECK_RESULT_UNSPECIFIED"
+    },
+    "v1CheckType": {
+      "type": "string",
+      "enum": [
+        "CHECK_TYPE_UNSPECIFIED",
+        "CHECK_TYPE_SANCTIONS",
+        "CHECK_TYPE_AGE"
+      ],
+      "default": "CHECK_TYPE_UNSPECIFIED"
+    },
+    "v1ClaimApplicationResponse": {
+      "type": "object",
+      "properties": {
+        "application": {
+          "$ref": "#/definitions/v1Application"
+        }
+      }
+    },
+    "v1CloseAccountResponse": {
+      "type": "object",
+      "properties": {
+        "account": {
+          "$ref": "#/definitions/v1Account"
+        }
+      }
+    },
+    "v1ConfirmUploadResponse": {
+      "type": "object",
+      "properties": {
+        "document": {
+          "$ref": "#/definitions/v1Document"
+        }
+      }
+    },
+    "v1CreateOfficerRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateOfficerResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User"
+        }
+      }
+    },
+    "v1Customer": {
+      "type": "object",
+      "properties": {
+        "customer_id": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1CustomerStatus"
+        },
+        "profile": {
+          "$ref": "#/definitions/v1Profile"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1CustomerStatus": {
+      "type": "string",
+      "enum": [
+        "CUSTOMER_STATUS_UNSPECIFIED",
+        "CUSTOMER_STATUS_NEW",
+        "CUSTOMER_STATUS_PROFILE_FILLED",
+        "CUSTOMER_STATUS_ON_KYC",
+        "CUSTOMER_STATUS_ACTIVE",
+        "CUSTOMER_STATUS_REJECTED",
+        "CUSTOMER_STATUS_BLOCKED"
+      ],
+      "default": "CUSTOMER_STATUS_UNSPECIFIED",
+      "description": "CustomerStatus is driven by KYC events, never set directly by the customer.\n\n  NEW -\u003e PROFILE_FILLED -\u003e ON_KYC -\u003e ACTIVE\n                                  -\u003e REJECTED\n  any -\u003e BLOCKED"
+    },
+    "v1DepositRequest": {
+      "type": "object",
+      "properties": {
+        "to_account_id": {
+          "type": "string"
+        },
+        "amount": {
+          "$ref": "#/definitions/v1Money"
+        },
+        "description": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DepositResponse": {
+      "type": "object",
+      "properties": {
+        "transaction": {
+          "$ref": "#/definitions/v1Transaction"
+        }
+      }
+    },
+    "v1Document": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "customer_id": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1DocumentType"
+        },
+        "status": {
+          "$ref": "#/definitions/v1DocumentStatus"
+        },
+        "file_name": {
+          "type": "string"
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "confirmed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1DocumentStatus": {
+      "type": "string",
+      "enum": [
+        "DOCUMENT_STATUS_UNSPECIFIED",
+        "DOCUMENT_STATUS_PENDING",
+        "DOCUMENT_STATUS_UPLOADED",
+        "DOCUMENT_STATUS_CONFIRMED",
+        "DOCUMENT_STATUS_REJECTED"
+      ],
+      "default": "DOCUMENT_STATUS_UNSPECIFIED"
+    },
+    "v1DocumentType": {
+      "type": "string",
+      "enum": [
+        "DOCUMENT_TYPE_UNSPECIFIED",
+        "DOCUMENT_TYPE_PASSPORT",
+        "DOCUMENT_TYPE_SELFIE",
+        "DOCUMENT_TYPE_PROOF_OF_ADDRESS"
+      ],
+      "default": "DOCUMENT_TYPE_UNSPECIFIED"
+    },
+    "v1Entry": {
+      "type": "object",
+      "properties": {
+        "entry_id": {
+          "type": "string"
+        },
+        "transaction_id": {
+          "type": "string"
+        },
+        "account_id": {
+          "type": "string"
+        },
+        "direction": {
+          "$ref": "#/definitions/v1EntryDirection"
+        },
+        "amount": {
+          "$ref": "#/definitions/v1Money"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1EntryDirection": {
+      "type": "string",
+      "enum": [
+        "ENTRY_DIRECTION_UNSPECIFIED",
+        "ENTRY_DIRECTION_DEBIT",
+        "ENTRY_DIRECTION_CREDIT"
+      ],
+      "default": "ENTRY_DIRECTION_UNSPECIFIED"
+    },
+    "v1GetAccountResponse": {
+      "type": "object",
+      "properties": {
+        "account": {
+          "$ref": "#/definitions/v1Account"
+        }
+      }
+    },
+    "v1GetApplicationResponse": {
+      "type": "object",
+      "properties": {
+        "application": {
+          "$ref": "#/definitions/v1Application"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ApplicationEvent"
+          }
+        }
+      }
+    },
+    "v1GetCustomerResponse": {
+      "type": "object",
+      "properties": {
+        "customer": {
+          "$ref": "#/definitions/v1Customer"
+        }
+      }
+    },
+    "v1GetCustomerStatusResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/v1CustomerStatus"
+        },
+        "changed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1GetDownloadUrlResponse": {
+      "type": "object",
+      "properties": {
+        "download_url": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1GetTransactionResponse": {
+      "type": "object",
+      "properties": {
+        "transaction": {
+          "$ref": "#/definitions/v1Transaction"
+        }
+      }
+    },
+    "v1InitUploadRequest": {
+      "type": "object",
+      "properties": {
+        "customer_id": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1DocumentType"
+        },
+        "file_name": {
+          "type": "string"
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "v1InitUploadResponse": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "upload_url": {
+          "type": "string"
+        },
+        "required_headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ListAccountsResponse": {
+      "type": "object",
+      "properties": {
+        "accounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Account"
+          }
+        },
+        "page": {
+          "$ref": "#/definitions/v1PageResponse"
+        }
+      }
+    },
+    "v1ListApplicationsResponse": {
+      "type": "object",
+      "properties": {
+        "applications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Application"
+          }
+        },
+        "page": {
+          "$ref": "#/definitions/v1PageResponse"
+        }
+      }
+    },
+    "v1ListChecksResponse": {
+      "type": "object",
+      "properties": {
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/antifraudV1Check"
+          }
+        },
+        "page": {
+          "$ref": "#/definitions/v1PageResponse"
+        }
+      }
+    },
+    "v1ListCustomersResponse": {
+      "type": "object",
+      "properties": {
+        "customers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Customer"
+          }
+        },
+        "page": {
+          "$ref": "#/definitions/v1PageResponse"
+        }
+      }
+    },
+    "v1ListDocumentsResponse": {
+      "type": "object",
+      "properties": {
+        "documents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Document"
+          }
+        },
+        "page": {
+          "$ref": "#/definitions/v1PageResponse"
+        }
+      }
+    },
+    "v1ListNotificationsResponse": {
+      "type": "object",
+      "properties": {
+        "notifications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Notification"
+          }
+        },
+        "page": {
+          "$ref": "#/definitions/v1PageResponse"
+        }
+      }
+    },
+    "v1ListRulesResponse": {
+      "type": "object",
+      "properties": {
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Rule"
+          }
+        },
+        "page": {
+          "$ref": "#/definitions/v1PageResponse"
+        }
+      }
+    },
+    "v1ListTransactionsResponse": {
+      "type": "object",
+      "properties": {
+        "transactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Transaction"
+          }
+        },
+        "page": {
+          "$ref": "#/definitions/v1PageResponse"
+        }
+      }
+    },
+    "v1LoginRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      }
+    },
+    "v1LoginResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User"
+        },
+        "tokens": {
+          "$ref": "#/definitions/v1TokenPair"
+        }
+      }
+    },
+    "v1LogoutRequest": {
+      "type": "object",
+      "properties": {
+        "refresh_token": {
+          "type": "string"
+        }
+      }
+    },
+    "v1LogoutResponse": {
+      "type": "object"
+    },
+    "v1Money": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        }
+      }
+    },
+    "v1Notification": {
+      "type": "object",
+      "properties": {
+        "notification_id": {
+          "type": "string"
+        },
+        "customer_id": {
+          "type": "string"
+        },
+        "event_id": {
+          "type": "string"
+        },
+        "event_type": {
+          "type": "string"
+        },
+        "channel": {
+          "$ref": "#/definitions/v1NotificationChannel"
+        },
+        "status": {
+          "$ref": "#/definitions/v1NotificationStatus"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "attempts": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sent_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1NotificationChannel": {
+      "type": "string",
+      "enum": [
+        "NOTIFICATION_CHANNEL_UNSPECIFIED",
+        "NOTIFICATION_CHANNEL_EMAIL",
+        "NOTIFICATION_CHANNEL_SMS",
+        "NOTIFICATION_CHANNEL_PUSH"
+      ],
+      "default": "NOTIFICATION_CHANNEL_UNSPECIFIED"
+    },
+    "v1NotificationStatus": {
+      "type": "string",
+      "enum": [
+        "NOTIFICATION_STATUS_UNSPECIFIED",
+        "NOTIFICATION_STATUS_PENDING",
+        "NOTIFICATION_STATUS_SENT",
+        "NOTIFICATION_STATUS_FAILED"
+      ],
+      "default": "NOTIFICATION_STATUS_UNSPECIFIED"
+    },
+    "v1OpenAccountRequest": {
+      "type": "object",
+      "properties": {
+        "customer_id": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "v1OpenAccountResponse": {
+      "type": "object",
+      "properties": {
+        "account": {
+          "$ref": "#/definitions/v1Account"
+        }
+      }
+    },
+    "v1PageRequest": {
+      "type": "object",
+      "properties": {
+        "page_size": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "page_token": {
+          "type": "string"
+        }
+      }
+    },
+    "v1PageResponse": {
+      "type": "object",
+      "properties": {
+        "next_page_token": {
+          "type": "string"
+        },
+        "total_size": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1Profile": {
+      "type": "object",
+      "properties": {
+        "first_name": {
+          "type": "string"
+        },
+        "last_name": {
+          "type": "string"
+        },
+        "birth_date": {
+          "$ref": "#/definitions/typeDate"
+        },
+        "citizenship": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "address": {
+          "$ref": "#/definitions/v1Address"
+        }
+      }
+    },
+    "v1RefreshRequest": {
+      "type": "object",
+      "properties": {
+        "refresh_token": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RefreshResponse": {
+      "type": "object",
+      "properties": {
+        "tokens": {
+          "$ref": "#/definitions/v1TokenPair"
+        }
+      }
+    },
+    "v1RegisterRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RegisterResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User"
+        }
+      }
+    },
+    "v1RejectApplicationResponse": {
+      "type": "object",
+      "properties": {
+        "application": {
+          "$ref": "#/definitions/v1Application"
+        }
+      }
+    },
+    "v1RequestMoreDocumentsResponse": {
+      "type": "object",
+      "properties": {
+        "application": {
+          "$ref": "#/definitions/v1Application"
+        }
+      }
+    },
+    "v1Role": {
+      "type": "string",
+      "enum": [
+        "ROLE_UNSPECIFIED",
+        "ROLE_CLIENT",
+        "ROLE_OFFICER",
+        "ROLE_ADMIN"
+      ],
+      "default": "ROLE_UNSPECIFIED"
+    },
+    "v1Rule": {
+      "type": "object",
+      "properties": {
+        "rule_id": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1RuleType"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "description": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1RuleType": {
+      "type": "string",
+      "enum": [
+        "RULE_TYPE_UNSPECIFIED",
+        "RULE_TYPE_SINGLE_AMOUNT_LIMIT",
+        "RULE_TYPE_VELOCITY",
+        "RULE_TYPE_SELF_TRANSFER"
+      ],
+      "default": "RULE_TYPE_UNSPECIFIED"
+    },
+    "v1SubmitApplicationRequest": {
+      "type": "object",
+      "properties": {
+        "customer_id": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SubmitApplicationResponse": {
+      "type": "object",
+      "properties": {
+        "application": {
+          "$ref": "#/definitions/v1Application"
+        }
+      }
+    },
+    "v1TokenPair": {
+      "type": "object",
+      "properties": {
+        "access_token": {
+          "type": "string"
+        },
+        "refresh_token": {
+          "type": "string"
+        },
+        "access_expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "refresh_expires_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1Transaction": {
+      "type": "object",
+      "properties": {
+        "transaction_id": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1TransactionType"
+        },
+        "status": {
+          "$ref": "#/definitions/v1TransactionStatus"
+        },
+        "amount": {
+          "$ref": "#/definitions/v1Money"
+        },
+        "from_account_id": {
+          "type": "string"
+        },
+        "to_account_id": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "decline_reason": {
+          "type": "string"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Entry"
+          }
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1TransactionStatus": {
+      "type": "string",
+      "enum": [
+        "TRANSACTION_STATUS_UNSPECIFIED",
+        "TRANSACTION_STATUS_PENDING",
+        "TRANSACTION_STATUS_COMPLETED",
+        "TRANSACTION_STATUS_DECLINED"
+      ],
+      "default": "TRANSACTION_STATUS_UNSPECIFIED"
+    },
+    "v1TransactionType": {
+      "type": "string",
+      "enum": [
+        "TRANSACTION_TYPE_UNSPECIFIED",
+        "TRANSACTION_TYPE_TRANSFER",
+        "TRANSACTION_TYPE_DEPOSIT"
+      ],
+      "default": "TRANSACTION_TYPE_UNSPECIFIED"
+    },
+    "v1TransferRequest": {
+      "type": "object",
+      "properties": {
+        "from_account_id": {
+          "type": "string"
+        },
+        "to_account_id": {
+          "type": "string"
+        },
+        "amount": {
+          "$ref": "#/definitions/v1Money"
+        },
+        "description": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      }
+    },
+    "v1TransferResponse": {
+      "type": "object",
+      "properties": {
+        "transaction": {
+          "$ref": "#/definitions/v1Transaction"
+        }
+      }
+    },
+    "v1TriggeredRule": {
+      "type": "object",
+      "properties": {
+        "rule_id": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1RuleType"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "v1UpdateProfileResponse": {
+      "type": "object",
+      "properties": {
+        "customer": {
+          "$ref": "#/definitions/v1Customer"
+        }
+      }
+    },
+    "v1UpdateRuleResponse": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "$ref": "#/definitions/v1Rule"
+        }
+      }
+    },
+    "v1User": {
+      "type": "object",
+      "properties": {
+        "user_id": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/v1Role"
+        },
+        "customer_id": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1Verdict": {
+      "type": "string",
+      "enum": [
+        "VERDICT_UNSPECIFIED",
+        "VERDICT_ALLOW",
+        "VERDICT_DENY"
+      ],
+      "default": "VERDICT_UNSPECIFIED"
+    }
+  }
+}

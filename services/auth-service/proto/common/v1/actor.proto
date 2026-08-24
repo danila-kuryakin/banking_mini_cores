@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/pb/gen/common/v1;commonv1";
+
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_CLIENT = 1;
+  ROLE_OFFICER = 2;
+  ROLE_ADMIN = 3;
+}
+
+message Actor {
+  string user_id = 1;
+  Role role = 2;
+  string customer_id = 3;
+}
