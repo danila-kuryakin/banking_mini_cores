@@ -1,0 +1,194 @@
+syntax = "proto3";
+
+package kyc.v1;
+
+option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/document-service/internal/pb/gen/kyc/v1;kycv1";
+
+import "common/v1/pagination.proto";
+import "document/v1/document.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+service KycService {
+  rpc SubmitApplication(SubmitApplicationRequest) returns (SubmitApplicationResponse) {
+    option (google.api.http) = {
+      post: "/v1/kyc/applications"
+      body: "*"
+    };
+  }
+
+  rpc GetApplication(GetApplicationRequest) returns (GetApplicationResponse) {
+    option (google.api.http) = {get: "/v1/kyc/applications/{application_id}"};
+  }
+
+  rpc ListApplications(ListApplicationsRequest) returns (ListApplicationsResponse) {
+    option (google.api.http) = {get: "/v1/kyc/applications"};
+  }
+
+  rpc ClaimApplication(ClaimApplicationRequest) returns (ClaimApplicationResponse) {
+    option (google.api.http) = {
+      post: "/v1/kyc/applications/{application_id}:claim"
+      body: "*"
+    };
+  }
+
+  rpc ApproveApplication(ApproveApplicationRequest) returns (ApproveApplicationResponse) {
+    option (google.api.http) = {
+      post: "/v1/kyc/applications/{application_id}:approve"
+      body: "*"
+    };
+  }
+
+  rpc RejectApplication(RejectApplicationRequest) returns (RejectApplicationResponse) {
+    option (google.api.http) = {
+      post: "/v1/kyc/applications/{application_id}:reject"
+      body: "*"
+    };
+  }
+
+  rpc RequestMoreDocuments(RequestMoreDocumentsRequest) returns (RequestMoreDocumentsResponse) {
+    option (google.api.http) = {
+      post: "/v1/kyc/applications/{application_id}:requestDocuments"
+      body: "*"
+    };
+  }
+}
+
+// ApplicationStatus is the explicit state machine of a KYC application.
+// Legal transitions, and nothing else:
+//
+//   DRAFT           -> SUBMITTED
+//   SUBMITTED       -> AUTO_CHECKS
+//   AUTO_CHECKS     -> AUTO_REJECTED | IN_REVIEW
+//   IN_REVIEW       -> APPROVED | REJECTED | DOCS_REQUESTED
+//   DOCS_REQUESTED  -> SUBMITTED
+//
+// APPROVED, REJECTED and AUTO_REJECTED are terminal.
+enum ApplicationStatus {
+  APPLICATION_STATUS_UNSPECIFIED = 0;
+  APPLICATION_STATUS_DRAFT = 1;
+  APPLICATION_STATUS_SUBMITTED = 2;
+  APPLICATION_STATUS_AUTO_CHECKS = 3;
+  APPLICATION_STATUS_AUTO_REJECTED = 4;
+  APPLICATION_STATUS_IN_REVIEW = 5;
+  APPLICATION_STATUS_DOCS_REQUESTED = 6;
+  APPLICATION_STATUS_APPROVED = 7;
+  APPLICATION_STATUS_REJECTED = 8;
+}
+
+enum CheckType {
+  CHECK_TYPE_UNSPECIFIED = 0;
+  CHECK_TYPE_SANCTIONS = 1;
+  CHECK_TYPE_AGE = 2;
+}
+
+enum CheckResult {
+  CHECK_RESULT_UNSPECIFIED = 0;
+  CHECK_RESULT_PENDING = 1;
+  CHECK_RESULT_PASSED = 2;
+  CHECK_RESULT_FAILED = 3;
+  CHECK_RESULT_ERROR = 4;
+}
+
+message Check {
+  string check_id = 1;
+  CheckType type = 2;
+  CheckResult result = 3;
+  string details = 4;
+  google.protobuf.Timestamp completed_at = 5;
+}
+
+message Application {
+  string application_id = 1;
+  string customer_id = 2;
+  ApplicationStatus status = 3;
+  string assigned_officer_id = 4;
+  string decision_reason = 5;
+  repeated Check checks = 6;
+  repeated document.v1.DocumentType requested_document_types = 7;
+  int64 version = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp submitted_at = 10;
+  google.protobuf.Timestamp decided_at = 11;
+}
+
+message ApplicationEvent {
+  string event_id = 1;
+  string application_id = 2;
+  ApplicationStatus from_status = 3;
+  ApplicationStatus to_status = 4;
+  string actor_user_id = 5;
+  string comment = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+}
+
+message SubmitApplicationRequest {
+  string customer_id = 1;
+  string idempotency_key = 2;
+}
+
+message SubmitApplicationResponse {
+  Application application = 1;
+}
+
+message GetApplicationRequest {
+  string application_id = 1;
+  bool include_events = 2;
+}
+
+message GetApplicationResponse {
+  Application application = 1;
+  repeated ApplicationEvent events = 2;
+}
+
+message ListApplicationsRequest {
+  ApplicationStatus status = 1;
+  string assigned_officer_id = 2;
+  common.v1.PageRequest page = 3;
+}
+
+message ListApplicationsResponse {
+  repeated Application applications = 1;
+  common.v1.PageResponse page = 2;
+}
+
+message ClaimApplicationRequest {
+  string application_id = 1;
+  int64 version = 2;
+  string idempotency_key = 3;
+}
+
+message ClaimApplicationResponse {
+  Application application = 1;
+}
+
+message ApproveApplicationRequest {
+  string application_id = 1;
+  string comment = 2;
+  string idempotency_key = 3;
+}
+
+message ApproveApplicationResponse {
+  Application application = 1;
+}
+
+message RejectApplicationRequest {
+  string application_id = 1;
+  string reason = 2;
+  string idempotency_key = 3;
+}
+
+message RejectApplicationResponse {
+  Application application = 1;
+}
+
+message RequestMoreDocumentsRequest {
+  string application_id = 1;
+  repeated document.v1.DocumentType requested_types = 2;
+  string comment = 3;
+  string idempotency_key = 4;
+}
+
+message RequestMoreDocumentsResponse {
+  Application application = 1;
+}

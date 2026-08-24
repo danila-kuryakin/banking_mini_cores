@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+package account.v1;
+
+option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/account-service/internal/pb/gen/account/v1;accountv1";
+
+import "common/v1/money.proto";
+import "common/v1/pagination.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+service AccountService {
+  rpc OpenAccount(OpenAccountRequest) returns (OpenAccountResponse) {
+    option (google.api.http) = {
+      post: "/v1/accounts"
+      body: "*"
+    };
+  }
+
+  rpc GetAccount(GetAccountRequest) returns (GetAccountResponse) {
+    option (google.api.http) = {get: "/v1/accounts/{account_id}"};
+  }
+
+  rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
+    option (google.api.http) = {get: "/v1/accounts"};
+  }
+
+  rpc BlockAccount(BlockAccountRequest) returns (BlockAccountResponse) {
+    option (google.api.http) = {
+      post: "/v1/accounts/{account_id}:block"
+      body: "*"
+    };
+  }
+
+//  rpc UnblockAccount(UnblockAccountRequest) returns (UnblockAccountResponse) {
+//    option (google.api.http) = {
+//      post: "/v1/accounts/{account_id}:unblock"
+//      body: "*"
+//    };
+//  }
+
+  rpc CloseAccount(CloseAccountRequest) returns (CloseAccountResponse) {
+    option (google.api.http) = {
+      post: "/v1/accounts/{account_id}:close"
+      body: "*"
+    };
+  }
+
+  rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse) {
+    option (google.api.http) = {get: "/v1/accounts/{account_id}/balance"};
+  }
+}
+
+// AccountStatus transitions:
+//
+//   ACTIVE  -> BLOCKED -> ACTIVE
+//   ACTIVE  -> CLOSED
+//
+// CLOSED is terminal.
+enum AccountStatus {
+  ACCOUNT_STATUS_UNSPECIFIED = 0;
+  ACCOUNT_STATUS_ACTIVE = 1;
+  ACCOUNT_STATUS_BLOCKED = 2;
+  ACCOUNT_STATUS_CLOSED = 3;
+}
+
+message Account {
+  string account_id = 1;
+  string customer_id = 2;
+  string account_number = 3;
+  string currency = 4;
+  AccountStatus status = 5;
+  string block_reason = 6;
+  google.protobuf.Timestamp opened_at = 7;
+  google.protobuf.Timestamp closed_at = 8;
+}
+
+message OpenAccountRequest {
+  string customer_id = 1;
+  string currency = 2;
+  string idempotency_key = 3;
+}
+
+message OpenAccountResponse {
+  Account account = 1;
+}
+
+message GetAccountRequest {
+  string account_id = 1;
+}
+
+message GetAccountResponse {
+  Account account = 1;
+}
+
+message ListAccountsRequest {
+  string customer_id = 1;
+  AccountStatus status = 2;
+  common.v1.PageRequest page = 3;
+}
+
+message ListAccountsResponse {
+  repeated Account accounts = 1;
+  common.v1.PageResponse page = 2;
+}
+
+message BlockAccountRequest {
+  string account_id = 1;
+  string reason = 2;
+  string idempotency_key = 3;
+}
+
+message BlockAccountResponse {
+  Account account = 1;
+}
+
+message UnblockAccountRequest {
+  string account_id = 1;
+  string idempotency_key = 2;
+}
+
+message UnblockAccountResponse {
+  Account account = 1;
+}
+
+message CloseAccountRequest {
+  string account_id = 1;
+  string idempotency_key = 2;
+}
+
+message CloseAccountResponse {
+  Account account = 1;
+}
+
+message GetBalanceRequest {
+  string account_id = 1;
+}
+
+message GetBalanceResponse {
+  common.v1.Money balance = 1;
+  google.protobuf.Timestamp as_of = 2;
+}
