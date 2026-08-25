@@ -11,12 +11,12 @@ grpc:
 upstreams:
   auth: localhost:50051
   customer: localhost:50052
-  kyc: kyc-service:50053
-  document: document-service:50054
-  account: account-service:50055
-  ledger: ledger-service:50056
-  antifraud: antifraud-service:50057
-  notification: notification-service:50058
+  kyc: localhost:50053
+  document: localhost:50054
+  account: localhost:50055
+  ledger: localhost:50056
+  antifraud: localhost:50057
+  notification: localhost:50058
 
 jwks_url: ""
 request_timeout: 30s
