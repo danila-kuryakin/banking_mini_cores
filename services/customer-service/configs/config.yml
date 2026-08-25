@@ -1,12 +1,12 @@
 server:
   host: localhost
-  port: 50051
+  port: 50052
 
 database:
   host: localhost
   port: 5432
   user: 1
   password: 1
-  dbname: banking_auth
+  dbname: banking_customer
   ssl_mode: disable
 

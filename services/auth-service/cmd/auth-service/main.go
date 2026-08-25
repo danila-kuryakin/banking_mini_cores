@@ -5,6 +5,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"time"
 
 	conn "github.com/danila-kuryakin/banking_mini_cores/platform/connection"
 	"github.com/danila-kuryakin/banking_mini_cores/platform/grpc_server"
@@ -30,8 +31,6 @@ func run() error {
 		return err
 	}
 
-	fmt.Printf("config: %+v\n", cfg)
-
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	dbPool, err := conn.NewConnectionDB(cfg.Postgres)
@@ -43,8 +42,15 @@ func run() error {
 	return grpc_server.NewServer(
 		cfg.Server.GetAddr(),
 		logger,
-		func(r grpc.ServiceRegistrar) {
-			authv1.RegisterAuthServiceServer(r, service.NewAuth(dbPool, logger))
-		},
+
+		grpc_server.WithServices(
+			func(r grpc.ServiceRegistrar) {
+				authv1.RegisterAuthServiceServer(r, service.NewAuth(dbPool, logger))
+			},
+		),
+
+		// Логин ходит в БД и считает bcrypt - 15 секунд по умолчанию тут
+		// избыточны, столько ждать клиенту нечего.
+		grpc_server.WithHandlerTimeout(5*time.Second),
 	)
 }

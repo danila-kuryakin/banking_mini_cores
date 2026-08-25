@@ -5,21 +5,26 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/adapters/repository"
 	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/pb/gen/customer/v1"
 )
 
 type Customer struct {
 	customerv1.UnimplementedCustomerServiceServer
-
-	log *slog.Logger
+	repo *repository.Repository
+	log  *slog.Logger
 }
 
-func NewCustomer(log *slog.Logger) *Customer {
-	return &Customer{log: log}
+func NewCustomer(db *pgxpool.Pool, log *slog.Logger) *Customer {
+	return &Customer{
+		repo: repository.NewRepository(db),
+		log:  log,
+	}
 }
 
 func (s *Customer) GetCustomer(ctx context.Context, in *customerv1.GetCustomerRequest) (*customerv1.GetCustomerResponse, error) {
@@ -34,7 +39,7 @@ func (s *Customer) GetCustomer(ctx context.Context, in *customerv1.GetCustomerRe
 			CreatedAt:  timestamppb.New(time.Now().UTC()),
 			UpdatedAt:  timestamppb.New(time.Now().UTC()),
 		},
-	}, nil
+	}, s.repo.Customer.GetCustomer()
 }
 func (s *Customer) UpdateProfile(ctx context.Context, in *customerv1.UpdateProfileRequest) (*customerv1.UpdateProfileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")

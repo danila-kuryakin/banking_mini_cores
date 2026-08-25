@@ -2,11 +2,17 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"log/slog"
 	"os"
+	"time"
 
-	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/adapters/grpcapi"
+	conn "github.com/danila-kuryakin/banking_mini_cores/platform/connection"
+	"github.com/danila-kuryakin/banking_mini_cores/platform/grpc_server"
+	service "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/adapters"
 	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/config"
+	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/pb/gen/customer/v1"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -25,7 +31,28 @@ func run() error {
 		return err
 	}
 
-	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	fmt.Printf("config: %+v\n", cfg)
 
-	return grpcapi.NewServer(cfg, log)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	dbPool, err := conn.NewConnectionDB(cfg.Postgres)
+	if err != nil {
+		log.Fatalf("Не удаётся подключиться к db: %v", err)
+	}
+	defer dbPool.Close()
+
+	return grpc_server.NewServer(
+		cfg.Server.GetAddr(),
+		logger,
+
+		grpc_server.WithServices(
+			func(r grpc.ServiceRegistrar) {
+				customerv1.RegisterCustomerServiceServer(r, service.NewCustomer(dbPool, logger))
+			},
+		),
+
+		// Хендлеры ходят только в свою БД - 15 секунд по умолчанию тут
+		// избыточны, столько ждать клиенту нечего.
+		grpc_server.WithHandlerTimeout(5*time.Second),
+	)
 }

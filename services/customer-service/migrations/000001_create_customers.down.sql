@@ -1,0 +1,6 @@
+BEGIN;
+
+DROP TABLE IF EXISTS customers;
+DROP TYPE IF EXISTS customer_status;
+
+COMMIT;
