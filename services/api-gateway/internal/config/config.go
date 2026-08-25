@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/danila-kuryakin/banking_mini_cores/platform/config"
@@ -9,14 +10,14 @@ import (
 
 // Upstreams are the gRPC addresses of the services the gateway forwards to.
 type Upstreams struct {
-	Auth         string
-	Customer     string
-	KYC          string
-	Document     string
-	Account      string
-	Ledger       string
-	Antifraud    string
-	Notification string
+	Auth         string `mapstructure:"auth"`
+	Customer     string `mapstructure:"customer"`
+	KYC          string `mapstructure:"kyc"`
+	Document     string `mapstructure:"document"`
+	Account      string `mapstructure:"account"`
+	Ledger       string `mapstructure:"ledger"`
+	Antifraud    string `mapstructure:"antifraud"`
+	Notification string `mapstructure:"notification"`
 }
 
 func (u Upstreams) All() map[string]string {
@@ -32,48 +33,37 @@ func (u Upstreams) All() map[string]string {
 	}
 }
 
+// Config is the api-gateway configuration beyond the common base.
 type Config struct {
-	Base           config.Base
-	HTTPAddr       string
-	GatewayAddr    string // Для health checks. Остальные микросервисы доступны по тому же адресу Upstreams
-	Upstreams      Upstreams
-	JWKSURL        string
-	RequestTimeout time.Duration
+	Server config.Server `mapstructure:"server"`
+	// GRPC - адрес health-сервера. Остальные микросервисы доступны по адресам
+	// из Upstreams.
+	GRPC            config.Server `mapstructure:"grpc"`
+	Upstreams       Upstreams     `mapstructure:"upstreams"`
+	JWKSURL         string        `mapstructure:"jwks_url"`
+	RequestTimeout  time.Duration `mapstructure:"request_timeout"`
+	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
 }
 
-func Load() (Config, error) {
-	base, err := config.LoadBase("api-gateway", 0)
-	if err != nil {
-		return Config{}, err
-	}
-
-	requestTimeout, err := config.Duration("REQUEST_TIMEOUT", 30*time.Second)
-	if err != nil {
-		return Config{}, err
-	}
-
-	cfg := Config{
-		Base:        base,
-		HTTPAddr:    config.String("HTTP_ADDR", ":8080"),
-		GatewayAddr: config.String("GATEWAY_ADDR", ":50059"),
-		Upstreams: Upstreams{
-			Auth:         config.String("AUTH_SERVICE_ADDR", "localhost:50051"),
-			Customer:     config.String("CUSTOMER_SERVICE_ADDR", "localhost:50052"),
-			KYC:          config.String("KYC_SERVICE_ADDR", "kyc-service:50053"),
-			Document:     config.String("DOCUMENT_SERVICE_ADDR", "document-service:50054"),
-			Account:      config.String("ACCOUNT_SERVICE_ADDR", "account-service:50055"),
-			Ledger:       config.String("LEDGER_SERVICE_ADDR", "ledger-service:50056"),
-			Antifraud:    config.String("ANTIFRAUD_SERVICE_ADDR", "antifraud-service:50057"),
-			Notification: config.String("NOTIFICATION_SERVICE_ADDR", "notification-service:50058"),
-		},
-		JWKSURL:        config.String("JWKS_URL", ""),
-		RequestTimeout: requestTimeout,
-	}
-
-	for name, addr := range cfg.Upstreams.All() {
+// Validate реализует config.Validator: Read вызовет его сам после разбора.
+// Пустой адрес апстрима - это отказ на первом же запросе к сервису, поэтому
+// ловим его на старте.
+func (c *Config) Validate() error {
+	for name, addr := range c.Upstreams.All() {
 		if addr == "" {
-			return Config{}, fmt.Errorf("config: upstream address for %s is empty", name)
+			return fmt.Errorf("upstream address for %s is empty", name)
 		}
+	}
+
+	return nil
+}
+
+// Load reads the configuration from the environment.
+func Load() (*Config, error) {
+
+	cfg, err := config.Read[Config]("./configs")
+	if err != nil {
+		log.Fatalf("config: %v", err)
 	}
 
 	return cfg, nil

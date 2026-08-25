@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/adapters/httpapi"
-
 	gwconfig "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/config"
 )
 
@@ -26,10 +25,9 @@ func run() error {
 		return fmt.Errorf("load configuration: %w", err)
 	}
 
-	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	err = httpapi.New(cfg, log)
-	if err != nil {
+	if err := httpapi.New(cfg, logger); err != nil {
 		return fmt.Errorf("build gateway: %w", err)
 	}
 

@@ -1,0 +1,23 @@
+server:
+  host: localhost
+  port: 8080
+
+# Отдельный gRPC-порт: сам gateway отвечает по HTTP, но health-проверку отдаёт
+# по grpc.health.v1.Health - тем же протоколом, что и остальные сервисы.
+grpc:
+  host: localhost
+  port: 50059
+
+upstreams:
+  auth: localhost:50051
+  customer: localhost:50052
+  kyc: kyc-service:50053
+  document: document-service:50054
+  account: account-service:50055
+  ledger: ledger-service:50056
+  antifraud: antifraud-service:50057
+  notification: notification-service:50058
+
+jwks_url: ""
+request_timeout: 30s
+shutdown_timeout: 5s

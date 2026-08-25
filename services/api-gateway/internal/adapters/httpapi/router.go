@@ -1,3 +1,9 @@
+// Package httpapi is the inbound HTTP adapter of api-gateway: grpc-gateway
+// переводит REST-запросы в gRPC-вызовы сервисов по правилам google.api.http
+// из proto.
+//
+// Своей бизнес-логики здесь нет - только транспорт, корреляция запросов и
+// жизненный цикл серверов.
 package httpapi
 
 import (
@@ -7,14 +13,12 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	authv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/auth/v1"
-	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/customer/v1"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
@@ -22,9 +26,10 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/swaggerui"
-
 	gwconfig "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/config"
+	authv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/auth/v1"
+	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/customer/v1"
+	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/swaggerui"
 )
 
 // Gateway — это HTTP-сервер и соединения gRPC за ним.
@@ -35,25 +40,28 @@ type Gateway struct {
 
 const specPath = "/openapi.json"
 
-func New(cfg gwconfig.Config, log *slog.Logger) error {
+func New(cfg *gwconfig.Config, log *slog.Logger) error {
 	gw := &Gateway{}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// NotifyContext сам снимает обработчик сигнала по stop() - в отличие от
+	// голого signal.Notify в горутине, которая висела бы вечно, если серверы
+	// упадут, так и не дождавшись сигнала.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	// Соединения с gRPC-бэкендами. NewClient не ходит в сеть сразу -
 	// подключение установится лениво, при первом вызове.
+	defer gw.closeConns()
+
 	authConn, err := gw.dial(cfg.Upstreams.Auth)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = authConn.Close() }()
 
 	customerConn, err := gw.dial(cfg.Upstreams.Customer)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = customerConn.Close() }()
 
 	// gwMux - сгенерированный grpc-gateway мост: разбирает HTTP-запрос по
 	// правилам google.api.http из proto и вызывает соответствующий gRPC-метод.
@@ -62,6 +70,7 @@ func New(cfg gwconfig.Config, log *slog.Logger) error {
 			MarshalOptions:   protojson.MarshalOptions{EmitUnpopulated: true},
 			UnmarshalOptions: protojson.UnmarshalOptions{DiscardUnknown: true},
 		}),
+		runtime.WithMetadata(gatewayMetadata),
 	)
 
 	if err := authv1.RegisterAuthServiceHandler(ctx, gwMux, authConn); err != nil {
@@ -75,10 +84,6 @@ func New(cfg gwconfig.Config, log *slog.Logger) error {
 	mux.Handle("/v1/", gwMux)
 	mux.Handle(specPath, swaggerui.SpecHandler())
 	mux.Handle("/swagger/", http.StripPrefix("/swagger/", swaggerui.Handler(specPath)))
-	//mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-	//	w.WriteHeader(http.StatusOK)
-	//	_, _ = w.Write([]byte("ok"))
-	//})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -87,9 +92,11 @@ func New(cfg gwconfig.Config, log *slog.Logger) error {
 		http.Redirect(w, r, "/swagger/", http.StatusFound)
 	})
 
+	httpAddr := cfg.Server.GetAddr()
 	gw.server = &http.Server{
-		Addr:              cfg.HTTPAddr,
-		Handler:           logRequests(log, mux),
+		Addr: httpAddr,
+		// requestID снаружи логов: строка лога должна уже содержать id.
+		Handler:           requestID(logRequests(log, mux)),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       cfg.RequestTimeout,
 		WriteTimeout:      cfg.RequestTimeout + 5*time.Second,
@@ -107,9 +114,10 @@ func New(cfg gwconfig.Config, log *slog.Logger) error {
 	reflection.Register(grpcSrv)
 	healthSrv.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 
-	healthLis, err := net.Listen("tcp", cfg.GatewayAddr)
+	healthAddr := cfg.GRPC.GetAddr()
+	healthLis, err := net.Listen("tcp", healthAddr)
 	if err != nil {
-		return fmt.Errorf("listen %s: %w", cfg.GatewayAddr, err)
+		return fmt.Errorf("listen %s: %w", healthAddr, err)
 	}
 	go func() {
 		// Serve возвращает ErrServerStopped после GracefulStop - это штатный
@@ -121,44 +129,54 @@ func New(cfg gwconfig.Config, log *slog.Logger) error {
 
 	go func() {
 		log.Info("http listening",
-			"addr", cfg.HTTPAddr,
-			"health", cfg.GatewayAddr,
+			"addr", httpAddr,
+			"health", healthAddr,
 			"auth", cfg.Upstreams.Auth,
-			//"customer", cfg.Upstreams.Customer,
-			"swagger", "http://localhost"+cfg.HTTPAddr+"/swagger/",
+			"customer", cfg.Upstreams.Customer,
+			"swagger", "http://"+httpAddr+"/swagger/",
 		)
 		if err := gw.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
 	}()
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-
 	select {
 	case err := <-errCh:
 		return err
-	case <-stop:
-		log.Info("shutting down")
+	case <-ctx.Done():
+		log.Info("shutting down", "timeout", cfg.ShutdownTimeout)
 		// Сначала объявляем себя NOT_SERVING, чтобы monitor увидел штатное
 		// выключение, и только потом закрываем серверы.
 		healthSrv.Shutdown()
 		grpcSrv.GracefulStop()
 
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 		defer shutdownCancel()
 		return gw.server.Shutdown(shutdownCtx)
 	}
 }
 
+// dial открывает соединение с апстримом и запоминает его, чтобы closeConns
+// закрыл всё разом.
+//
+// StatsHandler тот же, что ставит себе platform/grpc_server на входящих
+// вызовах, - так спан клиента и спан сервера склеиваются в одну трассу.
 func (g *Gateway) dial(addr string) (*grpc.ClientConn, error) {
-	return grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("dial %s: %w", addr, err)
+	}
+
+	g.conns = append(g.conns, conn)
+
+	return conn, nil
 }
 
-func logRequests(log *slog.Logger, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		next.ServeHTTP(w, r)
-		log.Info("http", "method", r.Method, "path", r.URL.Path, "took", time.Since(start))
-	})
+func (g *Gateway) closeConns() {
+	for _, conn := range g.conns {
+		_ = conn.Close()
+	}
 }
