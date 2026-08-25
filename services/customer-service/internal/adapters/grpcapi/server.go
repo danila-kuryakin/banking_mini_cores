@@ -1,4 +1,4 @@
-// Package grpcapi is the inbound gRPC adapter of auth-service: it translates
+// Package grpc_server is the inbound gRPC adapter of auth-service: it translates
 // protobuf messages into use-case calls and domain errors back into gRPC
 // statuses.
 //
@@ -14,9 +14,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	service "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters"
-	gwconfig "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/config"
-	authv1 "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/pb/gen/auth/v1"
+	service "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/adapters"
+	gwconfig "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/config"
+	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/pb/gen/customer/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -24,7 +24,7 @@ import (
 )
 
 type Server struct {
-	authv1.UnimplementedAuthServiceServer
+	customerv1.UnimplementedCustomerServiceServer
 }
 
 // NewServer creates the adapter. Use cases will be injected here as they are
@@ -36,7 +36,7 @@ func NewServer(cfg gwconfig.Config, log *slog.Logger) error {
 	}
 
 	srv := grpc.NewServer()
-	authv1.RegisterAuthServiceServer(srv, service.NewAuth(log))
+	customerv1.RegisterCustomerServiceServer(srv, service.NewCustomer(log))
 	// Рефлексия нужна, чтобы сервис можно было дёргать через grpcurl без .proto.
 	reflection.Register(srv)
 
@@ -45,7 +45,7 @@ func NewServer(cfg gwconfig.Config, log *slog.Logger) error {
 	healthSrv := health.NewServer()
 	healthpb.RegisterHealthServer(srv, healthSrv)
 	healthSrv.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
-	healthSrv.SetServingStatus(authv1.AuthService_ServiceDesc.ServiceName, healthpb.HealthCheckResponse_SERVING)
+	healthSrv.SetServingStatus(customerv1.CustomerService_ServiceDesc.ServiceName, healthpb.HealthCheckResponse_SERVING)
 
 	go func() {
 		stop := make(chan os.Signal, 1)

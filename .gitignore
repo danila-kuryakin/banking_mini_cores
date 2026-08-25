@@ -14,6 +14,7 @@ go.work
 go.work.sum
 
 # Local environment overrides. deploy/.env.example is committed.
+*.env
 .env
 deploy/.env
 

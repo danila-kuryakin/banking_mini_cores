@@ -16,7 +16,7 @@ import (
 	"github.com/danila-kuryakin/banking_mini_cores/services/monitor/internal/checker"
 )
 
-const defaultTargets = "auth=localhost:50051,gateway=localhost:50059"
+const defaultTargets = "customer=localhost:50052, auth=localhost:50051,gateway=localhost:50059"
 
 func main() {
 	targets := flag.String("targets", envOr("MONITOR_TARGETS", defaultTargets), "список сервисов вида имя=адрес через запятую")
@@ -75,7 +75,7 @@ func checkOnce(c *checker.Checker, timeout time.Duration) {
 	c.CheckAll(ctx)
 }
 
-// parseTargets разбирает строку вида "echo=localhost:50051,square=localhost:50052".
+// parseTargets разбирает строку.
 func parseTargets(raw string) ([]checker.Target, error) {
 	var targets []checker.Target
 

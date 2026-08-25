@@ -13,6 +13,7 @@ import (
 	"time"
 
 	authv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/auth/v1"
+	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/customer/v1"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -48,11 +49,11 @@ func New(cfg gwconfig.Config, log *slog.Logger) error {
 	}
 	defer func() { _ = authConn.Close() }()
 
-	//customerConn, err := gw.dial(cfg.Upstreams.Customer)
-	//if err != nil {
-	//	return err
-	//}
-	//defer func() { _ = customerConn.Close() }()
+	customerConn, err := gw.dial(cfg.Upstreams.Customer)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = customerConn.Close() }()
 
 	// gwMux - сгенерированный grpc-gateway мост: разбирает HTTP-запрос по
 	// правилам google.api.http из proto и вызывает соответствующий gRPC-метод.
@@ -66,18 +67,18 @@ func New(cfg gwconfig.Config, log *slog.Logger) error {
 	if err := authv1.RegisterAuthServiceHandler(ctx, gwMux, authConn); err != nil {
 		return err
 	}
-	//if err := customerv1.RegisterCustomerServiceHandler(ctx, gwMux, customerConn); err != nil {
-	//	return err
-	//}
+	if err := customerv1.RegisterCustomerServiceHandler(ctx, gwMux, customerConn); err != nil {
+		return err
+	}
 
 	mux := http.NewServeMux()
 	mux.Handle("/v1/", gwMux)
 	mux.Handle(specPath, swaggerui.SpecHandler())
 	mux.Handle("/swagger/", http.StripPrefix("/swagger/", swaggerui.Handler(specPath)))
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	})
+	//mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+	//	w.WriteHeader(http.StatusOK)
+	//	_, _ = w.Write([]byte("ok"))
+	//})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)

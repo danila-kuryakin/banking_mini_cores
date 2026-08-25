@@ -38,7 +38,6 @@ type Config struct {
 	GatewayAddr    string // Для health checks. Остальные микросервисы доступны по тому же адресу Upstreams
 	Upstreams      Upstreams
 	JWKSURL        string
-	CORSOrigins    []string
 	RequestTimeout time.Duration
 }
 
@@ -59,7 +58,7 @@ func Load() (Config, error) {
 		GatewayAddr: config.String("GATEWAY_ADDR", ":50059"),
 		Upstreams: Upstreams{
 			Auth:         config.String("AUTH_SERVICE_ADDR", "localhost:50051"),
-			Customer:     config.String("CUSTOMER_SERVICE_ADDR", "customer-service:50052"),
+			Customer:     config.String("CUSTOMER_SERVICE_ADDR", "localhost:50052"),
 			KYC:          config.String("KYC_SERVICE_ADDR", "kyc-service:50053"),
 			Document:     config.String("DOCUMENT_SERVICE_ADDR", "document-service:50054"),
 			Account:      config.String("ACCOUNT_SERVICE_ADDR", "account-service:50055"),
@@ -68,7 +67,6 @@ func Load() (Config, error) {
 			Notification: config.String("NOTIFICATION_SERVICE_ADDR", "notification-service:50058"),
 		},
 		JWKSURL:        config.String("JWKS_URL", ""),
-		CORSOrigins:    config.StringSlice("CORS_ORIGINS", []string{"http://localhost:3000"}),
 		RequestTimeout: requestTimeout,
 	}
 

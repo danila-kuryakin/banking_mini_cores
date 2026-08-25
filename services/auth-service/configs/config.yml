@@ -1,0 +1,12 @@
+server:
+  host: localhost
+  port: 50051
+
+database:
+  host: localhost
+  port: 5432
+  user: 1
+  password: 1
+  dbname: banking_mc
+  ssl_mode: disable
+
