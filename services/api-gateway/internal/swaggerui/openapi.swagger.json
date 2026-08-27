@@ -389,6 +389,73 @@
         ]
       }
     },
+    "/v1/antifraud/transfer": {
+      "post": {
+        "operationId": "AntifraudService_CheckTransfer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CheckTransferResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "from_account_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "to_account_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "customer_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "amount.amount",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "amount.currency",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "idempotency_key",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AntifraudService"
+        ]
+      }
+    },
     "/v1/auth/login": {
       "post": {
         "operationId": "AuthService_Login",
@@ -1555,21 +1622,20 @@
         "year": {
           "type": "integer",
           "format": "int32",
-          "description": "Year of the date. Must be from 1 to 9999, or 0 to specify a date without\na year."
+          "description": "Year of the date. Must be from 1 to 9999, or 0 to specify a date without\r\na year."
         },
         "month": {
           "type": "integer",
           "format": "int32",
-          "description": "Month of a year. Must be from 1 to 12, or 0 to specify a year without a\nmonth and day."
+          "description": "Month of a year. Must be from 1 to 12, or 0 to specify a year without a\r\nmonth and day."
         },
         "day": {
           "type": "integer",
           "format": "int32",
-          "description": "Day of a month. Must be from 1 to 31 and valid for the year and month, or 0\nto specify a year by itself or a year and month where the day isn't\nsignificant."
+          "description": "Day of a month. Must be from 1 to 31 and valid for the year and month, or 0\r\nto specify a year by itself or a year and month where the day isn't\r\nsignificant."
         }
       },
-      "description": "* A full date, with non-zero year, month, and day values.\n* A month and day, with a zero year (for example, an anniversary).\n* A year on its own, with a zero month and a zero day.\n* A year and month, with a zero day (for example, a credit card expiration\n  date).\n\nRelated types:\n\n* [google.type.TimeOfDay][google.type.TimeOfDay]\n* [google.type.DateTime][google.type.DateTime]\n* [google.protobuf.Timestamp][google.protobuf.Timestamp]",
-      "title": "Represents a whole or partial calendar date, such as a birthday. The time of\nday and time zone are either specified elsewhere or are insignificant. The\ndate is relative to the Gregorian Calendar. This can represent one of the\nfollowing:"
+      "title": "Represents a whole or partial calendar date, such as a birthday. The time of\r\nday and time zone are either specified elsewhere or are insignificant. The\r\ndate is relative to the Gregorian Calendar. This can represent one of the\r\nfollowing:\r\n\r\n* A full date, with non-zero year, month, and day values.\r\n* A month and day, with a zero year (for example, an anniversary).\r\n* A year on its own, with a zero month and a zero day.\r\n* A year and month, with a zero day (for example, a credit card expiration\r\n  date).\r\n\r\nRelated types:\r\n\r\n* [google.type.TimeOfDay][google.type.TimeOfDay]\r\n* [google.type.DateTime][google.type.DateTime]\r\n* [google.protobuf.Timestamp][google.protobuf.Timestamp]"
     },
     "v1Account": {
       "type": "object",
@@ -1611,8 +1677,7 @@
         "ACCOUNT_STATUS_CLOSED"
       ],
       "default": "ACCOUNT_STATUS_UNSPECIFIED",
-      "description": "ACTIVE  -\u003e BLOCKED -\u003e ACTIVE\n  ACTIVE  -\u003e CLOSED\n\nCLOSED is terminal.",
-      "title": "AccountStatus transitions:"
+      "description": "AccountStatus transitions:\r\n\r\n  ACTIVE  -\u003e BLOCKED -\u003e ACTIVE\r\n  ACTIVE  -\u003e CLOSED\r\n\r\nCLOSED is terminal."
     },
     "v1Address": {
       "type": "object",
@@ -1724,8 +1789,7 @@
         "APPLICATION_STATUS_REJECTED"
       ],
       "default": "APPLICATION_STATUS_UNSPECIFIED",
-      "description": "DRAFT           -\u003e SUBMITTED\n  SUBMITTED       -\u003e AUTO_CHECKS\n  AUTO_CHECKS     -\u003e AUTO_REJECTED | IN_REVIEW\n  IN_REVIEW       -\u003e APPROVED | REJECTED | DOCS_REQUESTED\n  DOCS_REQUESTED  -\u003e SUBMITTED\n\nAPPROVED, REJECTED and AUTO_REJECTED are terminal.",
-      "title": "ApplicationStatus is the explicit state machine of a KYC application.\nLegal transitions, and nothing else:"
+      "description": "ApplicationStatus is the explicit state machine of a KYC application.\r\nLegal transitions, and nothing else:\r\n\r\n  DRAFT           -\u003e SUBMITTED\r\n  SUBMITTED       -\u003e AUTO_CHECKS\r\n  AUTO_CHECKS     -\u003e AUTO_REJECTED | IN_REVIEW\r\n  IN_REVIEW       -\u003e APPROVED | REJECTED | DOCS_REQUESTED\r\n  DOCS_REQUESTED  -\u003e SUBMITTED\r\n\r\nAPPROVED, REJECTED and AUTO_REJECTED are terminal."
     },
     "v1ApproveApplicationResponse": {
       "type": "object",
@@ -1753,6 +1817,24 @@
         "CHECK_RESULT_ERROR"
       ],
       "default": "CHECK_RESULT_UNSPECIFIED"
+    },
+    "v1CheckTransferResponse": {
+      "type": "object",
+      "properties": {
+        "check_id": {
+          "type": "string"
+        },
+        "verdict": {
+          "$ref": "#/definitions/v1Verdict"
+        },
+        "triggered_rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TriggeredRule"
+          }
+        }
+      }
     },
     "v1CheckType": {
       "type": "string",
@@ -1846,7 +1928,7 @@
         "CUSTOMER_STATUS_BLOCKED"
       ],
       "default": "CUSTOMER_STATUS_UNSPECIFIED",
-      "description": "CustomerStatus is driven by KYC events, never set directly by the customer.\n\n  NEW -\u003e PROFILE_FILLED -\u003e ON_KYC -\u003e ACTIVE\n                                  -\u003e REJECTED\n  any -\u003e BLOCKED"
+      "description": "CustomerStatus is driven by KYC events, never set directly by the customer.\r\n\r\n  NEW -\u003e PROFILE_FILLED -\u003e ON_KYC -\u003e ACTIVE\r\n                                  -\u003e REJECTED\r\n  any -\u003e BLOCKED"
     },
     "v1DepositRequest": {
       "type": "object",

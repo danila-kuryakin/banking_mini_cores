@@ -10,7 +10,11 @@ import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 
 service AntifraudService {
-  rpc CheckTransfer(CheckTransferRequest) returns (CheckTransferResponse);
+  rpc CheckTransfer(CheckTransferRequest) returns (CheckTransferResponse) {
+    option (google.api.http) = {
+      post: "/v1/antifraud/transfer"
+    };
+  }
 
   rpc ListRules(ListRulesRequest) returns (ListRulesResponse) {
     option (google.api.http) = {get: "/v1/antifraud/rules"};

@@ -1,4 +1,4 @@
-package postgres
+package connection
 
 import (
 	"context"
@@ -10,6 +10,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Умолчания пула. Считать их надо не на сервис, а на весь стек: соединения
+// делят все сервисы разом, а max_connections у Postgres по умолчанию 100.
+// MinConns держится открытым постоянно, поэтому он маленький - иначе несколько
+// сервисов исчерпают лимит, не обслужив ни одного запроса.
+const (
+	defaultMaxConns          = 10
+	defaultMinConns          = 2
+	defaultMaxConnLifetime   = 1 * time.Hour    // Время жизни подключения, для его обновления
+	defaultMaxConnIdleTime   = 30 * time.Minute // Простаивающее соединение закрывается (например, ночью)
+	defaultHealthCheckPeriod = 15 * time.Minute // Как часто проверять соединения
+)
+
 func NewConnectionDB(cfg config.DataBaseConfig) (*pgxpool.Pool, error) {
 	dsn := cfg.GetDSN()
 	// Парсим и разбираем структуру конфига
@@ -18,12 +30,20 @@ func NewConnectionDB(cfg config.DataBaseConfig) (*pgxpool.Pool, error) {
 		return nil, fmt.Errorf("Не удалось прочесть конфиг дб: %w", err)
 	}
 
-	// Настройка пула
-	poolcfg.MaxConns = 100                       // Это макс.возможное подключение
-	poolcfg.MinConns = 30                        // Это колчество соединений которое будет жить всегда
-	poolcfg.MaxConnLifetime = 1 * time.Hour      // Время жизни подключения, для егоьобнолвения
-	poolcfg.MaxConnIdleTime = 30 * time.Minute   // Если никто не юзает подключение оно вкл(например ночью)
-	poolcfg.HealthCheckPeriod = 15 * time.Minute // Как часто будут проверки соединения
+	// Настройка пула: что задано в конфиге - берём оттуда, остальное по умолчанию.
+	poolcfg.MaxConns = orDefaultInt32(cfg.MaxConns, defaultMaxConns)
+	poolcfg.MinConns = orDefaultInt32(cfg.MinConns, defaultMinConns)
+	poolcfg.MaxConnLifetime = orDefaultDuration(cfg.MaxConnLifetime, defaultMaxConnLifetime)
+	poolcfg.MaxConnIdleTime = orDefaultDuration(cfg.MaxConnIdleTime, defaultMaxConnIdleTime)
+	poolcfg.HealthCheckPeriod = orDefaultDuration(cfg.HealthCheckPeriod, defaultHealthCheckPeriod)
+
+	// pgxpool при MinConns > MaxConns ведёт себя неочевидно, поэтому чиним сами
+	// и говорим об этом вслух - опечатка в конфиге не должна тихо съедаться.
+	if poolcfg.MinConns > poolcfg.MaxConns {
+		log.Printf("db: min_conns (%d) больше max_conns (%d), опускаю min_conns до max_conns",
+			poolcfg.MinConns, poolcfg.MaxConns)
+		poolcfg.MinConns = poolcfg.MaxConns
+	}
 
 	// Создаем Pool
 	pool, err := pgxpool.NewWithConfig(context.Background(), poolcfg)
@@ -39,6 +59,20 @@ func NewConnectionDB(cfg config.DataBaseConfig) (*pgxpool.Pool, error) {
 		return nil, fmt.Errorf("Связь с дб не установлена: %w", err)
 	}
 
-	log.Printf("Подключение к db успешно")
+	log.Printf("Подключение к db успешно (пул: min %d, max %d)", poolcfg.MinConns, poolcfg.MaxConns)
 	return pool, nil
+}
+
+func orDefaultInt32(v, def int32) int32 {
+	if v <= 0 {
+		return def
+	}
+	return v
+}
+
+func orDefaultDuration(v, def time.Duration) time.Duration {
+	if v <= 0 {
+		return def
+	}
+	return v
 }

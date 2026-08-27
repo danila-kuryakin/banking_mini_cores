@@ -16,7 +16,15 @@ import (
 	"github.com/danila-kuryakin/banking_mini_cores/services/monitor/internal/checker"
 )
 
-const defaultTargets = "customer=localhost:50052, auth=localhost:50051,gateway=localhost:50059"
+const defaultTargets = "" +
+	"auth=localhost:50051, " +
+	"customer=localhost:50052, " +
+	"kyc=localhost:50053, " +
+	"document=localhost:50054, " +
+	"account=localhost:50055, " +
+	"ledger=localhost:50056, " +
+	"antifraud=localhost:50057, " +
+	"notification=localhost:50058"
 
 func main() {
 	targets := flag.String("targets", envOr("MONITOR_TARGETS", defaultTargets), "список сервисов вида имя=адрес через запятую")

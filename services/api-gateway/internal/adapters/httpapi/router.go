@@ -17,18 +17,22 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/danila-kuryakin/banking_mini_cores/platform/grpc_server"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/health"
-	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	gwconfig "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/config"
+	accountv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/account/v1"
+	antifraudv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/antifraud/v1"
 	authv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/auth/v1"
 	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/customer/v1"
+	documentv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/document/v1"
+	kycv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/kyc/v1"
+	ledgerv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/ledger/v1"
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/swaggerui"
 )
 
@@ -63,6 +67,31 @@ func New(cfg *gwconfig.Config, log *slog.Logger) error {
 		return err
 	}
 
+	accountConn, err := gw.dial(cfg.Upstreams.Account)
+	if err != nil {
+		return err
+	}
+
+	antifraudConn, err := gw.dial(cfg.Upstreams.Antifraud)
+	if err != nil {
+		return err
+	}
+
+	kycConn, err := gw.dial(cfg.Upstreams.KYC)
+	if err != nil {
+		return err
+	}
+
+	documentConn, err := gw.dial(cfg.Upstreams.Document)
+	if err != nil {
+		return err
+	}
+
+	ledgerConn, err := gw.dial(cfg.Upstreams.Ledger)
+	if err != nil {
+		return err
+	}
+
 	// gwMux - сгенерированный grpc-gateway мост: разбирает HTTP-запрос по
 	// правилам google.api.http из proto и вызывает соответствующий gRPC-метод.
 	gwMux := runtime.NewServeMux(
@@ -79,6 +108,21 @@ func New(cfg *gwconfig.Config, log *slog.Logger) error {
 	if err := customerv1.RegisterCustomerServiceHandler(ctx, gwMux, customerConn); err != nil {
 		return err
 	}
+	if err := accountv1.RegisterAccountServiceHandler(ctx, gwMux, accountConn); err != nil {
+		return err
+	}
+	if err := antifraudv1.RegisterAntifraudServiceHandler(ctx, gwMux, antifraudConn); err != nil {
+		return err
+	}
+	if err := kycv1.RegisterKycServiceHandler(ctx, gwMux, kycConn); err != nil {
+		return err
+	}
+	if err := documentv1.RegisterDocumentServiceHandler(ctx, gwMux, documentConn); err != nil {
+		return err
+	}
+	if err := ledgerv1.RegisterLedgerServiceHandler(ctx, gwMux, ledgerConn); err != nil {
+		return err
+	}
 
 	mux := http.NewServeMux()
 	mux.Handle("/v1/", gwMux)
@@ -92,7 +136,7 @@ func New(cfg *gwconfig.Config, log *slog.Logger) error {
 		http.Redirect(w, r, "/swagger/", http.StatusFound)
 	})
 
-	httpAddr := cfg.Server.GetAddr()
+	httpAddr := cfg.RestServer.GetAddr()
 	gw.server = &http.Server{
 		Addr: httpAddr,
 		// requestID снаружи логов: строка лога должна уже содержать id.
@@ -108,13 +152,11 @@ func New(cfg *gwconfig.Config, log *slog.Logger) error {
 	// Сам gateway отвечает по HTTP, но health-проверку отдаёт по gRPC - тем же
 	// протоколом grpc.health.v1.Health, что и остальные сервисы, чтобы monitor
 	// не пришлось учить двум способам опроса.
-	healthSrv := health.NewServer()
 	grpcSrv := grpc.NewServer()
-	healthpb.RegisterHealthServer(grpcSrv, healthSrv)
+	healthSrv := grpc_server.HealthServer(grpcSrv)
 	reflection.Register(grpcSrv)
-	healthSrv.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 
-	healthAddr := cfg.GRPC.GetAddr()
+	healthAddr := cfg.GRPCServer.GetAddr()
 	healthLis, err := net.Listen("tcp", healthAddr)
 	if err != nil {
 		return fmt.Errorf("listen %s: %w", healthAddr, err)

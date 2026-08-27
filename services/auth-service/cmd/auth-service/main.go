@@ -9,7 +9,9 @@ import (
 
 	conn "github.com/danila-kuryakin/banking_mini_cores/platform/connection"
 	"github.com/danila-kuryakin/banking_mini_cores/platform/grpc_server"
-	service "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters"
+	accountint "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/interceptors"
+	service "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters/grpc_server"
+	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters/kafka"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/config"
 	authv1 "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/pb/gen/auth/v1"
 	"google.golang.org/grpc"
@@ -39,14 +41,36 @@ func run() error {
 	}
 	defer dbPool.Close()
 
+	// Продюсер необязателен: без брокеров в конфиге вернётся nil, и сервис
+	// поднимется без шины, а публикация событий станет no-op.
+	producer, err := kafka.NewProducer(cfg.Kafka, logger)
+	if err != nil {
+		log.Fatalf("Не удаётся подключиться к kafka: %v", err)
+	}
+	defer func() {
+		// Close дожидается отправки буфера, поэтому события, записанные
+		// перед остановкой, не теряются.
+		if err := producer.Close(); err != nil {
+			logger.Error("kafka: продюсер закрыт с ошибкой", slog.Any("error", err))
+		}
+	}()
+
 	return grpc_server.NewServer(
 		cfg.Server.GetAddr(),
 		logger,
 
 		grpc_server.WithServices(
 			func(r grpc.ServiceRegistrar) {
-				authv1.RegisterAuthServiceServer(r, service.NewAuth(dbPool, logger))
+				authv1.RegisterAuthServiceServer(r, service.NewAuth(dbPool, producer, logger))
 			},
+		),
+
+		// Базовую цепочку (recovery, request id, metrics, logging, timeout)
+		// подключает сам grpc_server. Здесь - только интерцепторы
+		// account-service; они встают ближе к хендлеру, уже под защитой
+		// recovery и под логами.
+		grpc_server.WithUnaryInterceptors(
+			accountint.Validate(),
 		),
 
 		// Логин ходит в БД и считает bcrypt - 15 секунд по умолчанию тут

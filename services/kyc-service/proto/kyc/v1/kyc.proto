@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package kyc.v1;
 
-option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/document-service/internal/pb/gen/kyc/v1;kycv1";
+option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/pb/gen/kyc/v1;kycv1";
 
 import "common/v1/pagination.proto";
 import "document/v1/document.proto";

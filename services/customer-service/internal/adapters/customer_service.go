@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/adapters/kafka"
 	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/adapters/repository"
 	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/pb/gen/customer/v1"
 )
@@ -17,13 +18,17 @@ import (
 type Customer struct {
 	customerv1.UnimplementedCustomerServiceServer
 	repo *repository.Repository
-	log  *slog.Logger
+	// events может быть nil - это штатный режим работы без Kafka,
+	// методы продюсера в таком случае ничего не делают.
+	events *kafka.Producer
+	log    *slog.Logger
 }
 
-func NewCustomer(db *pgxpool.Pool, log *slog.Logger) *Customer {
+func NewCustomer(db *pgxpool.Pool, events *kafka.Producer, log *slog.Logger) *Customer {
 	return &Customer{
-		repo: repository.NewRepository(db),
-		log:  log,
+		repo:   repository.NewRepository(db),
+		events: events,
+		log:    log,
 	}
 }
 

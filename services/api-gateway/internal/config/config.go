@@ -35,10 +35,10 @@ func (u Upstreams) All() map[string]string {
 
 // Config is the api-gateway configuration beyond the common base.
 type Config struct {
-	Server config.Server `mapstructure:"server"`
+	RestServer config.Server `mapstructure:"server"`
 	// GRPC - адрес health-сервера. Остальные микросервисы доступны по адресам
 	// из Upstreams.
-	GRPC            config.Server `mapstructure:"grpc"`
+	GRPCServer      config.Server `mapstructure:"grpc"`
 	Upstreams       Upstreams     `mapstructure:"upstreams"`
 	JWKSURL         string        `mapstructure:"jwks_url"`
 	RequestTimeout  time.Duration `mapstructure:"request_timeout"`

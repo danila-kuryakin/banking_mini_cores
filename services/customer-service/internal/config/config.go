@@ -10,6 +10,7 @@ import (
 type Config struct {
 	Server   config.Server         `mapstructure:"server"`
 	Postgres config.DataBaseConfig `mapstructure:"database"`
+	Kafka    config.KafkaConfig    `mapstructure:"kafka"`
 }
 
 // Load reads the configuration from the environment.

@@ -10,3 +10,27 @@ database:
   dbname: banking_customer
   ssl_mode: disable
 
+# Шина событий.
+#
+# 29092 - это порт, который брокер из docker-compose публикует на хост.
+# Внутри docker-сети сервис ходит на kafka:9092, туда его переключает
+# переменная KAFKA_BROKERS из compose-файла.
+#
+# Закомментированный brokers - штатный режим: сервис поднимется без Kafka,
+# а публикация событий станет no-op. Именно закомментировать, а не задать
+# KAFKA_BROKERS= пустым: viper считает пустую переменную окружения
+# незаданной, и значение отсюда останется в силе.
+#
+# Непустой список из окружения задаётся строкой через запятую:
+# KAFKA_BROKERS=kafka:9092,kafka-2:9092.
+kafka:
+  brokers:
+    - localhost:29092
+  topic: customer.events
+  group_id: customer-service
+  client_id: customer-service
+  # none | leader | all. Доменное событие терять нельзя, поэтому all.
+  required_acks: all
+  batch_timeout: 200ms
+  write_timeout: 10s
+  max_attempts: 5

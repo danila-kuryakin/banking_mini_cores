@@ -910,9 +910,9 @@ const file_antifraud_v1_antifraud_proto_rawDesc = "" +
 	"\x15RULE_TYPE_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dRULE_TYPE_SINGLE_AMOUNT_LIMIT\x10\x01\x12\x16\n" +
 	"\x12RULE_TYPE_VELOCITY\x10\x02\x12\x1b\n" +
-	"\x17RULE_TYPE_SELF_TRANSFER\x10\x042\xc1\x03\n" +
-	"\x10AntifraudService\x12X\n" +
-	"\rCheckTransfer\x12\".antifraud.v1.CheckTransferRequest\x1a#.antifraud.v1.CheckTransferResponse\x12i\n" +
+	"\x17RULE_TYPE_SELF_TRANSFER\x10\x042\xe1\x03\n" +
+	"\x10AntifraudService\x12x\n" +
+	"\rCheckTransfer\x12\".antifraud.v1.CheckTransferRequest\x1a#.antifraud.v1.CheckTransferResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\"\x16/v1/antifraud/transfer\x12i\n" +
 	"\tListRules\x12\x1e.antifraud.v1.ListRulesRequest\x1a\x1f.antifraud.v1.ListRulesResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/antifraud/rules\x12y\n" +
 	"\n" +
 	"UpdateRule\x12\x1f.antifraud.v1.UpdateRuleRequest\x1a .antifraud.v1.UpdateRuleResponse\"(\x82\xd3\xe4\x93\x02\":\x01*2\x1d/v1/antifraud/rules/{rule_id}\x12m\n" +

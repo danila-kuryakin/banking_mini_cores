@@ -1,4 +1,4 @@
-package repository
+package postgres
 
 import (
 	repositoryApp "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/repository"

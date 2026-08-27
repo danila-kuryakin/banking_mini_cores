@@ -68,7 +68,7 @@ func NewServer(addr string, logger *slog.Logger, opts ...Option) error {
 
 	// Стандартный health-протокол grpc.health.v1.Health - его опрашивает monitor.
 	// Пустое имя означает статус процесса целиком, именованное - конкретного сервиса.
-	s.health = healthServer(s.server)
+	s.health = HealthServer(s.server)
 
 	// NotifyContext сам снимает обработчик сигнала по stop() - в отличие от
 	// голого signal.Notify в горутине, которая висела бы вечно, если Serve
@@ -184,7 +184,7 @@ func (s *Server) shutdown(timeout time.Duration) {
 	}
 }
 
-func healthServer(grpcSrv *grpc.Server) *health.Server {
+func HealthServer(grpcSrv *grpc.Server) *health.Server {
 	healthSrv := health.NewServer()
 	healthpb.RegisterHealthServer(grpcSrv, healthSrv)
 	healthSrv.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
