@@ -1,0 +1,97 @@
+# kafka-service: единственный брокер Kafka на весь стек.
+#
+# Своего кода тут нет - только официальный образ и его настройки, поэтому и
+# Dockerfile отсутствует. Брокер вынесен в отдельный compose осознанно: он
+# общий, и поднимать его из стека какого-то одного сервиса значило бы, что
+# порядок запуска сервисов начинает иметь значение.
+#
+# Остальные сервисы находят брокер по DNS-имени kafka в общей сети
+# banking-net и своего брокера не заводят.
+#
+#   docker network create banking-net   # один раз на машину
+#   docker compose up -d
+#
+# Проверка:
+#   docker exec banking-kafka /opt/kafka/bin/kafka-topics.sh \
+#       --bootstrap-server localhost:9092 --list
+
+name: banking-kafka
+
+services:
+  kafka:
+    image: apache/kafka:3.9.1
+    container_name: banking-kafka
+    environment:
+      # KRaft: брокер и контроллер в одном процессе, ZooKeeper не нужен.
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092
+      # Клиент читает advertised-адрес и подключается по нему повторно. Отсюда
+      # два listener'а: из сети docker брокер зовётся kafka, с хоста - localhost.
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      # Узел один, поэтому реплики служебных топиков тоже одна - иначе брокер
+      # не поднимется, требуя недостающие ноды.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      # В dev ждать полсекунды на ребаланс незачем.
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    ports:
+      # Наружу - только EXTERNAL: с хоста брокер доступен как localhost:29092,
+      # именно этот адрес прописан в configs/config.yml сервисов.
+      - "${KAFKA_PORT:-29092}:29092"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+    networks: [banking-net]
+
+  # Разовая задача: заводит топики и завершается.
+  #
+  # Топики создаются явно и до старта сервисов, а не автосозданием на первой
+  # записи. Причина в консьюмере: группа получает партиции в момент входа, и
+  # если топика тогда ещё не было, читатель остаётся без единой партиции.
+  # Выглядит он при этом совершенно живым — подписка залогирована, ошибок нет,
+  # а события текут мимо, пока сервис не перезапустят.
+  #
+  # WatchPartitionChanges в platform/connection этот случай не закрывает: он
+  # ловит партиции, добавленные к уже существующему топику.
+  kafka-init:
+    image: apache/kafka:3.9.1
+    container_name: banking-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    # Партиций три, чтобы консьюмеров одной группы можно было масштабировать:
+    # больше инстансов, чем партиций, работать не начнут. Реплика одна - узел
+    # в кластере тоже один.
+    #
+    # Список из одного элемента, а не строка: строку compose разбивает по
+    # пробелам, и тогда sh -c получает первым аргументом только "for".
+    # $$t — это экранированный $t: одиночный $ compose съел бы сам.
+    command:
+      - |
+        for t in auth.events customer.events kyc.events ledger.events; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 \
+            --create --if-not-exists --topic "$$t" \
+            --partitions 3 --replication-factor 1
+        done
+    restart: "no"
+    networks: [banking-net]
+
+volumes:
+  kafka-data:
+
+networks:
+  banking-net:
+    external: true

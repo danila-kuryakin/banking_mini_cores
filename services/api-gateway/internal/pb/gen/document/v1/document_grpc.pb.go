@@ -29,11 +29,36 @@ const (
 // DocumentServiceClient is the client API for DocumentService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// DocumentService хранит документы клиента: сканы паспорта, селфи,
+// подтверждение адреса.
+//
+// Байты файлов через это API не ходят. Загрузка и скачивание идут напрямую в
+// объектное хранилище по предподписанным ссылкам, а сервис ведёт только
+// метаданные и выдаёт эти ссылки. Так крупные бинарники не попадают в
+// gRPC-тракт, где они занимали бы соединения и упирались в лимит размера
+// сообщения.
 type DocumentServiceClient interface {
+	// InitUpload регистрирует намерение загрузить файл и возвращает ссылку, куда
+	// его положить PUT-запросом. С этого момента документ существует в статусе
+	// PENDING, и байтов за ним ещё нет.
 	InitUpload(ctx context.Context, in *InitUploadRequest, opts ...grpc.CallOption) (*InitUploadResponse, error)
+	// ConfirmUpload сообщает сервису, что байты уже в хранилище.
+	//
+	// Нужен потому, что загрузка идёт мимо сервиса: без этого вызова никто не
+	// узнает, что передача завершилась. Документ, который так и не подтвердили,
+	// остаётся в PENDING и со временем вычищается.
 	ConfirmUpload(ctx context.Context, in *ConfirmUploadRequest, opts ...grpc.CallOption) (*ConfirmUploadResponse, error)
+	// GetDownloadUrl выдаёт короткоживущую ссылку на чтение файла.
+	//
+	// Выдаётся на каждый запрос, а не хранится в Document: ссылка, лежащая в
+	// базе, — это ссылка, утекающая вместе с дампом базы.
 	GetDownloadUrl(ctx context.Context, in *GetDownloadUrlRequest, opts ...grpc.CallOption) (*GetDownloadUrlResponse, error)
 	ListDocuments(ctx context.Context, in *ListDocumentsRequest, opts ...grpc.CallOption) (*ListDocumentsResponse, error)
+	// HasRequiredDocuments отвечает на вопрос "всё ли нужное у клиента есть".
+	//
+	// HTTP-маппинга нет: его зовёт kyc-service, прежде чем двинуть анкету
+	// дальше, и клиентам он не предназначен.
 	HasRequiredDocuments(ctx context.Context, in *HasRequiredDocumentsRequest, opts ...grpc.CallOption) (*HasRequiredDocumentsResponse, error)
 }
 
@@ -98,11 +123,36 @@ func (c *documentServiceClient) HasRequiredDocuments(ctx context.Context, in *Ha
 // DocumentServiceServer is the server API for DocumentService service.
 // All implementations must embed UnimplementedDocumentServiceServer
 // for forward compatibility.
+//
+// DocumentService хранит документы клиента: сканы паспорта, селфи,
+// подтверждение адреса.
+//
+// Байты файлов через это API не ходят. Загрузка и скачивание идут напрямую в
+// объектное хранилище по предподписанным ссылкам, а сервис ведёт только
+// метаданные и выдаёт эти ссылки. Так крупные бинарники не попадают в
+// gRPC-тракт, где они занимали бы соединения и упирались в лимит размера
+// сообщения.
 type DocumentServiceServer interface {
+	// InitUpload регистрирует намерение загрузить файл и возвращает ссылку, куда
+	// его положить PUT-запросом. С этого момента документ существует в статусе
+	// PENDING, и байтов за ним ещё нет.
 	InitUpload(context.Context, *InitUploadRequest) (*InitUploadResponse, error)
+	// ConfirmUpload сообщает сервису, что байты уже в хранилище.
+	//
+	// Нужен потому, что загрузка идёт мимо сервиса: без этого вызова никто не
+	// узнает, что передача завершилась. Документ, который так и не подтвердили,
+	// остаётся в PENDING и со временем вычищается.
 	ConfirmUpload(context.Context, *ConfirmUploadRequest) (*ConfirmUploadResponse, error)
+	// GetDownloadUrl выдаёт короткоживущую ссылку на чтение файла.
+	//
+	// Выдаётся на каждый запрос, а не хранится в Document: ссылка, лежащая в
+	// базе, — это ссылка, утекающая вместе с дампом базы.
 	GetDownloadUrl(context.Context, *GetDownloadUrlRequest) (*GetDownloadUrlResponse, error)
 	ListDocuments(context.Context, *ListDocumentsRequest) (*ListDocumentsResponse, error)
+	// HasRequiredDocuments отвечает на вопрос "всё ли нужное у клиента есть".
+	//
+	// HTTP-маппинга нет: его зовёт kyc-service, прежде чем двинуть анкету
+	// дальше, и клиентам он не предназначен.
 	HasRequiredDocuments(context.Context, *HasRequiredDocumentsRequest) (*HasRequiredDocumentsResponse, error)
 	mustEmbedUnimplementedDocumentServiceServer()
 }

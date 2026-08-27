@@ -21,10 +21,24 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Money — денежная сумма. На этом типе говорят все сервисы, которые двигают
+// деньги, чтобы ни на одной границе системы не приходилось гадать о единицах.
 type Money struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Amount        int64                  `protobuf:"varint,1,opt,name=amount,proto3" json:"amount,omitempty"`
-	Currency      string                 `protobuf:"bytes,2,opt,name=currency,proto3" json:"currency,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Сумма в минорных единицах валюты: 1050 при currency "USD" — это $10.50,
+	// а не $1050.
+	//
+	// Целое, а не число с плавающей точкой, и это принципиально. Двоичный float
+	// не представляет 0.10 точно, поэтому суммирование уводит результат на доли
+	// цента — в отчёте терпимо, в реестре проводок, который обязан сходиться,
+	// недопустимо.
+	Amount int64 `protobuf:"varint,1,opt,name=amount,proto3" json:"amount,omitempty"`
+	// Буквенный код ISO 4217, в верхнем регистре: "USD", "EUR".
+	//
+	// Сумма без него бессмысленна, и пара должна ходить вместе: сравнение или
+	// сложение сумм в разных валютах — ошибка, которую система типов не поймает,
+	// поэтому сервисы проверяют это явно.
+	Currency      string `protobuf:"bytes,2,opt,name=currency,proto3" json:"currency,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

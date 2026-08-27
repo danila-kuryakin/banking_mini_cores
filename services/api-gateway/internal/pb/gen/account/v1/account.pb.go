@@ -24,19 +24,24 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// AccountStatus transitions:
+// Переходы AccountStatus:
 //
 //	ACTIVE  -> BLOCKED -> ACTIVE
 //	ACTIVE  -> CLOSED
 //
-// CLOSED is terminal.
+// CLOSED терминален.
 type AccountStatus int32
 
 const (
 	AccountStatus_ACCOUNT_STATUS_UNSPECIFIED AccountStatus = 0
-	AccountStatus_ACCOUNT_STATUS_ACTIVE      AccountStatus = 1
-	AccountStatus_ACCOUNT_STATUS_BLOCKED     AccountStatus = 2
-	AccountStatus_ACCOUNT_STATUS_CLOSED      AccountStatus = 3
+	// Обычное состояние. Деньги ходят в обе стороны.
+	AccountStatus_ACCOUNT_STATUS_ACTIVE AccountStatus = 1
+	// Заморожен. Баланс и история читаются, но ни одна проводка счёт не тронет.
+	// Обратимо.
+	AccountStatus_ACCOUNT_STATUS_BLOCKED AccountStatus = 2
+	// Закрыт окончательно. Счёт при этом сохраняется, а не удаляется: история
+	// его проводок нужна аудиту ещё долго после ухода клиента.
+	AccountStatus_ACCOUNT_STATUS_CLOSED AccountStatus = 3
 )
 
 // Enum value maps for AccountStatus.
@@ -83,12 +88,22 @@ func (AccountStatus) EnumDescriptor() ([]byte, []int) {
 }
 
 type Account struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountId     string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
-	CustomerId    string                 `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	AccountNumber string                 `protobuf:"bytes,3,opt,name=account_number,json=accountNumber,proto3" json:"account_number,omitempty"`
-	Currency      string                 `protobuf:"bytes,4,opt,name=currency,proto3" json:"currency,omitempty"`
-	Status        AccountStatus          `protobuf:"varint,5,opt,name=status,proto3,enum=account.v1.AccountStatus" json:"status,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Внутренний идентификатор. Используется везде между сервисами.
+	AccountId  string `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	CustomerId string `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	// Номер, который клиент видит и диктует по телефону, например IBAN.
+	//
+	// Отдельно от account_id намеренно: показываемый номер следует публичному
+	// формату с контрольной суммой и может быть перевыпущен, а внутренний id
+	// непрозрачен и меняться не должен никогда.
+	AccountNumber string `protobuf:"bytes,3,opt,name=account_number,json=accountNumber,proto3" json:"account_number,omitempty"`
+	// Код ISO 4217. Фиксируется при открытии — счёт держит ровно одну валюту,
+	// поэтому конвертации счёта попросту не бывает.
+	Currency string        `protobuf:"bytes,4,opt,name=currency,proto3" json:"currency,omitempty"`
+	Status   AccountStatus `protobuf:"varint,5,opt,name=status,proto3,enum=account.v1.AccountStatus" json:"status,omitempty"`
+	// Почему заблокирован. Проставляется вместе с BLOCKED и сохраняется потом
+	// для аудита.
 	BlockReason   string                 `protobuf:"bytes,6,opt,name=block_reason,json=blockReason,proto3" json:"block_reason,omitempty"`
 	OpenedAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=opened_at,json=openedAt,proto3" json:"opened_at,omitempty"`
 	ClosedAt      *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=closed_at,json=closedAt,proto3" json:"closed_at,omitempty"`
@@ -183,10 +198,14 @@ func (x *Account) GetClosedAt() *timestamppb.Timestamp {
 }
 
 type OpenAccountRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	CustomerId     string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	Currency       string                 `protobuf:"bytes,2,opt,name=currency,proto3" json:"currency,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	CustomerId string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	// Код ISO 4217 открываемого счёта. По счёту на валюту: кому нужны две
+	// валюты, тот открывает два счёта.
+	Currency string `protobuf:"bytes,2,opt,name=currency,proto3" json:"currency,omitempty"`
+	// Без него повторённый запрос откроет второй счёт — и, в отличие от
+	// задвоенного чтения, отменить это клиент сам не сможет.
+	IdempotencyKey string `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -375,10 +394,12 @@ func (x *GetAccountResponse) GetAccount() *Account {
 }
 
 type ListAccountsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CustomerId    string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	Status        AccountStatus          `protobuf:"varint,2,opt,name=status,proto3,enum=account.v1.AccountStatus" json:"status,omitempty"`
-	Page          *v1.PageRequest        `protobuf:"bytes,3,opt,name=page,proto3" json:"page,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Чьи счета. Клиент вправе передать только свой customer_id.
+	CustomerId string `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	// UNSPECIFIED — любой статус, включая закрытые счета.
+	Status        AccountStatus   `protobuf:"varint,2,opt,name=status,proto3,enum=account.v1.AccountStatus" json:"status,omitempty"`
+	Page          *v1.PageRequest `protobuf:"bytes,3,opt,name=page,proto3" json:"page,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -487,10 +508,13 @@ func (x *ListAccountsResponse) GetPage() *v1.PageResponse {
 }
 
 type BlockAccountRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	AccountId      string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
-	Reason         string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	AccountId string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	// Почему — подозрение в мошенничестве, решение суда, просьба клиента.
+	// Сохраняется на счёте: заморозку, которую потом никто не может объяснить,
+	// никто и не решится снять.
+	Reason         string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	IdempotencyKey string `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -590,6 +614,7 @@ func (x *BlockAccountResponse) GetAccount() *Account {
 	return nil
 }
 
+// Не используется, пока метод UnblockAccount выше закомментирован.
 type UnblockAccountRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	AccountId      string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
@@ -642,6 +667,7 @@ func (x *UnblockAccountRequest) GetIdempotencyKey() string {
 	return ""
 }
 
+// Не используется, пока метод UnblockAccount выше закомментирован.
 type UnblockAccountResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Account       *Account               `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
@@ -827,8 +853,11 @@ func (x *GetBalanceRequest) GetAccountId() string {
 }
 
 type GetBalanceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Balance       *v1.Money              `protobuf:"bytes,1,opt,name=balance,proto3" json:"balance,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Balance *v1.Money              `protobuf:"bytes,1,opt,name=balance,proto3" json:"balance,omitempty"`
+	// Момент, на который посчитан баланс. Баланс без отметки времени
+	// неопровержим в дурном смысле: читатель не отличит актуальную цифру от
+	// взятой из кеша.
 	AsOf          *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=as_of,json=asOf,proto3" json:"as_of,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

@@ -9,7 +9,15 @@ import "document/v1/document.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 
+// KycService ведёт Know Your Customer — регулируемую процедуру, решающую,
+// можно ли вообще обслуживать этого человека.
+//
+// Каждое решение записывается как ApplicationEvent, а не как изменение
+// текущего состояния. Регулятор спрашивает "кто одобрил и когда", и ответ
+// обязан пережить все последующие правки со стороны клиента.
 service KycService {
+  // SubmitApplication начинает проверку — или подаёт заново ту анкету, которую
+  // вернули за недостающими документами.
   rpc SubmitApplication(SubmitApplicationRequest) returns (SubmitApplicationResponse) {
     option (google.api.http) = {
       post: "/v1/kyc/applications"
@@ -21,10 +29,16 @@ service KycService {
     option (google.api.http) = {get: "/v1/kyc/applications/{application_id}"};
   }
 
+  // ListApplications — рабочая очередь офицера.
   rpc ListApplications(ListApplicationsRequest) returns (ListApplicationsResponse) {
     option (google.api.http) = {get: "/v1/kyc/applications"};
   }
 
+  // ClaimApplication закрепляет анкету за вызывающим офицером.
+  //
+  // Взятие в работу существует для того, чтобы двое не разбирали одну анкету
+  // параллельно и не пришли к противоположным выводам. Это единственный вызов
+  // с version — потому что это единственный вызов, который гоняется.
   rpc ClaimApplication(ClaimApplicationRequest) returns (ClaimApplicationResponse) {
     option (google.api.http) = {
       post: "/v1/kyc/applications/{application_id}:claim"
@@ -32,6 +46,8 @@ service KycService {
     };
   }
 
+  // ApproveApplication пропускает клиента. Терминальный: публикует событие,
+  // которое переводит клиента в ACTIVE и открывает дорогу к счетам.
   rpc ApproveApplication(ApproveApplicationRequest) returns (ApproveApplicationResponse) {
     option (google.api.http) = {
       post: "/v1/kyc/applications/{application_id}:approve"
@@ -39,6 +55,7 @@ service KycService {
     };
   }
 
+  // RejectApplication отказывает клиенту. Терминальный для этой анкеты.
   rpc RejectApplication(RejectApplicationRequest) returns (RejectApplicationResponse) {
     option (google.api.http) = {
       post: "/v1/kyc/applications/{application_id}:reject"
@@ -46,6 +63,9 @@ service KycService {
     };
   }
 
+  // RequestMoreDocuments возвращает анкету клиенту, не вынося решения, —
+  // середина между "одобрить на слабых основаниях" и "отказать человеку,
+  // который просто загрузил не тот файл".
   rpc RequestMoreDocuments(RequestMoreDocumentsRequest) returns (RequestMoreDocumentsResponse) {
     option (google.api.http) = {
       post: "/v1/kyc/applications/{application_id}:requestDocuments"
@@ -54,8 +74,8 @@ service KycService {
   }
 }
 
-// ApplicationStatus is the explicit state machine of a KYC application.
-// Legal transitions, and nothing else:
+// ApplicationStatus — явная машина состояний KYC-анкеты. Разрешённые
+// переходы, и никаких других:
 //
 //   DRAFT           -> SUBMITTED
 //   SUBMITTED       -> AUTO_CHECKS
@@ -63,61 +83,130 @@ service KycService {
 //   IN_REVIEW       -> APPROVED | REJECTED | DOCS_REQUESTED
 //   DOCS_REQUESTED  -> SUBMITTED
 //
-// APPROVED, REJECTED and AUTO_REJECTED are terminal.
+// APPROVED, REJECTED и AUTO_REJECTED терминальны.
 enum ApplicationStatus {
   APPLICATION_STATUS_UNSPECIFIED = 0;
+
+  // Создана, не подана. Клиент ещё может её править.
   APPLICATION_STATUS_DRAFT = 1;
+
+  // Подана, ждёт автоматических проверок.
   APPLICATION_STATUS_SUBMITTED = 2;
+
+  // Идут автоматические проверки — санкции, возраст. Человек не участвует.
   APPLICATION_STATUS_AUTO_CHECKS = 3;
+
+  // Отклонена автоматической проверкой. Терминальный, и достигается без
+  // офицера: попадание в санкционный список не требует человеческого суждения.
   APPLICATION_STATUS_AUTO_REJECTED = 4;
+
+  // Автопроверки пройдены, ждёт офицера или уже у него.
   APPLICATION_STATUS_IN_REVIEW = 5;
+
+  // Возвращена: офицеру нужны ещё документы. Это не отказ — та же анкета
+  // вернётся в SUBMITTED, как только клиент их загрузит.
   APPLICATION_STATUS_DOCS_REQUESTED = 6;
+
+  // Одобрена офицером. Терминальный.
   APPLICATION_STATUS_APPROVED = 7;
+
+  // Отклонена офицером. Терминальный, и отличается от AUTO_REJECTED, чтобы по
+  // аудиту было видно, принимал ли решение человек.
   APPLICATION_STATUS_REJECTED = 8;
 }
 
+// CheckType — автоматическая проверка, выполняемая до разбора человеком.
 enum CheckType {
   CHECK_TYPE_UNSPECIFIED = 0;
+
+  // Сверка с санкционными списками и списками публичных лиц. Попадание
+  // дисквалифицирует.
   CHECK_TYPE_SANCTIONS = 1;
+
+  // Совершеннолетие по законам юрисдикции, считается из Profile.birth_date.
   CHECK_TYPE_AGE = 2;
 }
 
+// CheckResult отделяет "проверка говорит нет" от "проверка не смогла
+// отработать": FAILED дисквалифицирует клиента, ERROR означает лишь "повторить
+// позже".
 enum CheckResult {
   CHECK_RESULT_UNSPECIFIED = 0;
+
+  // Ещё выполняется.
   CHECK_RESULT_PENDING = 1;
+
+  // Пройдена.
   CHECK_RESULT_PASSED = 2;
+
+  // Клиент не прошёл. Это суждение о клиенте.
   CHECK_RESULT_FAILED = 3;
+
+  // Сломалась сама проверка — провайдер недоступен, таймаут. О клиенте не
+  // говорит ничего, и приравнивать её к FAILED нельзя: так люди получали бы
+  // отказ из-за аварии на стороне банка.
   CHECK_RESULT_ERROR = 4;
 }
 
+// Check — одна автоматическая проверка и её исход.
 message Check {
   string check_id = 1;
   CheckType type = 2;
   CheckResult result = 3;
+
+  // Подробности для офицера человеческим языком: какой список сработал, что
+  // ответил провайдер. Формат свободный — разбирать его программно не надо.
   string details = 4;
+
+  // Когда проверка завершилась. Не заполнено, пока PENDING.
   google.protobuf.Timestamp completed_at = 5;
 }
 
+// Application — один проход клиента через KYC. У клиента их может быть
+// несколько за время жизни: сегодняшний отказ не запрещает завтрашнюю анкету.
 message Application {
   string application_id = 1;
   string customer_id = 2;
   ApplicationStatus status = 3;
+
+  // Офицер, взявший анкету в работу. Пусто, пока не взяли.
   string assigned_officer_id = 4;
+
+  // Почему одобрили или отказали. Заполняется на терминальном переходе и
+  // хранится для аудита.
   string decision_reason = 5;
+
+  // Результаты автопроверок — офицеру, чтобы их взвесить.
   repeated Check checks = 6;
+
+  // Что офицер запросил. Осмысленно в статусе DOCS_REQUESTED.
   repeated document.v1.DocumentType requested_document_types = 7;
+
+  // Счётчик оптимистической блокировки, растёт на каждом изменении. Передайте
+  // его в ClaimApplication, и "взять, только если с моего взгляда никто её не
+  // взял" станет одной атомарной операцией вместо проверки с последующей
+  // записью.
   int64 version = 8;
+
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp submitted_at = 10;
   google.protobuf.Timestamp decided_at = 11;
 }
 
+// ApplicationEvent — один зафиксированный переход. События и есть аудиторский
+// след: Application показывает, как обстоят дела, а они — как к этому пришли.
 message ApplicationEvent {
   string event_id = 1;
   string application_id = 2;
+
+  // Переход. У самого первого события from_status равен UNSPECIFIED.
   ApplicationStatus from_status = 3;
   ApplicationStatus to_status = 4;
+
+  // Кто его вызвал. Пусто для автоматических переходов — и эта пустота сама по
+  // себе является записью о том, что человек не участвовал.
   string actor_user_id = 5;
+
   string comment = 6;
   google.protobuf.Timestamp occurred_at = 7;
 }
@@ -133,17 +222,27 @@ message SubmitApplicationResponse {
 
 message GetApplicationRequest {
   string application_id = 1;
+
+  // Приложить полную историю событий. По умолчанию выключено: история растёт
+  // без предела, а большинству вызывающих нужно только текущее состояние.
   bool include_events = 2;
 }
 
 message GetApplicationResponse {
   Application application = 1;
+
+  // Заполняется, только если include_events был true.
   repeated ApplicationEvent events = 2;
 }
 
 message ListApplicationsRequest {
+  // UNSPECIFIED — не фильтровать по статусу.
   ApplicationStatus status = 1;
+
+  // Фильтр по исполнителю. Офицер передаёт свой id, чтобы увидеть свою
+  // очередь.
   string assigned_officer_id = 2;
+
   common.v1.PageRequest page = 3;
 }
 
@@ -154,7 +253,12 @@ message ListApplicationsResponse {
 
 message ClaimApplicationRequest {
   string application_id = 1;
+
+  // Application.version, каким его последний раз видел офицер. Если он с тех
+  // пор изменился, значит кто-то успел раньше, и взятие в работу не пройдёт —
+  // вместо того чтобы молча отобрать анкету у коллеги.
   int64 version = 2;
+
   string idempotency_key = 3;
 }
 
@@ -164,7 +268,10 @@ message ClaimApplicationResponse {
 
 message ApproveApplicationRequest {
   string application_id = 1;
+
+  // Комментарий офицера. Необязателен, но именно его читает будущий аудит.
   string comment = 2;
+
   string idempotency_key = 3;
 }
 
@@ -174,7 +281,11 @@ message ApproveApplicationResponse {
 
 message RejectApplicationRequest {
   string application_id = 1;
+
+  // Почему. На практике обязателен: отказ без записанной причины нельзя ни
+  // защитить перед регулятором, ни объяснить клиенту.
   string reason = 2;
+
   string idempotency_key = 3;
 }
 
@@ -184,8 +295,14 @@ message RejectApplicationResponse {
 
 message RequestMoreDocumentsRequest {
   string application_id = 1;
+
+  // Что клиент должен загрузить.
   repeated document.v1.DocumentType requested_types = 2;
+
+  // Что не так с уже присланным — "фото паспорта смазано". Без этого клиент
+  // загрузит тот же непригодный файл ещё раз.
   string comment = 3;
+
   string idempotency_key = 4;
 }
 

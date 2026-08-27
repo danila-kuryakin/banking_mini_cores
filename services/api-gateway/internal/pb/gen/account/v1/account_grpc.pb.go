@@ -30,12 +30,31 @@ const (
 // AccountServiceClient is the client API for AccountService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// AccountService владеет самими счетами: открытием, блокировкой, закрытием.
+//
+// Деньги он не двигает — это дело ledger-service. Разделение важно потому, что
+// счёт — долгоживущий объект со статусом, а баланс — производное число,
+// считать которое вправе только реестр проводок.
 type AccountServiceClient interface {
+	// OpenAccount открывает счёт клиенту, прошедшему KYC. Открыть счёт тому, кто
+	// его не прошёл, — ровно то, ради предотвращения чего KYC и существует.
 	OpenAccount(ctx context.Context, in *OpenAccountRequest, opts ...grpc.CallOption) (*OpenAccountResponse, error)
 	GetAccount(ctx context.Context, in *GetAccountRequest, opts ...grpc.CallOption) (*GetAccountResponse, error)
 	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
+	// BlockAccount замораживает счёт: ни списаний, ни зачислений. Обратимо, в
+	// отличие от закрытия.
 	BlockAccount(ctx context.Context, in *BlockAccountRequest, opts ...grpc.CallOption) (*BlockAccountResponse, error)
+	// CloseAccount закрывает счёт навсегда. Требует нулевого баланса: закрыть
+	// счёт поверх чужих денег — значит оставить средства без владельца по
+	// документам.
 	CloseAccount(ctx context.Context, in *CloseAccountRequest, opts ...grpc.CallOption) (*CloseAccountResponse, error)
+	// GetBalance возвращает баланс для показа.
+	//
+	// Это удобная обёртка над ledger-service, который и есть источник правды. Не
+	// используйте её, чтобы разрешить перевод: значение успевает устареть к
+	// моменту чтения, а проверить баланс и списать деньги одним атомарным шагом
+	// способен только реестр.
 	GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*GetBalanceResponse, error)
 }
 
@@ -110,12 +129,31 @@ func (c *accountServiceClient) GetBalance(ctx context.Context, in *GetBalanceReq
 // AccountServiceServer is the server API for AccountService service.
 // All implementations must embed UnimplementedAccountServiceServer
 // for forward compatibility.
+//
+// AccountService владеет самими счетами: открытием, блокировкой, закрытием.
+//
+// Деньги он не двигает — это дело ledger-service. Разделение важно потому, что
+// счёт — долгоживущий объект со статусом, а баланс — производное число,
+// считать которое вправе только реестр проводок.
 type AccountServiceServer interface {
+	// OpenAccount открывает счёт клиенту, прошедшему KYC. Открыть счёт тому, кто
+	// его не прошёл, — ровно то, ради предотвращения чего KYC и существует.
 	OpenAccount(context.Context, *OpenAccountRequest) (*OpenAccountResponse, error)
 	GetAccount(context.Context, *GetAccountRequest) (*GetAccountResponse, error)
 	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
+	// BlockAccount замораживает счёт: ни списаний, ни зачислений. Обратимо, в
+	// отличие от закрытия.
 	BlockAccount(context.Context, *BlockAccountRequest) (*BlockAccountResponse, error)
+	// CloseAccount закрывает счёт навсегда. Требует нулевого баланса: закрыть
+	// счёт поверх чужих денег — значит оставить средства без владельца по
+	// документам.
 	CloseAccount(context.Context, *CloseAccountRequest) (*CloseAccountResponse, error)
+	// GetBalance возвращает баланс для показа.
+	//
+	// Это удобная обёртка над ledger-service, который и есть источник правды. Не
+	// используйте её, чтобы разрешить перевод: значение успевает устареть к
+	// моменту чтения, а проверить баланс и списать деньги одним атомарным шагом
+	// способен только реестр.
 	GetBalance(context.Context, *GetBalanceRequest) (*GetBalanceResponse, error)
 	mustEmbedUnimplementedAccountServiceServer()
 }

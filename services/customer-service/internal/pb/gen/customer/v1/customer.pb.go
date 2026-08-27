@@ -27,9 +27,9 @@ const (
 
 // CustomerStatus is driven by KYC events, never set directly by the customer.
 //
-//   NEW -> PROFILE_FILLED -> ON_KYC -> ACTIVE
-//                                   -> REJECTED
-//   any -> BLOCKED
+//	NEW -> PROFILE_FILLED -> ON_KYC -> ACTIVE
+//	                                -> REJECTED
+//	any -> BLOCKED
 type CustomerStatus int32
 
 const (

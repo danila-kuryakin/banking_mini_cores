@@ -1,0 +1,89 @@
+# auth-service: gRPC-сервис + собственный PostgreSQL 16.
+#
+# Стек самодостаточен: поднимается и работает без остальных сервисов.
+# Связь с ними — через общую внешнюю сеть banking-net:
+#
+#   docker network create banking-net                          # один раз на машину
+#   docker compose -f ../kafka-service/docker-compose.yml up -d  # общий брокер
+#   docker compose up -d --build
+
+name: banking-auth
+
+x-service-env: &service-env
+  # В контейнере слушать localhost нельзя — снаружи такой порт недоступен.
+  SERVER_HOST: 0.0.0.0
+  SERVER_PORT: "50051"
+  DATABASE_HOST: auth-db
+  DATABASE_PORT: "5432"
+  DATABASE_USER: ${DATABASE_USER:-banking}
+  DATABASE_PASSWORD: ${DATABASE_PASSWORD:-123}
+  DATABASE_DBNAME: ${DATABASE_DBNAME:-banking_auth}
+  DATABASE_SSL_MODE: disable
+  # Внутри сети сервисы ходят на внутренний listener брокера.
+  # Брокер общий и живёт в services/kafka-service - свой сервис его не поднимает.
+  KAFKA_BROKERS: kafka:9092
+  KAFKA_TOPIC: auth.events
+  KAFKA_GROUP_ID: auth-service
+  KAFKA_CLIENT_ID: auth-service
+
+services:
+  auth-db:
+    image: postgres:16-alpine
+    container_name: banking-auth-db
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-banking}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-123}
+      POSTGRES_DB: ${DATABASE_DBNAME:-banking_auth}
+    ports:
+      # Наружу — нестандартный порт, чтобы не спорить с локальным postgres
+      # и с БД соседних сервисов.
+      - "${AUTH_DB_PORT:-5433}:5432"
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-banking} -d ${DATABASE_DBNAME:-banking_auth}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks: [banking-net]
+
+  # Разовая задача: накатывает миграции и завершается. Сервис стартует только
+  # после её успешного выхода.
+  auth-migrate:
+    build: &service-build
+      context: ../..
+      dockerfile: services/auth-service/Dockerfile
+    # Отдельный тег, хотя Dockerfile и слои те же: два compose-сервиса с одним
+    # тегом заставляют buildx собирать его дважды параллельно, и вторая сборка
+    # падает на "image already exists".
+    image: banking/auth-migrate:local
+    container_name: banking-auth-migrate
+    entrypoint: ["/app/migrate"]
+    command: ["-cmd=up"]
+    environment: *service-env
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    restart: "no"
+    networks: [banking-net]
+
+  auth-service:
+    build: *service-build
+    image: banking/auth-service:local
+    container_name: auth-service
+    environment: *service-env
+    ports:
+      - "${AUTH_GRPC_PORT:-50051}:50051"
+    depends_on:
+      auth-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks: [banking-net]
+
+volumes:
+  auth-db-data:
+
+networks:
+  banking-net:
+    external: true

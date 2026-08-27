@@ -25,7 +25,18 @@ const (
 // NotificationServiceClient is the client API for NotificationService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// NotificationService рассылает уведомления клиентам.
+//
+// Метод здесь всего один, и это не упущение: сервис работает от событий, а не
+// от вызовов. Он читает доменные события остальных сервисов из Kafka и сам
+// решает, что и куда отправить, поэтому попросить его "отправить письмо"
+// снаружи невозможно — и это защищает от превращения его в открытую рассылку.
 type NotificationServiceClient interface {
+	// ListNotifications показывает, что сервис насчитал по событиям.
+	//
+	// Метод отладочный: по нему видно, что событие доехало и во что превратилось,
+	// без чтения топика руками через kafka-console-consumer.
 	ListNotifications(ctx context.Context, in *ListNotificationsRequest, opts ...grpc.CallOption) (*ListNotificationsResponse, error)
 }
 
@@ -50,7 +61,18 @@ func (c *notificationServiceClient) ListNotifications(ctx context.Context, in *L
 // NotificationServiceServer is the server API for NotificationService service.
 // All implementations must embed UnimplementedNotificationServiceServer
 // for forward compatibility.
+//
+// NotificationService рассылает уведомления клиентам.
+//
+// Метод здесь всего один, и это не упущение: сервис работает от событий, а не
+// от вызовов. Он читает доменные события остальных сервисов из Kafka и сам
+// решает, что и куда отправить, поэтому попросить его "отправить письмо"
+// снаружи невозможно — и это защищает от превращения его в открытую рассылку.
 type NotificationServiceServer interface {
+	// ListNotifications показывает, что сервис насчитал по событиям.
+	//
+	// Метод отладочный: по нему видно, что событие доехало и во что превратилось,
+	// без чтения топика руками через kafka-console-consumer.
 	ListNotifications(context.Context, *ListNotificationsRequest) (*ListNotificationsResponse, error)
 	mustEmbedUnimplementedNotificationServiceServer()
 }

@@ -1,0 +1,17 @@
+version: v2
+
+inputs:
+  - directory: .
+    paths:
+      - proto/account
+      - proto/common
+
+plugins:
+  - local: protoc-gen-go
+    out: .
+    opt:
+      - module=github.com/danila-kuryakin/banking_mini_cores/services/account-service
+  - local: protoc-gen-go-grpc
+    out: .
+    opt:
+      - module=github.com/danila-kuryakin/banking_mini_cores/services/account-service

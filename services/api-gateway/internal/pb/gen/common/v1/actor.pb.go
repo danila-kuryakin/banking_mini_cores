@@ -21,13 +21,22 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Role решает, что вызывающему позволено. Авторизация живёт в каждом сервисе
+// своя, но словарь общий — чтобы все читали токен одинаково.
 type Role int32
 
 const (
+	// Не задана. Трактуется как "нет прав", но никогда как роль по умолчанию:
+	// запрос, пришедший без роли, — это сломанный запрос, а не анонимный.
 	Role_ROLE_UNSPECIFIED Role = 0
-	Role_ROLE_CLIENT      Role = 1
-	Role_ROLE_OFFICER     Role = 2
-	Role_ROLE_ADMIN       Role = 3
+	// Клиент банка. Видит и меняет только свои данные — потому для этой роли и
+	// важен Actor.customer_id, а для остальных нет.
+	Role_ROLE_CLIENT Role = 1
+	// Сотрудник банка, разбирающий KYC-анкеты: проверяет, одобряет, отказывает.
+	// Видит чужие данные, но не меняет настройки системы.
+	Role_ROLE_OFFICER Role = 2
+	// Полный доступ, включая правила антифрода.
+	Role_ROLE_ADMIN Role = 3
 )
 
 // Enum value maps for Role.
@@ -73,11 +82,24 @@ func (Role) EnumDescriptor() ([]byte, []int) {
 	return file_common_v1_actor_proto_rawDescGZIP(), []int{0}
 }
 
+// Actor — аутентифицированный инициатор запроса, каким его восстановили из
+// access-токена.
+//
+// Сервисы получают его от gateway, а не перечитывают токен сами: формат токена
+// так и остаётся делом одного лишь gateway.
 type Actor struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Role          Role                   `protobuf:"varint,2,opt,name=role,proto3,enum=common.v1.Role" json:"role,omitempty"`
-	CustomerId    string                 `protobuf:"bytes,3,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Личность в auth-service. Не меняется за всё время жизни аккаунта и служит
+	// для аудита: отвечает на вопрос "кто это сделал" — в том числе для офицеров
+	// и админов, у которых customer_id нет вовсе.
+	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Role   Role   `protobuf:"varint,2,opt,name=role,proto3,enum=common.v1.Role" json:"role,omitempty"`
+	// Клиент, от имени которого действует actor. Заполнен для ROLE_CLIENT, пуст
+	// для офицеров и админов: те действуют от себя, а не от имени клиента.
+	//
+	// Отдельно от user_id, потому что у этих двух идентичностей разное время
+	// жизни: логин существует раньше, чем появляется профиль клиента.
+	CustomerId    string `protobuf:"bytes,3,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

@@ -1,0 +1,64 @@
+# account-service: gRPC-сервис + собственный PostgreSQL 16.
+#
+# Стек самодостаточен: поднимается и работает без остальных сервисов.
+# Связь с ними — через общую внешнюю сеть banking-net:
+#
+#   docker network create banking-net   # один раз на машину
+#   docker compose up -d --build
+
+name: banking-account
+
+x-service-env: &service-env
+  # В контейнере слушать localhost нельзя — снаружи такой порт недоступен.
+  SERVER_HOST: 0.0.0.0
+  SERVER_PORT: "50055"
+  DATABASE_HOST: account-db
+  DATABASE_PORT: "5432"
+  DATABASE_USER: ${DATABASE_USER:-banking}
+  DATABASE_PASSWORD: ${DATABASE_PASSWORD:-123}
+  DATABASE_DBNAME: ${DATABASE_DBNAME:-banking_account}
+  DATABASE_SSL_MODE: disable
+
+services:
+  account-db:
+    image: postgres:16-alpine
+    container_name: banking-account-db
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-banking}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-123}
+      POSTGRES_DB: ${DATABASE_DBNAME:-banking_account}
+    ports:
+      # Наружу — нестандартный порт, чтобы не спорить с локальным postgres
+      # и с БД соседних сервисов.
+      - "${ACCOUNT_DB_PORT:-5437}:5432"
+    volumes:
+      - account-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-banking} -d ${DATABASE_DBNAME:-banking_account}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks: [banking-net]
+
+  account-service:
+    build:
+      context: ../..
+      dockerfile: services/account-service/Dockerfile
+    image: banking/account-service:local
+    container_name: account-service
+    environment: *service-env
+    ports:
+      - "${ACCOUNT_GRPC_PORT:-50055}:50055"
+    depends_on:
+      account-db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [banking-net]
+
+volumes:
+  account-db-data:
+
+networks:
+  banking-net:
+    external: true

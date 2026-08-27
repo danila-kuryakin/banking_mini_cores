@@ -9,17 +9,34 @@ import "common/v1/pagination.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 
+// AntifraudService решает, можно ли пропустить перевод.
+//
+// Правила — это данные, а не код: они лежат в базе и меняются через UpdateRule
+// на ходу. Лимит, для смены которого нужен деплой, — это лимит, который сутки
+// остаётся неверным, а схемы мошенничества меняются быстрее релизного цикла.
 service AntifraudService {
+  // CheckTransfer выносит вердикт по предполагаемому переводу. Вызывается из
+  // ledger-service до того, как деньги двинутся.
+  //
+  // ВНИМАНИЕ: в этом HTTP-маппинге нет body, поэтому grpc-gateway возьмёт поля
+  // запроса из query-строки, а присланный JSON-body проигнорирует — все поля
+  // приедут пустыми. Чинится добавлением `body: "*"`; либо маппинг стоит убрать
+  // вовсе: остальные три метода административные, а этот внешним вызывающим не
+  // предназначен вообще.
   rpc CheckTransfer(CheckTransferRequest) returns (CheckTransferResponse) {
     option (google.api.http) = {
       post: "/v1/antifraud/transfer"
     };
   }
 
+  // ListRules показывает действующий набор правил. Только для админа: он
+  // раскрывает, под какими именно порогами атакующему надо держаться.
   rpc ListRules(ListRulesRequest) returns (ListRulesResponse) {
     option (google.api.http) = {get: "/v1/antifraud/rules"};
   }
 
+  // UpdateRule включает, выключает или перенастраивает правило. Только для
+  // админа.
   rpc UpdateRule(UpdateRuleRequest) returns (UpdateRuleResponse) {
     option (google.api.http) = {
       patch: "/v1/antifraud/rules/{rule_id}"
@@ -27,39 +44,86 @@ service AntifraudService {
     };
   }
 
+  // ListChecks — журнал прошлых вердиктов: для разбора жалобы и для оценки
+  // того, не слишком ли туго или слишком свободно настроено правило.
   rpc ListChecks(ListChecksRequest) returns (ListChecksResponse) {
     option (google.api.http) = {get: "/v1/antifraud/checks"};
   }
 }
 
+// Verdict — ответ на вопрос "пропускать ли перевод".
+//
+// Значения два, а не три: неопределённый ответ оставил бы ledger-service
+// решать вопросы фрод-политики самостоятельно. Если проверка не отработала,
+// сервис всё равно обязан выбрать между "разрешить" и "запретить".
 enum Verdict {
   VERDICT_UNSPECIFIED = 0;
+
+  // Пропустить.
   VERDICT_ALLOW = 1;
+
+  // Отказать. Транзакция окажется в статусе DECLINED.
   VERDICT_DENY = 2;
 }
 
+// RuleType — вид проверки, которую выполняет правило. Пороговые значения живут
+// в Rule.parameters, поэтому новый порог не требует нового типа.
+//
+// ВНИМАНИЕ: значение 3 пропущено. Номера — это формат передачи по проводу, и
+// переиспользовать их нельзя, поэтому удалённый тип правила навсегда оставляет
+// дыру. Это правильно, но знать об этом стоит — прежде чем кто-нибудь решит
+// "навести порядок" в нумерации и сломает уже сохранённые данные.
 enum RuleType {
   RULE_TYPE_UNSPECIFIED = 0;
+
+  // Ограничивает один перевод. Параметр — максимальная сумма.
   RULE_TYPE_SINGLE_AMOUNT_LIMIT = 1;
+
+  // Ограничивает сумму или частоту в окне времени — то правило, которое ловит
+  // сумму, разбитую на множество мелких переводов, чтобы пролезть под разовым
+  // лимитом.
   RULE_TYPE_VELOCITY = 2;
+
+  // Переводы между счетами одного клиента. Обычно безобидны — потому и
+  // вынесены в отдельное правило: его можно выключить, не ослабляя остальные.
   RULE_TYPE_SELF_TRANSFER = 4;
 }
 
+// Rule — одна настроенная проверка.
 message Rule {
   string rule_id = 1;
   RuleType type = 2;
+
+  // Применяется ли правило. Выключить лучше, чем удалить: правило сохраняет
+  // свой id, и прошлые записи Check по-прежнему ссылаются на то, что можно
+  // объяснить.
   bool enabled = 3;
+
+  // Пороговые значения по именам — "max_amount", "window_seconds". Строковая
+  // карта вместо типизированных полей, чтобы перенастройка правила была
+  // изменением данных; цена — валидация, которую схема больше не сделает.
   map<string, string> parameters = 4;
+
+  // Для чего правило, словами, — тому админу, который будет его менять.
   string description = 5;
+
   google.protobuf.Timestamp updated_at = 6;
 }
 
+// TriggeredRule — одно правило, сработавшее при проверке.
 message TriggeredRule {
   string rule_id = 1;
   RuleType type = 2;
+
+  // Что именно сработало, конкретно: "сумма 50000 превышает лимит 10000". Для
+  // разбирающего, а не для клиента: сказать клиенту, в какой порог он упёрся,
+  // — значит сказать, под чем держаться в следующий раз.
   string reason = 3;
 }
 
+// Check — записанный вердикт. Сохраняется при любом исходе: разрешённые
+// переводы важны не меньше отклонённых, когда позже восстанавливают схему
+// мошенничества.
 message Check {
   string check_id = 1;
   string transaction_id = 2;
@@ -67,22 +131,40 @@ message Check {
   string to_account_id = 4;
   common.v1.Money amount = 5;
   Verdict verdict = 6;
+
+  // Какие правила сработали. Пусто при ALLOW.
   repeated TriggeredRule triggered_rules = 7;
+
   google.protobuf.Timestamp checked_at = 8;
 }
 
 message CheckTransferRequest {
+  // Проверяемая транзакция, на этот момент ещё PENDING.
   string transaction_id = 1;
+
   string from_account_id = 2;
   string to_account_id = 3;
+
+  // Владелец счёта-источника. Передаётся снаружи, а не ищется здесь: правила
+  // частоты считают по всем счетам клиента, а этому сервису не следует ходить
+  // в customer-service на критическом пути перевода.
   string customer_id = 4;
+
   common.v1.Money amount = 5;
+
+  // Заставляет повторную проверку вернуть записанный вердикт вместо повторного
+  // прогона правил. Для правил частоты это существенно: повторный прогон
+  // засчитал бы тот же перевод дважды и отказал бы в том, что только что
+  // разрешил.
   string idempotency_key = 6;
 }
 
 message CheckTransferResponse {
   string check_id = 1;
   Verdict verdict = 2;
+
+  // Заполняется при DENY, чтобы вызывающий записал причину в лог без второго
+  // запроса.
   repeated TriggeredRule triggered_rules = 3;
 }
 
@@ -97,8 +179,16 @@ message ListRulesResponse {
 
 message UpdateRuleRequest {
   string rule_id = 1;
+
   bool enabled = 2;
+
+  // Заменяет карту параметров целиком, а не сливается с ней. Присылать надо
+  // все параметры правила, а не только изменяемый.
+  //
+  // Учтите, что proto3 не отличает пропущенный bool от false, поэтому
+  // обновление, забывшее выставить enabled, выключит правило.
   map<string, string> parameters = 3;
+
   string idempotency_key = 4;
 }
 
@@ -107,8 +197,12 @@ message UpdateRuleResponse {
 }
 
 message ListChecksRequest {
+  // Фильтр по счёту, совпадение по любой из сторон перевода.
   string account_id = 1;
+
+  // UNSPECIFIED — оба вердикта.
   Verdict verdict = 2;
+
   common.v1.PageRequest page = 3;
 }
 

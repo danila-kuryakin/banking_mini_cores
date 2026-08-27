@@ -1,0 +1,58 @@
+# api-gateway: единственная точка входа снаружи. Принимает REST-запросы и
+# через grpc-gateway пересылает их gRPC-сервисам.
+#
+# Собственной БД у gateway нет — он не хранит состояние.
+# Стек самодостаточен: поднимается и без соседей (соединения ленивые,
+# недоступный апстрим — это ошибка на конкретном запросе, а не при старте).
+#
+#   docker network create banking-net   # один раз на машину
+#   docker compose up -d --build
+#
+# Проверка: http://localhost:8080/swagger/
+
+name: banking-api-gateway
+
+services:
+  api-gateway:
+    build:
+      context: ../..
+      dockerfile: services/api-gateway/Dockerfile
+    image: banking/api-gateway:local
+    container_name: api-gateway
+    environment:
+      # В контейнере слушать localhost нельзя — снаружи такой порт недоступен.
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "8080"
+      GRPC_HOST: 0.0.0.0
+      GRPC_PORT: "50059"
+
+      # Апстримы адресуются по DNS-именам контейнеров в сети banking-net.
+      UPSTREAMS_AUTH: ${UPSTREAMS_AUTH:-auth-service:50051}
+      UPSTREAMS_CUSTOMER: ${UPSTREAMS_CUSTOMER:-customer-service:50052}
+      # Сервисы ниже пока не контейнеризованы, но конфиг требует непустой
+      # адрес у каждого апстрима — заранее указываем их будущие имена.
+      UPSTREAMS_KYC: ${UPSTREAMS_KYC:-kyc-service:50053}
+      UPSTREAMS_DOCUMENT: ${UPSTREAMS_DOCUMENT:-document-service:50054}
+      UPSTREAMS_ACCOUNT: ${UPSTREAMS_ACCOUNT:-account-service:50055}
+      UPSTREAMS_LEDGER: ${UPSTREAMS_LEDGER:-ledger-service:50056}
+      UPSTREAMS_ANTIFRAUD: ${UPSTREAMS_ANTIFRAUD:-antifraud-service:50057}
+      UPSTREAMS_NOTIFICATION: ${UPSTREAMS_NOTIFICATION:-notification-service:50058}
+
+      REQUEST_TIMEOUT: 30s
+      SHUTDOWN_TIMEOUT: 5s
+    ports:
+      - "${GATEWAY_HTTP_PORT:-8080}:8080"
+      # gRPC health — его опрашивает monitor; наружу нужен только для отладки.
+      - "${GATEWAY_GRPC_PORT:-50059}:50059"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/openapi.json"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    networks: [banking-net]
+
+networks:
+  banking-net:
+    external: true

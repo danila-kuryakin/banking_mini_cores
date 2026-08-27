@@ -28,8 +28,11 @@ type TransactionType int32
 
 const (
 	TransactionType_TRANSACTION_TYPE_UNSPECIFIED TransactionType = 0
-	TransactionType_TRANSACTION_TYPE_TRANSFER    TransactionType = 1
-	TransactionType_TRANSACTION_TYPE_DEPOSIT     TransactionType = 2
+	// Между двумя внутренними счетами. Заполнены и from_account_id, и
+	// to_account_id.
+	TransactionType_TRANSACTION_TYPE_TRANSFER TransactionType = 1
+	// Извне банка. Заполнен только to_account_id.
+	TransactionType_TRANSACTION_TYPE_DEPOSIT TransactionType = 2
 )
 
 // Enum value maps for TransactionType.
@@ -73,13 +76,25 @@ func (TransactionType) EnumDescriptor() ([]byte, []int) {
 	return file_ledger_v1_ledger_proto_rawDescGZIP(), []int{0}
 }
 
+// TransactionStatus:
+//
+//	PENDING -> COMPLETED
+//	        -> DECLINED
+//
+// Оба исхода терминальны. Отклонённая транзакция сохраняется, а не удаляется:
+// сама попытка — часть записи, и антифроду нужно видеть закономерность.
 type TransactionStatus int32
 
 const (
 	TransactionStatus_TRANSACTION_STATUS_UNSPECIFIED TransactionStatus = 0
-	TransactionStatus_TRANSACTION_STATUS_PENDING     TransactionStatus = 1
-	TransactionStatus_TRANSACTION_STATUS_COMPLETED   TransactionStatus = 2
-	TransactionStatus_TRANSACTION_STATUS_DECLINED    TransactionStatus = 3
+	// Принята, но ещё не проведена: антифрод решает. Деньги в этом состоянии
+	// недоступны ни одной из сторон.
+	TransactionStatus_TRANSACTION_STATUS_PENDING TransactionStatus = 1
+	// Проведена. Записи существуют, и балансы их учитывают.
+	TransactionStatus_TRANSACTION_STATUS_COMPLETED TransactionStatus = 2
+	// Отклонена — не хватило средств, счёт заблокирован, антифрод. Записи не
+	// создавались, поэтому балансы не тронуты.
+	TransactionStatus_TRANSACTION_STATUS_DECLINED TransactionStatus = 3
 )
 
 // Enum value maps for TransactionStatus.
@@ -125,12 +140,15 @@ func (TransactionStatus) EnumDescriptor() ([]byte, []int) {
 	return file_ledger_v1_ledger_proto_rawDescGZIP(), []int{1}
 }
 
+// EntryDirection — знак записи с точки зрения счёта.
 type EntryDirection int32
 
 const (
 	EntryDirection_ENTRY_DIRECTION_UNSPECIFIED EntryDirection = 0
-	EntryDirection_ENTRY_DIRECTION_DEBIT       EntryDirection = 1
-	EntryDirection_ENTRY_DIRECTION_CREDIT      EntryDirection = 2
+	// Деньги уходят со счёта.
+	EntryDirection_ENTRY_DIRECTION_DEBIT EntryDirection = 1
+	// Деньги приходят на счёт.
+	EntryDirection_ENTRY_DIRECTION_CREDIT EntryDirection = 2
 )
 
 // Enum value maps for EntryDirection.
@@ -174,12 +192,20 @@ func (EntryDirection) EnumDescriptor() ([]byte, []int) {
 	return file_ledger_v1_ledger_proto_rawDescGZIP(), []int{2}
 }
 
+// Entry — одна сторона транзакции по одному счёту, атом реестра.
+//
+// Записи неизменяемы. Ошибка исправляется встречной записью, но никогда
+// правкой или удалением этой: и ошибочная запись, и её исправление обе
+// принадлежат истории.
 type Entry struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EntryId       string                 `protobuf:"bytes,1,opt,name=entry_id,json=entryId,proto3" json:"entry_id,omitempty"`
 	TransactionId string                 `protobuf:"bytes,2,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
 	AccountId     string                 `protobuf:"bytes,3,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
 	Direction     EntryDirection         `protobuf:"varint,4,opt,name=direction,proto3,enum=ledger.v1.EntryDirection" json:"direction,omitempty"`
+	// Всегда положительна; знак живёт в direction. Разделение величины и
+	// направления делает проверку "сумма равна нулю" тривиальной и не даёт
+	// ошибиться в ней незаметно.
 	Amount        *v1.Money              `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -258,17 +284,28 @@ func (x *Entry) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// Transaction — одно перемещение денег и порождённые им записи.
 type Transaction struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	TransactionId  string                 `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
-	Type           TransactionType        `protobuf:"varint,2,opt,name=type,proto3,enum=ledger.v1.TransactionType" json:"type,omitempty"`
-	Status         TransactionStatus      `protobuf:"varint,3,opt,name=status,proto3,enum=ledger.v1.TransactionStatus" json:"status,omitempty"`
-	Amount         *v1.Money              `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty"`
-	FromAccountId  string                 `protobuf:"bytes,5,opt,name=from_account_id,json=fromAccountId,proto3" json:"from_account_id,omitempty"`
-	ToAccountId    string                 `protobuf:"bytes,6,opt,name=to_account_id,json=toAccountId,proto3" json:"to_account_id,omitempty"`
-	Description    string                 `protobuf:"bytes,7,opt,name=description,proto3" json:"description,omitempty"`
-	DeclineReason  string                 `protobuf:"bytes,8,opt,name=decline_reason,json=declineReason,proto3" json:"decline_reason,omitempty"`
-	Entries        []*Entry               `protobuf:"bytes,9,rep,name=entries,proto3" json:"entries,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TransactionId string                 `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	Type          TransactionType        `protobuf:"varint,2,opt,name=type,proto3,enum=ledger.v1.TransactionType" json:"type,omitempty"`
+	Status        TransactionStatus      `protobuf:"varint,3,opt,name=status,proto3,enum=ledger.v1.TransactionStatus" json:"status,omitempty"`
+	// Итоговая сумма, какой её видит клиент. Достоверные цифры лежат в entries,
+	// здесь то же значение в удобном виде.
+	Amount *v1.Money `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	// Источник. Пусто при пополнении.
+	FromAccountId string `protobuf:"bytes,5,opt,name=from_account_id,json=fromAccountId,proto3" json:"from_account_id,omitempty"`
+	// Получатель. Заполнен всегда.
+	ToAccountId string `protobuf:"bytes,6,opt,name=to_account_id,json=toAccountId,proto3" json:"to_account_id,omitempty"`
+	// Комментарий от клиента, показывается в выписке.
+	Description string `protobuf:"bytes,7,opt,name=description,proto3" json:"description,omitempty"`
+	// Почему отклонена. Заполняется только вместе с DECLINED.
+	DeclineReason string `protobuf:"bytes,8,opt,name=decline_reason,json=declineReason,proto3" json:"decline_reason,omitempty"`
+	// Записи двойной записи. Пусто, пока PENDING, и у DECLINED: записи
+	// появляются только тогда, когда деньги действительно перешли.
+	Entries []*Entry `protobuf:"bytes,9,rep,name=entries,proto3" json:"entries,omitempty"`
+	// Ключ, который прислал вызывающий. Возвращается обратно, чтобы клиент,
+	// потерявший ответ, узнал свою транзакцию при повторе.
 	IdempotencyKey string                 `protobuf:"bytes,10,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	CompletedAt    *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
@@ -391,12 +428,16 @@ func (x *Transaction) GetCompletedAt() *timestamppb.Timestamp {
 }
 
 type TransferRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	FromAccountId  string                 `protobuf:"bytes,1,opt,name=from_account_id,json=fromAccountId,proto3" json:"from_account_id,omitempty"`
-	ToAccountId    string                 `protobuf:"bytes,2,opt,name=to_account_id,json=toAccountId,proto3" json:"to_account_id,omitempty"`
-	Amount         *v1.Money              `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount,omitempty"`
-	Description    string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FromAccountId string                 `protobuf:"bytes,1,opt,name=from_account_id,json=fromAccountId,proto3" json:"from_account_id,omitempty"`
+	ToAccountId   string                 `protobuf:"bytes,2,opt,name=to_account_id,json=toAccountId,proto3" json:"to_account_id,omitempty"`
+	// Валюта обязана совпадать с валютой обоих счетов — этот сервис не
+	// конвертирует.
+	Amount      *v1.Money `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount,omitempty"`
+	Description string    `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// На практике обязателен. Повторённый без него перевод отправит деньги
+	// дважды, и, в отличие от задвоенного чтения, отменить это клиент не сможет.
+	IdempotencyKey string `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -711,8 +752,14 @@ func (x *GetTransactionResponse) GetTransaction() *Transaction {
 }
 
 type ListTransactionsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountId     string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	AccountId string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	// Полуоткрытый интервал [from_time, to_time). Незаполненное поле означает,
+	// что с этой стороны границы нет.
+	//
+	// Полуоткрытый — чтобы соседние периоды стыковались без дыр и наложений:
+	// выписка, кончающаяся полуночью, и следующая, начинающаяся полуночью, не
+	// содержат одну и ту же транзакцию дважды.
 	FromTime      *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=from_time,json=fromTime,proto3" json:"from_time,omitempty"`
 	ToTime        *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=to_time,json=toTime,proto3" json:"to_time,omitempty"`
 	Page          *v1.PageRequest        `protobuf:"bytes,4,opt,name=page,proto3" json:"page,omitempty"`
@@ -875,7 +922,9 @@ func (x *GetBalanceRequest) GetAccountId() string {
 }
 
 type GetBalanceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Сложен по записям на момент as_of. Транзакции в статусе PENDING не
+	// учитываются: деньги в полёте пока не принадлежат ни одной из сторон.
 	Balance       *v1.Money              `protobuf:"bytes,1,opt,name=balance,proto3" json:"balance,omitempty"`
 	AsOf          *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=as_of,json=asOf,proto3" json:"as_of,omitempty"`
 	unknownFields protoimpl.UnknownFields

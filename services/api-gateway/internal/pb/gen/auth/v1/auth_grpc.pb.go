@@ -30,12 +30,46 @@ const (
 // AuthServiceClient is the client API for AuthService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// AuthService владеет логинами, паролями и токенами. Это единственный сервис,
+// который вообще видит пароль, и хранит он только его хеш.
+//
+// О клиенте он намеренно не знает ничего, кроме непрозрачного customer_id: кто
+// этот человек — забота customer-service. Такое разделение означает, что взлом
+// одного сервиса не отдаёт данные второго.
 type AuthServiceClient interface {
+	// Register создаёт аккаунт с ролью ROLE_CLIENT.
+	//
+	// Профиль клиента здесь не заводится — это дело customer-service, которое
+	// запускается событием auth.user.registered, публикуемым этим вызовом.
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
+	// Login обменивает учётные данные на пару токенов.
+	//
+	// Об ошибке сообщается одинаково, неизвестен ли адрес или неверен пароль:
+	// если различать эти два случая, атакующий сможет перебором выяснить, какие
+	// адреса зарегистрированы.
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	// Refresh обменивает refresh-токен на свежую пару.
+	//
+	// Предъявленный refresh-токен при этом гасится: на один токен — ровно одна
+	// новая пара. Поэтому украденный токен перестаёт работать, как только
+	// настоящий владелец обновится, а повторное использование уже погашенного
+	// токена — заметный признак утечки.
 	Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*RefreshResponse, error)
+	// Logout отзывает refresh-токен.
+	//
+	// Уже выданные access-токены останутся действительными до истечения срока —
+	// это цена за то, что их проверяют без похода в базу. Поэтому срок их жизни
+	// держат коротким: так окно остаётся маленьким.
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
+	// ValidateToken проверяет access-токен и говорит, кому он принадлежит.
+	//
+	// HTTP-маппинга нет намеренно: это вызов сервис-сервис для gateway, и до
+	// браузера он доходить не должен.
 	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
+	// CreateOfficer заводит аккаунт с ролью ROLE_OFFICER. Только для админа:
+	// офицер одобряет KYC-анкеты, то есть выдать эту роль — значит выдать право
+	// заводить в банк клиентов.
 	CreateOfficer(ctx context.Context, in *CreateOfficerRequest, opts ...grpc.CallOption) (*CreateOfficerResponse, error)
 }
 
@@ -110,12 +144,46 @@ func (c *authServiceClient) CreateOfficer(ctx context.Context, in *CreateOfficer
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
+//
+// AuthService владеет логинами, паролями и токенами. Это единственный сервис,
+// который вообще видит пароль, и хранит он только его хеш.
+//
+// О клиенте он намеренно не знает ничего, кроме непрозрачного customer_id: кто
+// этот человек — забота customer-service. Такое разделение означает, что взлом
+// одного сервиса не отдаёт данные второго.
 type AuthServiceServer interface {
+	// Register создаёт аккаунт с ролью ROLE_CLIENT.
+	//
+	// Профиль клиента здесь не заводится — это дело customer-service, которое
+	// запускается событием auth.user.registered, публикуемым этим вызовом.
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
+	// Login обменивает учётные данные на пару токенов.
+	//
+	// Об ошибке сообщается одинаково, неизвестен ли адрес или неверен пароль:
+	// если различать эти два случая, атакующий сможет перебором выяснить, какие
+	// адреса зарегистрированы.
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
+	// Refresh обменивает refresh-токен на свежую пару.
+	//
+	// Предъявленный refresh-токен при этом гасится: на один токен — ровно одна
+	// новая пара. Поэтому украденный токен перестаёт работать, как только
+	// настоящий владелец обновится, а повторное использование уже погашенного
+	// токена — заметный признак утечки.
 	Refresh(context.Context, *RefreshRequest) (*RefreshResponse, error)
+	// Logout отзывает refresh-токен.
+	//
+	// Уже выданные access-токены останутся действительными до истечения срока —
+	// это цена за то, что их проверяют без похода в базу. Поэтому срок их жизни
+	// держат коротким: так окно остаётся маленьким.
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
+	// ValidateToken проверяет access-токен и говорит, кому он принадлежит.
+	//
+	// HTTP-маппинга нет намеренно: это вызов сервис-сервис для gateway, и до
+	// браузера он доходить не должен.
 	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
+	// CreateOfficer заводит аккаунт с ролью ROLE_OFFICER. Только для админа:
+	// офицер одобряет KYC-анкеты, то есть выдать эту роль — значит выдать право
+	// заводить в банк клиентов.
 	CreateOfficer(context.Context, *CreateOfficerRequest) (*CreateOfficerResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }

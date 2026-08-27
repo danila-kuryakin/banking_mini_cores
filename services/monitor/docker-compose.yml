@@ -1,0 +1,30 @@
+# monitor: опрашивает grpc.health.v1.Health у остальных сервисов и пишет
+# состояние в лог. Ничего не слушает и не хранит — ни портов, ни БД.
+#
+# Стек самодостаточен: соединения ленивые, недоступная цель просто
+# отображается как DOWN.
+#
+#   docker network create banking-net   # один раз на машину
+#   docker compose up -d --build
+#   docker compose logs -f monitor
+
+name: banking-monitor
+
+services:
+  monitor:
+    build:
+      context: ../..
+      dockerfile: services/monitor/Dockerfile
+    image: banking/monitor:local
+    container_name: monitor
+    environment:
+      # Цели адресуются по DNS-именам контейнеров в сети banking-net.
+      MONITOR_TARGETS: ${MONITOR_TARGETS:-auth=auth-service:50051,customer=customer-service:50052,kyc=kyc-service:50053,document=document-service:50054,account=account-service:50055,ledger=ledger-service:50056,antifraud=antifraud-service:50057,notification=notification-service:50058,gateway=api-gateway:50059}
+      MONITOR_INTERVAL: ${MONITOR_INTERVAL:-5s}
+      MONITOR_TIMEOUT: ${MONITOR_TIMEOUT:-2s}
+    restart: unless-stopped
+    networks: [banking-net]
+
+networks:
+  banking-net:
+    external: true

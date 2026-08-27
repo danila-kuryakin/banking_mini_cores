@@ -25,8 +25,8 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// ApplicationStatus is the explicit state machine of a KYC application.
-// Legal transitions, and nothing else:
+// ApplicationStatus — явная машина состояний KYC-анкеты. Разрешённые
+// переходы, и никаких других:
 //
 //	DRAFT           -> SUBMITTED
 //	SUBMITTED       -> AUTO_CHECKS
@@ -34,19 +34,30 @@ const (
 //	IN_REVIEW       -> APPROVED | REJECTED | DOCS_REQUESTED
 //	DOCS_REQUESTED  -> SUBMITTED
 //
-// APPROVED, REJECTED and AUTO_REJECTED are terminal.
+// APPROVED, REJECTED и AUTO_REJECTED терминальны.
 type ApplicationStatus int32
 
 const (
-	ApplicationStatus_APPLICATION_STATUS_UNSPECIFIED    ApplicationStatus = 0
-	ApplicationStatus_APPLICATION_STATUS_DRAFT          ApplicationStatus = 1
-	ApplicationStatus_APPLICATION_STATUS_SUBMITTED      ApplicationStatus = 2
-	ApplicationStatus_APPLICATION_STATUS_AUTO_CHECKS    ApplicationStatus = 3
-	ApplicationStatus_APPLICATION_STATUS_AUTO_REJECTED  ApplicationStatus = 4
-	ApplicationStatus_APPLICATION_STATUS_IN_REVIEW      ApplicationStatus = 5
+	ApplicationStatus_APPLICATION_STATUS_UNSPECIFIED ApplicationStatus = 0
+	// Создана, не подана. Клиент ещё может её править.
+	ApplicationStatus_APPLICATION_STATUS_DRAFT ApplicationStatus = 1
+	// Подана, ждёт автоматических проверок.
+	ApplicationStatus_APPLICATION_STATUS_SUBMITTED ApplicationStatus = 2
+	// Идут автоматические проверки — санкции, возраст. Человек не участвует.
+	ApplicationStatus_APPLICATION_STATUS_AUTO_CHECKS ApplicationStatus = 3
+	// Отклонена автоматической проверкой. Терминальный, и достигается без
+	// офицера: попадание в санкционный список не требует человеческого суждения.
+	ApplicationStatus_APPLICATION_STATUS_AUTO_REJECTED ApplicationStatus = 4
+	// Автопроверки пройдены, ждёт офицера или уже у него.
+	ApplicationStatus_APPLICATION_STATUS_IN_REVIEW ApplicationStatus = 5
+	// Возвращена: офицеру нужны ещё документы. Это не отказ — та же анкета
+	// вернётся в SUBMITTED, как только клиент их загрузит.
 	ApplicationStatus_APPLICATION_STATUS_DOCS_REQUESTED ApplicationStatus = 6
-	ApplicationStatus_APPLICATION_STATUS_APPROVED       ApplicationStatus = 7
-	ApplicationStatus_APPLICATION_STATUS_REJECTED       ApplicationStatus = 8
+	// Одобрена офицером. Терминальный.
+	ApplicationStatus_APPLICATION_STATUS_APPROVED ApplicationStatus = 7
+	// Отклонена офицером. Терминальный, и отличается от AUTO_REJECTED, чтобы по
+	// аудиту было видно, принимал ли решение человек.
+	ApplicationStatus_APPLICATION_STATUS_REJECTED ApplicationStatus = 8
 )
 
 // Enum value maps for ApplicationStatus.
@@ -102,12 +113,16 @@ func (ApplicationStatus) EnumDescriptor() ([]byte, []int) {
 	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{0}
 }
 
+// CheckType — автоматическая проверка, выполняемая до разбора человеком.
 type CheckType int32
 
 const (
 	CheckType_CHECK_TYPE_UNSPECIFIED CheckType = 0
-	CheckType_CHECK_TYPE_SANCTIONS   CheckType = 1
-	CheckType_CHECK_TYPE_AGE         CheckType = 2
+	// Сверка с санкционными списками и списками публичных лиц. Попадание
+	// дисквалифицирует.
+	CheckType_CHECK_TYPE_SANCTIONS CheckType = 1
+	// Совершеннолетие по законам юрисдикции, считается из Profile.birth_date.
+	CheckType_CHECK_TYPE_AGE CheckType = 2
 )
 
 // Enum value maps for CheckType.
@@ -151,14 +166,23 @@ func (CheckType) EnumDescriptor() ([]byte, []int) {
 	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{1}
 }
 
+// CheckResult отделяет "проверка говорит нет" от "проверка не смогла
+// отработать": FAILED дисквалифицирует клиента, ERROR означает лишь "повторить
+// позже".
 type CheckResult int32
 
 const (
 	CheckResult_CHECK_RESULT_UNSPECIFIED CheckResult = 0
-	CheckResult_CHECK_RESULT_PENDING     CheckResult = 1
-	CheckResult_CHECK_RESULT_PASSED      CheckResult = 2
-	CheckResult_CHECK_RESULT_FAILED      CheckResult = 3
-	CheckResult_CHECK_RESULT_ERROR       CheckResult = 4
+	// Ещё выполняется.
+	CheckResult_CHECK_RESULT_PENDING CheckResult = 1
+	// Пройдена.
+	CheckResult_CHECK_RESULT_PASSED CheckResult = 2
+	// Клиент не прошёл. Это суждение о клиенте.
+	CheckResult_CHECK_RESULT_FAILED CheckResult = 3
+	// Сломалась сама проверка — провайдер недоступен, таймаут. О клиенте не
+	// говорит ничего, и приравнивать её к FAILED нельзя: так люди получали бы
+	// отказ из-за аварии на стороне банка.
+	CheckResult_CHECK_RESULT_ERROR CheckResult = 4
 )
 
 // Enum value maps for CheckResult.
@@ -206,12 +230,16 @@ func (CheckResult) EnumDescriptor() ([]byte, []int) {
 	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{2}
 }
 
+// Check — одна автоматическая проверка и её исход.
 type Check struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CheckId       string                 `protobuf:"bytes,1,opt,name=check_id,json=checkId,proto3" json:"check_id,omitempty"`
-	Type          CheckType              `protobuf:"varint,2,opt,name=type,proto3,enum=kyc.v1.CheckType" json:"type,omitempty"`
-	Result        CheckResult            `protobuf:"varint,3,opt,name=result,proto3,enum=kyc.v1.CheckResult" json:"result,omitempty"`
-	Details       string                 `protobuf:"bytes,4,opt,name=details,proto3" json:"details,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	CheckId string                 `protobuf:"bytes,1,opt,name=check_id,json=checkId,proto3" json:"check_id,omitempty"`
+	Type    CheckType              `protobuf:"varint,2,opt,name=type,proto3,enum=kyc.v1.CheckType" json:"type,omitempty"`
+	Result  CheckResult            `protobuf:"varint,3,opt,name=result,proto3,enum=kyc.v1.CheckResult" json:"result,omitempty"`
+	// Подробности для офицера человеческим языком: какой список сработал, что
+	// ответил провайдер. Формат свободный — разбирать его программно не надо.
+	Details string `protobuf:"bytes,4,opt,name=details,proto3" json:"details,omitempty"`
+	// Когда проверка завершилась. Не заполнено, пока PENDING.
 	CompletedAt   *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -282,21 +310,32 @@ func (x *Check) GetCompletedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// Application — один проход клиента через KYC. У клиента их может быть
+// несколько за время жизни: сегодняшний отказ не запрещает завтрашнюю анкету.
 type Application struct {
-	state                  protoimpl.MessageState `protogen:"open.v1"`
-	ApplicationId          string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
-	CustomerId             string                 `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	Status                 ApplicationStatus      `protobuf:"varint,3,opt,name=status,proto3,enum=kyc.v1.ApplicationStatus" json:"status,omitempty"`
-	AssignedOfficerId      string                 `protobuf:"bytes,4,opt,name=assigned_officer_id,json=assignedOfficerId,proto3" json:"assigned_officer_id,omitempty"`
-	DecisionReason         string                 `protobuf:"bytes,5,opt,name=decision_reason,json=decisionReason,proto3" json:"decision_reason,omitempty"`
-	Checks                 []*Check               `protobuf:"bytes,6,rep,name=checks,proto3" json:"checks,omitempty"`
-	RequestedDocumentTypes []v1.DocumentType      `protobuf:"varint,7,rep,packed,name=requested_document_types,json=requestedDocumentTypes,proto3,enum=document.v1.DocumentType" json:"requested_document_types,omitempty"`
-	Version                int64                  `protobuf:"varint,8,opt,name=version,proto3" json:"version,omitempty"`
-	CreatedAt              *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	SubmittedAt            *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=submitted_at,json=submittedAt,proto3" json:"submitted_at,omitempty"`
-	DecidedAt              *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=decided_at,json=decidedAt,proto3" json:"decided_at,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ApplicationId string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
+	CustomerId    string                 `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	Status        ApplicationStatus      `protobuf:"varint,3,opt,name=status,proto3,enum=kyc.v1.ApplicationStatus" json:"status,omitempty"`
+	// Офицер, взявший анкету в работу. Пусто, пока не взяли.
+	AssignedOfficerId string `protobuf:"bytes,4,opt,name=assigned_officer_id,json=assignedOfficerId,proto3" json:"assigned_officer_id,omitempty"`
+	// Почему одобрили или отказали. Заполняется на терминальном переходе и
+	// хранится для аудита.
+	DecisionReason string `protobuf:"bytes,5,opt,name=decision_reason,json=decisionReason,proto3" json:"decision_reason,omitempty"`
+	// Результаты автопроверок — офицеру, чтобы их взвесить.
+	Checks []*Check `protobuf:"bytes,6,rep,name=checks,proto3" json:"checks,omitempty"`
+	// Что офицер запросил. Осмысленно в статусе DOCS_REQUESTED.
+	RequestedDocumentTypes []v1.DocumentType `protobuf:"varint,7,rep,packed,name=requested_document_types,json=requestedDocumentTypes,proto3,enum=document.v1.DocumentType" json:"requested_document_types,omitempty"`
+	// Счётчик оптимистической блокировки, растёт на каждом изменении. Передайте
+	// его в ClaimApplication, и "взять, только если с моего взгляда никто её не
+	// взял" станет одной атомарной операцией вместо проверки с последующей
+	// записью.
+	Version       int64                  `protobuf:"varint,8,opt,name=version,proto3" json:"version,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	SubmittedAt   *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=submitted_at,json=submittedAt,proto3" json:"submitted_at,omitempty"`
+	DecidedAt     *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=decided_at,json=decidedAt,proto3" json:"decided_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Application) Reset() {
@@ -406,12 +445,17 @@ func (x *Application) GetDecidedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// ApplicationEvent — один зафиксированный переход. События и есть аудиторский
+// след: Application показывает, как обстоят дела, а они — как к этому пришли.
 type ApplicationEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
 	ApplicationId string                 `protobuf:"bytes,2,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
-	FromStatus    ApplicationStatus      `protobuf:"varint,3,opt,name=from_status,json=fromStatus,proto3,enum=kyc.v1.ApplicationStatus" json:"from_status,omitempty"`
-	ToStatus      ApplicationStatus      `protobuf:"varint,4,opt,name=to_status,json=toStatus,proto3,enum=kyc.v1.ApplicationStatus" json:"to_status,omitempty"`
+	// Переход. У самого первого события from_status равен UNSPECIFIED.
+	FromStatus ApplicationStatus `protobuf:"varint,3,opt,name=from_status,json=fromStatus,proto3,enum=kyc.v1.ApplicationStatus" json:"from_status,omitempty"`
+	ToStatus   ApplicationStatus `protobuf:"varint,4,opt,name=to_status,json=toStatus,proto3,enum=kyc.v1.ApplicationStatus" json:"to_status,omitempty"`
+	// Кто его вызвал. Пусто для автоматических переходов — и эта пустота сама по
+	// себе является записью о том, что человек не участвовал.
 	ActorUserId   string                 `protobuf:"bytes,5,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
 	Comment       string                 `protobuf:"bytes,6,opt,name=comment,proto3" json:"comment,omitempty"`
 	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
@@ -597,7 +641,9 @@ func (x *SubmitApplicationResponse) GetApplication() *Application {
 type GetApplicationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ApplicationId string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
-	IncludeEvents bool                   `protobuf:"varint,2,opt,name=include_events,json=includeEvents,proto3" json:"include_events,omitempty"`
+	// Приложить полную историю событий. По умолчанию выключено: история растёт
+	// без предела, а большинству вызывающих нужно только текущее состояние.
+	IncludeEvents bool `protobuf:"varint,2,opt,name=include_events,json=includeEvents,proto3" json:"include_events,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -647,9 +693,10 @@ func (x *GetApplicationRequest) GetIncludeEvents() bool {
 }
 
 type GetApplicationResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Application   *Application           `protobuf:"bytes,1,opt,name=application,proto3" json:"application,omitempty"`
-	Events        []*ApplicationEvent    `protobuf:"bytes,2,rep,name=events,proto3" json:"events,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Application *Application           `protobuf:"bytes,1,opt,name=application,proto3" json:"application,omitempty"`
+	// Заполняется, только если include_events был true.
+	Events        []*ApplicationEvent `protobuf:"bytes,2,rep,name=events,proto3" json:"events,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -699,10 +746,13 @@ func (x *GetApplicationResponse) GetEvents() []*ApplicationEvent {
 }
 
 type ListApplicationsRequest struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Status            ApplicationStatus      `protobuf:"varint,1,opt,name=status,proto3,enum=kyc.v1.ApplicationStatus" json:"status,omitempty"`
-	AssignedOfficerId string                 `protobuf:"bytes,2,opt,name=assigned_officer_id,json=assignedOfficerId,proto3" json:"assigned_officer_id,omitempty"`
-	Page              *v11.PageRequest       `protobuf:"bytes,3,opt,name=page,proto3" json:"page,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// UNSPECIFIED — не фильтровать по статусу.
+	Status ApplicationStatus `protobuf:"varint,1,opt,name=status,proto3,enum=kyc.v1.ApplicationStatus" json:"status,omitempty"`
+	// Фильтр по исполнителю. Офицер передаёт свой id, чтобы увидеть свою
+	// очередь.
+	AssignedOfficerId string           `protobuf:"bytes,2,opt,name=assigned_officer_id,json=assignedOfficerId,proto3" json:"assigned_officer_id,omitempty"`
+	Page              *v11.PageRequest `protobuf:"bytes,3,opt,name=page,proto3" json:"page,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -811,10 +861,13 @@ func (x *ListApplicationsResponse) GetPage() *v11.PageResponse {
 }
 
 type ClaimApplicationRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	ApplicationId  string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
-	Version        int64                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ApplicationId string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
+	// Application.version, каким его последний раз видел офицер. Если он с тех
+	// пор изменился, значит кто-то успел раньше, и взятие в работу не пройдёт —
+	// вместо того чтобы молча отобрать анкету у коллеги.
+	Version        int64  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	IdempotencyKey string `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -915,10 +968,11 @@ func (x *ClaimApplicationResponse) GetApplication() *Application {
 }
 
 type ApproveApplicationRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	ApplicationId  string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
-	Comment        string                 `protobuf:"bytes,2,opt,name=comment,proto3" json:"comment,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ApplicationId string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
+	// Комментарий офицера. Необязателен, но именно его читает будущий аудит.
+	Comment        string `protobuf:"bytes,2,opt,name=comment,proto3" json:"comment,omitempty"`
+	IdempotencyKey string `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1019,10 +1073,12 @@ func (x *ApproveApplicationResponse) GetApplication() *Application {
 }
 
 type RejectApplicationRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	ApplicationId  string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
-	Reason         string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ApplicationId string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
+	// Почему. На практике обязателен: отказ без записанной причины нельзя ни
+	// защитить перед регулятором, ни объяснить клиенту.
+	Reason         string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	IdempotencyKey string `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1123,11 +1179,14 @@ func (x *RejectApplicationResponse) GetApplication() *Application {
 }
 
 type RequestMoreDocumentsRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	ApplicationId  string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
-	RequestedTypes []v1.DocumentType      `protobuf:"varint,2,rep,packed,name=requested_types,json=requestedTypes,proto3,enum=document.v1.DocumentType" json:"requested_types,omitempty"`
-	Comment        string                 `protobuf:"bytes,3,opt,name=comment,proto3" json:"comment,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ApplicationId string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
+	// Что клиент должен загрузить.
+	RequestedTypes []v1.DocumentType `protobuf:"varint,2,rep,packed,name=requested_types,json=requestedTypes,proto3,enum=document.v1.DocumentType" json:"requested_types,omitempty"`
+	// Что не так с уже присланным — "фото паспорта смазано". Без этого клиент
+	// загрузит тот же непригодный файл ещё раз.
+	Comment        string `protobuf:"bytes,3,opt,name=comment,proto3" json:"comment,omitempty"`
+	IdempotencyKey string `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }

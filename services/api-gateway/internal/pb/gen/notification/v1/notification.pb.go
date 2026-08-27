@@ -24,13 +24,18 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// NotificationChannel — куда доставлять. Канал выбирает сервис по типу
+// события, а не клиент: срочность решает содержание, а не адресат.
 type NotificationChannel int32
 
 const (
 	NotificationChannel_NOTIFICATION_CHANNEL_UNSPECIFIED NotificationChannel = 0
-	NotificationChannel_NOTIFICATION_CHANNEL_EMAIL       NotificationChannel = 1
-	NotificationChannel_NOTIFICATION_CHANNEL_SMS         NotificationChannel = 2
-	NotificationChannel_NOTIFICATION_CHANNEL_PUSH        NotificationChannel = 3
+	// Почта. Умолчание для всего, что можно прочитать вечером.
+	NotificationChannel_NOTIFICATION_CHANNEL_EMAIL NotificationChannel = 1
+	// SMS. Для того, что читают сразу: движение денег, отказы.
+	NotificationChannel_NOTIFICATION_CHANNEL_SMS NotificationChannel = 2
+	// Push в мобильное приложение.
+	NotificationChannel_NOTIFICATION_CHANNEL_PUSH NotificationChannel = 3
 )
 
 // Enum value maps for NotificationChannel.
@@ -76,13 +81,21 @@ func (NotificationChannel) EnumDescriptor() ([]byte, []int) {
 	return file_notification_v1_notification_proto_rawDescGZIP(), []int{0}
 }
 
+// NotificationStatus:
+//
+//	PENDING -> SENT
+//	        -> FAILED
 type NotificationStatus int32
 
 const (
 	NotificationStatus_NOTIFICATION_STATUS_UNSPECIFIED NotificationStatus = 0
-	NotificationStatus_NOTIFICATION_STATUS_PENDING     NotificationStatus = 1
-	NotificationStatus_NOTIFICATION_STATUS_SENT        NotificationStatus = 2
-	NotificationStatus_NOTIFICATION_STATUS_FAILED      NotificationStatus = 3
+	// В очереди на отправку.
+	NotificationStatus_NOTIFICATION_STATUS_PENDING NotificationStatus = 1
+	// Отправлено. Означает "провайдер принял", а не "человек прочитал" —
+	// подтверждения доставки у этого сервиса нет.
+	NotificationStatus_NOTIFICATION_STATUS_SENT NotificationStatus = 2
+	// Отправить не удалось и попытки исчерпаны. См. attempts.
+	NotificationStatus_NOTIFICATION_STATUS_FAILED NotificationStatus = 3
 )
 
 // Enum value maps for NotificationStatus.
@@ -128,21 +141,38 @@ func (NotificationStatus) EnumDescriptor() ([]byte, []int) {
 	return file_notification_v1_notification_proto_rawDescGZIP(), []int{1}
 }
 
+// Notification — одно уведомление, построенное из доменного события чужого
+// сервиса.
 type Notification struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	NotificationId string                 `protobuf:"bytes,1,opt,name=notification_id,json=notificationId,proto3" json:"notification_id,omitempty"`
-	CustomerId     string                 `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	EventId        string                 `protobuf:"bytes,3,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
-	EventType      string                 `protobuf:"bytes,4,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
-	Channel        NotificationChannel    `protobuf:"varint,5,opt,name=channel,proto3,enum=notification.v1.NotificationChannel" json:"channel,omitempty"`
-	Status         NotificationStatus     `protobuf:"varint,6,opt,name=status,proto3,enum=notification.v1.NotificationStatus" json:"status,omitempty"`
-	Subject        string                 `protobuf:"bytes,7,opt,name=subject,proto3" json:"subject,omitempty"`
-	Body           string                 `protobuf:"bytes,8,opt,name=body,proto3" json:"body,omitempty"`
-	Attempts       int32                  `protobuf:"varint,9,opt,name=attempts,proto3" json:"attempts,omitempty"`
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	SentAt         *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=sent_at,json=sentAt,proto3" json:"sent_at,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Кому. Может быть пустым: у части событий адресатом является пользователь,
+	// у которого профиля клиента ещё нет, — например при регистрации.
+	CustomerId string `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	// Идентификатор породившего события. По нему уведомление дедуплицируется:
+	// Kafka доставляет "хотя бы один раз", то есть одно событие приезжает
+	// повторно после ребаланса группы или переподключения.
+	EventId string `protobuf:"bytes,3,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	// Тип события, например "auth.user.registered". Сохраняется как есть, чтобы
+	// по уведомлению было видно, чем оно вызвано.
+	EventType string              `protobuf:"bytes,4,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	Channel   NotificationChannel `protobuf:"varint,5,opt,name=channel,proto3,enum=notification.v1.NotificationChannel" json:"channel,omitempty"`
+	Status    NotificationStatus  `protobuf:"varint,6,opt,name=status,proto3,enum=notification.v1.NotificationStatus" json:"status,omitempty"`
+	// Тема письма.
+	Subject string `protobuf:"bytes,7,opt,name=subject,proto3" json:"subject,omitempty"`
+	// Тело уведомления.
+	Body string `protobuf:"bytes,8,opt,name=body,proto3" json:"body,omitempty"`
+	// Сколько раз пытались отправить. Растёт при каждой неудаче: отличает
+	// "провайдер моргнул один раз" от "адрес неверный и не станет верным".
+	Attempts int32 `protobuf:"varint,9,opt,name=attempts,proto3" json:"attempts,omitempty"`
+	// Время исходного события, а не время его обработки. Так порядок уведомлений
+	// совпадает с порядком того, что произошло на самом деле, даже если
+	// консьюмер отставал.
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// Когда ушло. Не заполнено, пока статус не SENT.
+	SentAt        *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=sent_at,json=sentAt,proto3" json:"sent_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Notification) Reset() {
@@ -253,10 +283,12 @@ func (x *Notification) GetSentAt() *timestamppb.Timestamp {
 }
 
 type ListNotificationsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CustomerId    string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	Status        NotificationStatus     `protobuf:"varint,2,opt,name=status,proto3,enum=notification.v1.NotificationStatus" json:"status,omitempty"`
-	Page          *v1.PageRequest        `protobuf:"bytes,3,opt,name=page,proto3" json:"page,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Фильтр по клиенту. Пусто — все.
+	CustomerId string `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	// Фильтр по статусу. UNSPECIFIED — не фильтровать.
+	Status        NotificationStatus `protobuf:"varint,2,opt,name=status,proto3,enum=notification.v1.NotificationStatus" json:"status,omitempty"`
+	Page          *v1.PageRequest    `protobuf:"bytes,3,opt,name=page,proto3" json:"page,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -313,9 +345,10 @@ func (x *ListNotificationsRequest) GetPage() *v1.PageRequest {
 }
 
 type ListNotificationsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Notifications []*Notification        `protobuf:"bytes,1,rep,name=notifications,proto3" json:"notifications,omitempty"`
-	Page          *v1.PageResponse       `protobuf:"bytes,2,opt,name=page,proto3" json:"page,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// От новых к старым.
+	Notifications []*Notification  `protobuf:"bytes,1,rep,name=notifications,proto3" json:"notifications,omitempty"`
+	Page          *v1.PageResponse `protobuf:"bytes,2,opt,name=page,proto3" json:"page,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

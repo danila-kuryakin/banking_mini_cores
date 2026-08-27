@@ -1,0 +1,28 @@
+# Контекст сборки — корень репозитория, поэтому отсекаем всё, что образу не нужно.
+.git
+.gitignore
+.idea
+**/.idea
+
+# Локальные секреты: в образ попадать не должны, значения приходят из окружения.
+**/.env
+**/.env.local
+
+# Артефакты сборки и тестов
+bin/
+out/
+**/*.exe
+**/*.test
+coverage.out
+coverage.html
+**/*.prof
+**/*.log
+
+# Docker-обвязка сама в образ не нужна
+**/Dockerfile
+**/docker-compose.yml
+**/docker-compose.*.yml
+
+# go.work намеренно не копируем: образы собираются по-модульно, с GOWORK=off
+go.work
+go.work.sum

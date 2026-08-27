@@ -29,11 +29,30 @@ const (
 // LedgerServiceClient is the client API for LedgerService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// LedgerService двигает деньги и является источником правды о балансах.
+//
+// Двойная запись: каждая транзакция порождает записи Entry, сумма которых
+// равна нулю, а баланс выводится сложением записей, а не хранится изменяемым
+// числом. Именно это делает книгу проверяемой — неверный баланс отслеживается
+// до породившей его записи, и никакое обновление не потеряет деньги тихо.
 type LedgerServiceClient interface {
+	// Transfer переводит деньги между двумя счетами.
+	//
+	// Списание и зачисление пишутся в одной транзакции. Что угодно меньшее
+	// позволило бы падению между двумя половинами уничтожить или выдумать
+	// деньги.
 	Transfer(ctx context.Context, in *TransferRequest, opts ...grpc.CallOption) (*TransferResponse, error)
+	// Deposit заводит деньги извне банка. Счёта-источника у него нет — потому
+	// это отдельный вызов, а не Transfer с пустым отправителем.
 	Deposit(ctx context.Context, in *DepositRequest, opts ...grpc.CallOption) (*DepositResponse, error)
 	GetTransaction(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error)
+	// ListTransactions — выписка по счёту.
 	ListTransactions(ctx context.Context, in *ListTransactionsRequest, opts ...grpc.CallOption) (*ListTransactionsResponse, error)
+	// GetBalance возвращает достоверный баланс, посчитанный по записям.
+	//
+	// HTTP-маппинга нет: клиенты читают баланс через account-service. Этот метод
+	// — для сервисов, которым нужна настоящая цифра, а не значение для показа.
 	GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*GetBalanceResponse, error)
 }
 
@@ -98,11 +117,30 @@ func (c *ledgerServiceClient) GetBalance(ctx context.Context, in *GetBalanceRequ
 // LedgerServiceServer is the server API for LedgerService service.
 // All implementations must embed UnimplementedLedgerServiceServer
 // for forward compatibility.
+//
+// LedgerService двигает деньги и является источником правды о балансах.
+//
+// Двойная запись: каждая транзакция порождает записи Entry, сумма которых
+// равна нулю, а баланс выводится сложением записей, а не хранится изменяемым
+// числом. Именно это делает книгу проверяемой — неверный баланс отслеживается
+// до породившей его записи, и никакое обновление не потеряет деньги тихо.
 type LedgerServiceServer interface {
+	// Transfer переводит деньги между двумя счетами.
+	//
+	// Списание и зачисление пишутся в одной транзакции. Что угодно меньшее
+	// позволило бы падению между двумя половинами уничтожить или выдумать
+	// деньги.
 	Transfer(context.Context, *TransferRequest) (*TransferResponse, error)
+	// Deposit заводит деньги извне банка. Счёта-источника у него нет — потому
+	// это отдельный вызов, а не Transfer с пустым отправителем.
 	Deposit(context.Context, *DepositRequest) (*DepositResponse, error)
 	GetTransaction(context.Context, *GetTransactionRequest) (*GetTransactionResponse, error)
+	// ListTransactions — выписка по счёту.
 	ListTransactions(context.Context, *ListTransactionsRequest) (*ListTransactionsResponse, error)
+	// GetBalance возвращает достоверный баланс, посчитанный по записям.
+	//
+	// HTTP-маппинга нет: клиенты читают баланс через account-service. Этот метод
+	// — для сервисов, которым нужна настоящая цифра, а не значение для показа.
 	GetBalance(context.Context, *GetBalanceRequest) (*GetBalanceResponse, error)
 	mustEmbedUnimplementedLedgerServiceServer()
 }

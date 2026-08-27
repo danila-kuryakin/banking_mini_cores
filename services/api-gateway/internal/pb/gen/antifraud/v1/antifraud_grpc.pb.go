@@ -28,10 +28,30 @@ const (
 // AntifraudServiceClient is the client API for AntifraudService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// AntifraudService решает, можно ли пропустить перевод.
+//
+// Правила — это данные, а не код: они лежат в базе и меняются через UpdateRule
+// на ходу. Лимит, для смены которого нужен деплой, — это лимит, который сутки
+// остаётся неверным, а схемы мошенничества меняются быстрее релизного цикла.
 type AntifraudServiceClient interface {
+	// CheckTransfer выносит вердикт по предполагаемому переводу. Вызывается из
+	// ledger-service до того, как деньги двинутся.
+	//
+	// ВНИМАНИЕ: в этом HTTP-маппинге нет body, поэтому grpc-gateway возьмёт поля
+	// запроса из query-строки, а присланный JSON-body проигнорирует — все поля
+	// приедут пустыми. Чинится добавлением `body: "*"`; либо маппинг стоит убрать
+	// вовсе: остальные три метода административные, а этот внешним вызывающим не
+	// предназначен вообще.
 	CheckTransfer(ctx context.Context, in *CheckTransferRequest, opts ...grpc.CallOption) (*CheckTransferResponse, error)
+	// ListRules показывает действующий набор правил. Только для админа: он
+	// раскрывает, под какими именно порогами атакующему надо держаться.
 	ListRules(ctx context.Context, in *ListRulesRequest, opts ...grpc.CallOption) (*ListRulesResponse, error)
+	// UpdateRule включает, выключает или перенастраивает правило. Только для
+	// админа.
 	UpdateRule(ctx context.Context, in *UpdateRuleRequest, opts ...grpc.CallOption) (*UpdateRuleResponse, error)
+	// ListChecks — журнал прошлых вердиктов: для разбора жалобы и для оценки
+	// того, не слишком ли туго или слишком свободно настроено правило.
 	ListChecks(ctx context.Context, in *ListChecksRequest, opts ...grpc.CallOption) (*ListChecksResponse, error)
 }
 
@@ -86,10 +106,30 @@ func (c *antifraudServiceClient) ListChecks(ctx context.Context, in *ListChecksR
 // AntifraudServiceServer is the server API for AntifraudService service.
 // All implementations must embed UnimplementedAntifraudServiceServer
 // for forward compatibility.
+//
+// AntifraudService решает, можно ли пропустить перевод.
+//
+// Правила — это данные, а не код: они лежат в базе и меняются через UpdateRule
+// на ходу. Лимит, для смены которого нужен деплой, — это лимит, который сутки
+// остаётся неверным, а схемы мошенничества меняются быстрее релизного цикла.
 type AntifraudServiceServer interface {
+	// CheckTransfer выносит вердикт по предполагаемому переводу. Вызывается из
+	// ledger-service до того, как деньги двинутся.
+	//
+	// ВНИМАНИЕ: в этом HTTP-маппинге нет body, поэтому grpc-gateway возьмёт поля
+	// запроса из query-строки, а присланный JSON-body проигнорирует — все поля
+	// приедут пустыми. Чинится добавлением `body: "*"`; либо маппинг стоит убрать
+	// вовсе: остальные три метода административные, а этот внешним вызывающим не
+	// предназначен вообще.
 	CheckTransfer(context.Context, *CheckTransferRequest) (*CheckTransferResponse, error)
+	// ListRules показывает действующий набор правил. Только для админа: он
+	// раскрывает, под какими именно порогами атакующему надо держаться.
 	ListRules(context.Context, *ListRulesRequest) (*ListRulesResponse, error)
+	// UpdateRule включает, выключает или перенастраивает правило. Только для
+	// админа.
 	UpdateRule(context.Context, *UpdateRuleRequest) (*UpdateRuleResponse, error)
+	// ListChecks — журнал прошлых вердиктов: для разбора жалобы и для оценки
+	// того, не слишком ли туго или слишком свободно настроено правило.
 	ListChecks(context.Context, *ListChecksRequest) (*ListChecksResponse, error)
 	mustEmbedUnimplementedAntifraudServiceServer()
 }

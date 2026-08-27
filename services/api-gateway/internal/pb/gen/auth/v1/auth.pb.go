@@ -24,11 +24,15 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// User — аккаунт, каким его видит остальная система. Поля с паролем тут нет ни
+// в каком виде: это сообщение уезжает клиентам.
 type User struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
-	Role          v1.Role                `protobuf:"varint,3,opt,name=role,proto3,enum=common.v1.Role" json:"role,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	UserId string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Email  string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	Role   v1.Role                `protobuf:"varint,3,opt,name=role,proto3,enum=common.v1.Role" json:"role,omitempty"`
+	// Связанный профиль клиента. Пуст, пока customer-service его не создал, и
+	// навсегда пуст у офицеров и админов.
 	CustomerId    string                 `protobuf:"bytes,4,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -100,10 +104,23 @@ func (x *User) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// TokenPair — то, что клиент получает после успешного входа или обновления.
+//
+// Токенов два, а не один: короткоживущий access ходит с каждым запросом и
+// проверяется без похода в базу, а долгоживущий refresh ходит редко, зато его
+// можно отозвать.
 type TokenPair struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	AccessToken      string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
-	RefreshToken     string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Отправляется с каждым запросом как "Authorization: Bearer <token>". Живёт
+	// минуты, а не часы: отозвать его нельзя, поэтому он обязан протухать.
+	AccessToken string `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	// Используется только в Refresh. Хранить его надо не там, где место
+	// access-токену, и обращаться как с учётными данными: он выпускает новые
+	// access-токены.
+	RefreshToken string `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	// Подсказки о сроках, чтобы клиент обновлялся заранее, а не дожидался
+	// отказа. Носят справочный характер: сервер проверяет сам токен и не верит
+	// тому, что клиент о нём думает.
 	AccessExpiresAt  *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=access_expires_at,json=accessExpiresAt,proto3" json:"access_expires_at,omitempty"`
 	RefreshExpiresAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=refresh_expires_at,json=refreshExpiresAt,proto3" json:"refresh_expires_at,omitempty"`
 	unknownFields    protoimpl.UnknownFields
@@ -169,10 +186,17 @@ func (x *TokenPair) GetRefreshExpiresAt() *timestamppb.Timestamp {
 }
 
 type RegisterRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Email          string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
-	Password       string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Email string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	// Открытым текстом, под защитой TLS в пути, хешируется перед сохранением.
+	// Его нельзя писать в лог, возвращать обратно и вставлять в текст ошибки.
+	Password string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	// Уникальная строка от клиента, которая делает повтор запроса безопасным.
+	//
+	// После таймаута сети вызывающий не знает, создан аккаунт или нет, поэтому
+	// повторяет запрос с тем же ключом и получает тот же результат — вместо
+	// второго аккаунта или ответа "email уже занят".
+	IdempotencyKey string `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -508,6 +532,8 @@ func (x *LogoutRequest) GetRefreshToken() string {
 	return ""
 }
 
+// Пустое намеренно: сообщать после выхода нечего, кроме самого факта успеха, а
+// пустое сообщение потом можно дополнить полями, ничего никому не сломав.
 type LogoutResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -588,6 +614,12 @@ func (x *ValidateTokenRequest) GetAccessToken() string {
 	return ""
 }
 
+// ValidateTokenResponse описывает токен; поля после valid осмысленны, только
+// когда он true.
+//
+// Недействительный токен возвращается как valid=false, а не ошибкой, потому
+// что "токен протух" — это нормальный ответ на нормальный вопрос: gateway
+// задаёт его на каждом запросе.
 type ValidateTokenResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Valid         bool                   `protobuf:"varint,1,opt,name=valid,proto3" json:"valid,omitempty"`
@@ -665,10 +697,11 @@ func (x *ValidateTokenResponse) GetExpiresAt() *timestamppb.Timestamp {
 }
 
 type CreateOfficerRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Email          string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
-	Password       string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Email string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	// Начальный пароль. Предполагается, что офицер сменит его при первом входе.
+	Password       string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	IdempotencyKey string `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }

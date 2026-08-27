@@ -24,12 +24,19 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Verdict — ответ на вопрос "пропускать ли перевод".
+//
+// Значения два, а не три: неопределённый ответ оставил бы ledger-service
+// решать вопросы фрод-политики самостоятельно. Если проверка не отработала,
+// сервис всё равно обязан выбрать между "разрешить" и "запретить".
 type Verdict int32
 
 const (
 	Verdict_VERDICT_UNSPECIFIED Verdict = 0
-	Verdict_VERDICT_ALLOW       Verdict = 1
-	Verdict_VERDICT_DENY        Verdict = 2
+	// Пропустить.
+	Verdict_VERDICT_ALLOW Verdict = 1
+	// Отказать. Транзакция окажется в статусе DECLINED.
+	Verdict_VERDICT_DENY Verdict = 2
 )
 
 // Enum value maps for Verdict.
@@ -73,13 +80,26 @@ func (Verdict) EnumDescriptor() ([]byte, []int) {
 	return file_antifraud_v1_antifraud_proto_rawDescGZIP(), []int{0}
 }
 
+// RuleType — вид проверки, которую выполняет правило. Пороговые значения живут
+// в Rule.parameters, поэтому новый порог не требует нового типа.
+//
+// ВНИМАНИЕ: значение 3 пропущено. Номера — это формат передачи по проводу, и
+// переиспользовать их нельзя, поэтому удалённый тип правила навсегда оставляет
+// дыру. Это правильно, но знать об этом стоит — прежде чем кто-нибудь решит
+// "навести порядок" в нумерации и сломает уже сохранённые данные.
 type RuleType int32
 
 const (
-	RuleType_RULE_TYPE_UNSPECIFIED         RuleType = 0
+	RuleType_RULE_TYPE_UNSPECIFIED RuleType = 0
+	// Ограничивает один перевод. Параметр — максимальная сумма.
 	RuleType_RULE_TYPE_SINGLE_AMOUNT_LIMIT RuleType = 1
-	RuleType_RULE_TYPE_VELOCITY            RuleType = 2
-	RuleType_RULE_TYPE_SELF_TRANSFER       RuleType = 4
+	// Ограничивает сумму или частоту в окне времени — то правило, которое ловит
+	// сумму, разбитую на множество мелких переводов, чтобы пролезть под разовым
+	// лимитом.
+	RuleType_RULE_TYPE_VELOCITY RuleType = 2
+	// Переводы между счетами одного клиента. Обычно безобидны — потому и
+	// вынесены в отдельное правило: его можно выключить, не ослабляя остальные.
+	RuleType_RULE_TYPE_SELF_TRANSFER RuleType = 4
 )
 
 // Enum value maps for RuleType.
@@ -125,12 +145,20 @@ func (RuleType) EnumDescriptor() ([]byte, []int) {
 	return file_antifraud_v1_antifraud_proto_rawDescGZIP(), []int{1}
 }
 
+// Rule — одна настроенная проверка.
 type Rule struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RuleId        string                 `protobuf:"bytes,1,opt,name=rule_id,json=ruleId,proto3" json:"rule_id,omitempty"`
-	Type          RuleType               `protobuf:"varint,2,opt,name=type,proto3,enum=antifraud.v1.RuleType" json:"type,omitempty"`
-	Enabled       bool                   `protobuf:"varint,3,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Parameters    map[string]string      `protobuf:"bytes,4,rep,name=parameters,proto3" json:"parameters,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	RuleId string                 `protobuf:"bytes,1,opt,name=rule_id,json=ruleId,proto3" json:"rule_id,omitempty"`
+	Type   RuleType               `protobuf:"varint,2,opt,name=type,proto3,enum=antifraud.v1.RuleType" json:"type,omitempty"`
+	// Применяется ли правило. Выключить лучше, чем удалить: правило сохраняет
+	// свой id, и прошлые записи Check по-прежнему ссылаются на то, что можно
+	// объяснить.
+	Enabled bool `protobuf:"varint,3,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	// Пороговые значения по именам — "max_amount", "window_seconds". Строковая
+	// карта вместо типизированных полей, чтобы перенастройка правила была
+	// изменением данных; цена — валидация, которую схема больше не сделает.
+	Parameters map[string]string `protobuf:"bytes,4,rep,name=parameters,proto3" json:"parameters,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Для чего правило, словами, — тому админу, который будет его менять.
 	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -209,11 +237,15 @@ func (x *Rule) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// TriggeredRule — одно правило, сработавшее при проверке.
 type TriggeredRule struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RuleId        string                 `protobuf:"bytes,1,opt,name=rule_id,json=ruleId,proto3" json:"rule_id,omitempty"`
-	Type          RuleType               `protobuf:"varint,2,opt,name=type,proto3,enum=antifraud.v1.RuleType" json:"type,omitempty"`
-	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	RuleId string                 `protobuf:"bytes,1,opt,name=rule_id,json=ruleId,proto3" json:"rule_id,omitempty"`
+	Type   RuleType               `protobuf:"varint,2,opt,name=type,proto3,enum=antifraud.v1.RuleType" json:"type,omitempty"`
+	// Что именно сработало, конкретно: "сумма 50000 превышает лимит 10000". Для
+	// разбирающего, а не для клиента: сказать клиенту, в какой порог он упёрся,
+	// — значит сказать, под чем держаться в следующий раз.
+	Reason        string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -269,14 +301,18 @@ func (x *TriggeredRule) GetReason() string {
 	return ""
 }
 
+// Check — записанный вердикт. Сохраняется при любом исходе: разрешённые
+// переводы важны не меньше отклонённых, когда позже восстанавливают схему
+// мошенничества.
 type Check struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	CheckId        string                 `protobuf:"bytes,1,opt,name=check_id,json=checkId,proto3" json:"check_id,omitempty"`
-	TransactionId  string                 `protobuf:"bytes,2,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
-	FromAccountId  string                 `protobuf:"bytes,3,opt,name=from_account_id,json=fromAccountId,proto3" json:"from_account_id,omitempty"`
-	ToAccountId    string                 `protobuf:"bytes,4,opt,name=to_account_id,json=toAccountId,proto3" json:"to_account_id,omitempty"`
-	Amount         *v1.Money              `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
-	Verdict        Verdict                `protobuf:"varint,6,opt,name=verdict,proto3,enum=antifraud.v1.Verdict" json:"verdict,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CheckId       string                 `protobuf:"bytes,1,opt,name=check_id,json=checkId,proto3" json:"check_id,omitempty"`
+	TransactionId string                 `protobuf:"bytes,2,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	FromAccountId string                 `protobuf:"bytes,3,opt,name=from_account_id,json=fromAccountId,proto3" json:"from_account_id,omitempty"`
+	ToAccountId   string                 `protobuf:"bytes,4,opt,name=to_account_id,json=toAccountId,proto3" json:"to_account_id,omitempty"`
+	Amount        *v1.Money              `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
+	Verdict       Verdict                `protobuf:"varint,6,opt,name=verdict,proto3,enum=antifraud.v1.Verdict" json:"verdict,omitempty"`
+	// Какие правила сработали. Пусто при ALLOW.
 	TriggeredRules []*TriggeredRule       `protobuf:"bytes,7,rep,name=triggered_rules,json=triggeredRules,proto3" json:"triggered_rules,omitempty"`
 	CheckedAt      *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=checked_at,json=checkedAt,proto3" json:"checked_at,omitempty"`
 	unknownFields  protoimpl.UnknownFields
@@ -370,13 +406,21 @@ func (x *Check) GetCheckedAt() *timestamppb.Timestamp {
 }
 
 type CheckTransferRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	TransactionId  string                 `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
-	FromAccountId  string                 `protobuf:"bytes,2,opt,name=from_account_id,json=fromAccountId,proto3" json:"from_account_id,omitempty"`
-	ToAccountId    string                 `protobuf:"bytes,3,opt,name=to_account_id,json=toAccountId,proto3" json:"to_account_id,omitempty"`
-	CustomerId     string                 `protobuf:"bytes,4,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	Amount         *v1.Money              `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Проверяемая транзакция, на этот момент ещё PENDING.
+	TransactionId string `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	FromAccountId string `protobuf:"bytes,2,opt,name=from_account_id,json=fromAccountId,proto3" json:"from_account_id,omitempty"`
+	ToAccountId   string `protobuf:"bytes,3,opt,name=to_account_id,json=toAccountId,proto3" json:"to_account_id,omitempty"`
+	// Владелец счёта-источника. Передаётся снаружи, а не ищется здесь: правила
+	// частоты считают по всем счетам клиента, а этому сервису не следует ходить
+	// в customer-service на критическом пути перевода.
+	CustomerId string    `protobuf:"bytes,4,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	Amount     *v1.Money `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
+	// Заставляет повторную проверку вернуть записанный вердикт вместо повторного
+	// прогона правил. Для правил частоты это существенно: повторный прогон
+	// засчитал бы тот же перевод дважды и отказал бы в том, что только что
+	// разрешил.
+	IdempotencyKey string `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -454,10 +498,12 @@ func (x *CheckTransferRequest) GetIdempotencyKey() string {
 }
 
 type CheckTransferResponse struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	CheckId        string                 `protobuf:"bytes,1,opt,name=check_id,json=checkId,proto3" json:"check_id,omitempty"`
-	Verdict        Verdict                `protobuf:"varint,2,opt,name=verdict,proto3,enum=antifraud.v1.Verdict" json:"verdict,omitempty"`
-	TriggeredRules []*TriggeredRule       `protobuf:"bytes,3,rep,name=triggered_rules,json=triggeredRules,proto3" json:"triggered_rules,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	CheckId string                 `protobuf:"bytes,1,opt,name=check_id,json=checkId,proto3" json:"check_id,omitempty"`
+	Verdict Verdict                `protobuf:"varint,2,opt,name=verdict,proto3,enum=antifraud.v1.Verdict" json:"verdict,omitempty"`
+	// Заполняется при DENY, чтобы вызывающий записал причину в лог без второго
+	// запроса.
+	TriggeredRules []*TriggeredRule `protobuf:"bytes,3,rep,name=triggered_rules,json=triggeredRules,proto3" json:"triggered_rules,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -610,11 +656,16 @@ func (x *ListRulesResponse) GetPage() *v1.PageResponse {
 }
 
 type UpdateRuleRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	RuleId         string                 `protobuf:"bytes,1,opt,name=rule_id,json=ruleId,proto3" json:"rule_id,omitempty"`
-	Enabled        bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Parameters     map[string]string      `protobuf:"bytes,3,rep,name=parameters,proto3" json:"parameters,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	IdempotencyKey string                 `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	RuleId  string                 `protobuf:"bytes,1,opt,name=rule_id,json=ruleId,proto3" json:"rule_id,omitempty"`
+	Enabled bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	// Заменяет карту параметров целиком, а не сливается с ней. Присылать надо
+	// все параметры правила, а не только изменяемый.
+	//
+	// Учтите, что proto3 не отличает пропущенный bool от false, поэтому
+	// обновление, забывшее выставить enabled, выключит правило.
+	Parameters     map[string]string `protobuf:"bytes,3,rep,name=parameters,proto3" json:"parameters,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	IdempotencyKey string            `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -722,10 +773,12 @@ func (x *UpdateRuleResponse) GetRule() *Rule {
 }
 
 type ListChecksRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountId     string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
-	Verdict       Verdict                `protobuf:"varint,2,opt,name=verdict,proto3,enum=antifraud.v1.Verdict" json:"verdict,omitempty"`
-	Page          *v1.PageRequest        `protobuf:"bytes,3,opt,name=page,proto3" json:"page,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Фильтр по счёту, совпадение по любой из сторон перевода.
+	AccountId string `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	// UNSPECIFIED — оба вердикта.
+	Verdict       Verdict         `protobuf:"varint,2,opt,name=verdict,proto3,enum=antifraud.v1.Verdict" json:"verdict,omitempty"`
+	Page          *v1.PageRequest `protobuf:"bytes,3,opt,name=page,proto3" json:"page,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

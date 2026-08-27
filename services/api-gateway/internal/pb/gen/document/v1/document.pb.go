@@ -27,9 +27,13 @@ const (
 type DocumentType int32
 
 const (
-	DocumentType_DOCUMENT_TYPE_UNSPECIFIED      DocumentType = 0
-	DocumentType_DOCUMENT_TYPE_PASSPORT         DocumentType = 1
-	DocumentType_DOCUMENT_TYPE_SELFIE           DocumentType = 2
+	DocumentType_DOCUMENT_TYPE_UNSPECIFIED DocumentType = 0
+	// Скан документа, удостоверяющего личность.
+	DocumentType_DOCUMENT_TYPE_PASSPORT DocumentType = 1
+	// Фотография клиента, сверяется с паспортом: доказывает, что документ
+	// принадлежит тому, кто его предъявляет.
+	DocumentType_DOCUMENT_TYPE_SELFIE DocumentType = 2
+	// Счёт за коммунальные услуги или выписка, подтверждающая Profile.address.
 	DocumentType_DOCUMENT_TYPE_PROOF_OF_ADDRESS DocumentType = 3
 )
 
@@ -76,14 +80,24 @@ func (DocumentType) EnumDescriptor() ([]byte, []int) {
 	return file_document_v1_document_proto_rawDescGZIP(), []int{0}
 }
 
+// DocumentStatus отслеживает загрузку, а не проверку по существу:
+//
+//	PENDING -> UPLOADED -> CONFIRMED
+//	                    -> REJECTED
 type DocumentStatus int32
 
 const (
 	DocumentStatus_DOCUMENT_STATUS_UNSPECIFIED DocumentStatus = 0
-	DocumentStatus_DOCUMENT_STATUS_PENDING     DocumentStatus = 1
-	DocumentStatus_DOCUMENT_STATUS_UPLOADED    DocumentStatus = 2
-	DocumentStatus_DOCUMENT_STATUS_CONFIRMED   DocumentStatus = 3
-	DocumentStatus_DOCUMENT_STATUS_REJECTED    DocumentStatus = 4
+	// InitUpload прошёл, байтов в хранилище ещё нет.
+	DocumentStatus_DOCUMENT_STATUS_PENDING DocumentStatus = 1
+	// Байты в хранилище, проверка не проводилась.
+	DocumentStatus_DOCUMENT_STATUS_UPLOADED DocumentStatus = 2
+	// Проверен и принят. В HasRequiredDocuments засчитываются только документы в
+	// этом статусе.
+	DocumentStatus_DOCUMENT_STATUS_CONFIRMED DocumentStatus = 3
+	// Нечитаемый, не того типа или не сошлась контрольная сумма. Клиент грузит
+	// замену, а не исправляет этот.
+	DocumentStatus_DOCUMENT_STATUS_REJECTED DocumentStatus = 4
 )
 
 // Enum value maps for DocumentStatus.
@@ -131,15 +145,24 @@ func (DocumentStatus) EnumDescriptor() ([]byte, []int) {
 	return file_document_v1_document_proto_rawDescGZIP(), []int{1}
 }
 
+// Document — метаданные о хранимом файле. Ключа в хранилище тут намеренно нет:
+// клиенты получают предподписанные ссылки, а не путь, по которому можно
+// побродить.
 type Document struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DocumentId    string                 `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
-	CustomerId    string                 `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	Type          DocumentType           `protobuf:"varint,3,opt,name=type,proto3,enum=document.v1.DocumentType" json:"type,omitempty"`
-	Status        DocumentStatus         `protobuf:"varint,4,opt,name=status,proto3,enum=document.v1.DocumentStatus" json:"status,omitempty"`
-	FileName      string                 `protobuf:"bytes,5,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
-	ContentType   string                 `protobuf:"bytes,6,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
-	SizeBytes     int64                  `protobuf:"varint,7,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	DocumentId string                 `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
+	CustomerId string                 `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	Type       DocumentType           `protobuf:"varint,3,opt,name=type,proto3,enum=document.v1.DocumentType" json:"type,omitempty"`
+	Status     DocumentStatus         `protobuf:"varint,4,opt,name=status,proto3,enum=document.v1.DocumentStatus" json:"status,omitempty"`
+	// Исходное имя от клиента. Только для показа: значение задаёт атакующий, и
+	// строить из него путь в хранилище нельзя.
+	FileName string `protobuf:"bytes,5,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	// MIME-тип, заявленный при InitUpload, например "image/jpeg".
+	ContentType string `protobuf:"bytes,6,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	SizeBytes   int64  `protobuf:"varint,7,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	// SHA-256 файла в hex. Передаётся в ConfirmUpload и сверяется с сохранённым
+	// объектом. Доказывает, что дошли те байты, которые отправляли, и даёт
+	// аудиту то, на что можно сослаться потом.
 	Sha256        string                 `protobuf:"bytes,8,opt,name=sha256,proto3" json:"sha256,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	ConfirmedAt   *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=confirmed_at,json=confirmedAt,proto3" json:"confirmed_at,omitempty"`
@@ -248,13 +271,18 @@ func (x *Document) GetConfirmedAt() *timestamppb.Timestamp {
 }
 
 type InitUploadRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	CustomerId     string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	Type           DocumentType           `protobuf:"varint,2,opt,name=type,proto3,enum=document.v1.DocumentType" json:"type,omitempty"`
-	FileName       string                 `protobuf:"bytes,3,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
-	ContentType    string                 `protobuf:"bytes,4,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
-	SizeBytes      int64                  `protobuf:"varint,5,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	CustomerId string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	Type       DocumentType           `protobuf:"varint,2,opt,name=type,proto3,enum=document.v1.DocumentType" json:"type,omitempty"`
+	FileName   string                 `protobuf:"bytes,3,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	// Заявленный MIME-тип. Сервис ограничивает, что принимает: разрешить
+	// произвольные типы — значит превратить хранилище документов в раздачу
+	// вредоносных файлов.
+	ContentType string `protobuf:"bytes,4,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	// Заявленный размер. Проверяется против лимита до выдачи ссылки, поэтому
+	// слишком большой файл отвергается до загрузки, а не после.
+	SizeBytes      int64  `protobuf:"varint,5,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	IdempotencyKey string `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -332,13 +360,19 @@ func (x *InitUploadRequest) GetIdempotencyKey() string {
 }
 
 type InitUploadResponse struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	DocumentId      string                 `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
-	UploadUrl       string                 `protobuf:"bytes,2,opt,name=upload_url,json=uploadUrl,proto3" json:"upload_url,omitempty"`
-	RequiredHeaders map[string]string      `protobuf:"bytes,3,rep,name=required_headers,json=requiredHeaders,proto3" json:"required_headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	ExpiresAt       *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	DocumentId string                 `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
+	// Предподписанная ссылка, куда класть байты методом PUT. Одноразового
+	// назначения и с коротким сроком; пока жива — обращаться как с секретом.
+	UploadUrl string `protobuf:"bytes,2,opt,name=upload_url,json=uploadUrl,proto3" json:"upload_url,omitempty"`
+	// Заголовки, которые надо отправить с PUT дословно. Подпись покрывает и их,
+	// поэтому пропущенный или изменённый заголовок заставит хранилище отклонить
+	// загрузку.
+	RequiredHeaders map[string]string `protobuf:"bytes,3,rep,name=required_headers,json=requiredHeaders,proto3" json:"required_headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Когда upload_url перестанет работать. После этого — снова InitUpload.
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *InitUploadResponse) Reset() {
@@ -400,10 +434,12 @@ func (x *InitUploadResponse) GetExpiresAt() *timestamppb.Timestamp {
 }
 
 type ConfirmUploadRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	DocumentId     string                 `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
-	Sha256         string                 `protobuf:"bytes,2,opt,name=sha256,proto3" json:"sha256,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	DocumentId string                 `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
+	// SHA-256 в hex, посчитанный клиентом по отправленным байтам. Несовпадение
+	// означает, что загрузка побилась или её подменили, и документ отклоняется.
+	Sha256         string `protobuf:"bytes,2,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	IdempotencyKey string `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -600,10 +636,12 @@ func (x *GetDownloadUrlResponse) GetExpiresAt() *timestamppb.Timestamp {
 }
 
 type ListDocumentsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CustomerId    string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	Types         []DocumentType         `protobuf:"varint,2,rep,packed,name=types,proto3,enum=document.v1.DocumentType" json:"types,omitempty"`
-	Page          *v1.PageRequest        `protobuf:"bytes,3,opt,name=page,proto3" json:"page,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	CustomerId string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	// Фильтр по типам. Пусто — все типы: пустой список означает "без фильтра", а
+	// не "ничего не возвращать".
+	Types         []DocumentType  `protobuf:"varint,2,rep,packed,name=types,proto3,enum=document.v1.DocumentType" json:"types,omitempty"`
+	Page          *v1.PageRequest `protobuf:"bytes,3,opt,name=page,proto3" json:"page,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -712,9 +750,12 @@ func (x *ListDocumentsResponse) GetPage() *v1.PageResponse {
 }
 
 type HasRequiredDocumentsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CustomerId    string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	RequiredTypes []DocumentType         `protobuf:"varint,2,rep,packed,name=required_types,json=requiredTypes,proto3,enum=document.v1.DocumentType" json:"required_types,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	CustomerId string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	// Что именно нужно вызывающему. Набор требований принадлежит его политике, а
+	// не этому сервису, поэтому и передаётся снаружи: правила KYC отличаются от
+	// юрисдикции к юрисдикции и от типа анкеты.
+	RequiredTypes []DocumentType `protobuf:"varint,2,rep,packed,name=required_types,json=requiredTypes,proto3,enum=document.v1.DocumentType" json:"required_types,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -764,9 +805,12 @@ func (x *HasRequiredDocumentsRequest) GetRequiredTypes() []DocumentType {
 }
 
 type HasRequiredDocumentsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Satisfied     bool                   `protobuf:"varint,1,opt,name=satisfied,proto3" json:"satisfied,omitempty"`
-	MissingTypes  []DocumentType         `protobuf:"varint,2,rep,packed,name=missing_types,json=missingTypes,proto3,enum=document.v1.DocumentType" json:"missing_types,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// True, когда для каждого требуемого типа есть документ в статусе CONFIRMED.
+	Satisfied bool `protobuf:"varint,1,opt,name=satisfied,proto3" json:"satisfied,omitempty"`
+	// Каких типов не хватает. Заполняется, когда satisfied = false, чтобы
+	// вызывающий сказал клиенту, что догрузить, без второго запроса.
+	MissingTypes  []DocumentType `protobuf:"varint,2,rep,packed,name=missing_types,json=missingTypes,proto3,enum=document.v1.DocumentType" json:"missing_types,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

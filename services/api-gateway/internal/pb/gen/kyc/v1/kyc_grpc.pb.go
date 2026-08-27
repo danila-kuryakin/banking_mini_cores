@@ -31,13 +31,34 @@ const (
 // KycServiceClient is the client API for KycService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// KycService ведёт Know Your Customer — регулируемую процедуру, решающую,
+// можно ли вообще обслуживать этого человека.
+//
+// Каждое решение записывается как ApplicationEvent, а не как изменение
+// текущего состояния. Регулятор спрашивает "кто одобрил и когда", и ответ
+// обязан пережить все последующие правки со стороны клиента.
 type KycServiceClient interface {
+	// SubmitApplication начинает проверку — или подаёт заново ту анкету, которую
+	// вернули за недостающими документами.
 	SubmitApplication(ctx context.Context, in *SubmitApplicationRequest, opts ...grpc.CallOption) (*SubmitApplicationResponse, error)
 	GetApplication(ctx context.Context, in *GetApplicationRequest, opts ...grpc.CallOption) (*GetApplicationResponse, error)
+	// ListApplications — рабочая очередь офицера.
 	ListApplications(ctx context.Context, in *ListApplicationsRequest, opts ...grpc.CallOption) (*ListApplicationsResponse, error)
+	// ClaimApplication закрепляет анкету за вызывающим офицером.
+	//
+	// Взятие в работу существует для того, чтобы двое не разбирали одну анкету
+	// параллельно и не пришли к противоположным выводам. Это единственный вызов
+	// с version — потому что это единственный вызов, который гоняется.
 	ClaimApplication(ctx context.Context, in *ClaimApplicationRequest, opts ...grpc.CallOption) (*ClaimApplicationResponse, error)
+	// ApproveApplication пропускает клиента. Терминальный: публикует событие,
+	// которое переводит клиента в ACTIVE и открывает дорогу к счетам.
 	ApproveApplication(ctx context.Context, in *ApproveApplicationRequest, opts ...grpc.CallOption) (*ApproveApplicationResponse, error)
+	// RejectApplication отказывает клиенту. Терминальный для этой анкеты.
 	RejectApplication(ctx context.Context, in *RejectApplicationRequest, opts ...grpc.CallOption) (*RejectApplicationResponse, error)
+	// RequestMoreDocuments возвращает анкету клиенту, не вынося решения, —
+	// середина между "одобрить на слабых основаниях" и "отказать человеку,
+	// который просто загрузил не тот файл".
 	RequestMoreDocuments(ctx context.Context, in *RequestMoreDocumentsRequest, opts ...grpc.CallOption) (*RequestMoreDocumentsResponse, error)
 }
 
@@ -122,13 +143,34 @@ func (c *kycServiceClient) RequestMoreDocuments(ctx context.Context, in *Request
 // KycServiceServer is the server API for KycService service.
 // All implementations must embed UnimplementedKycServiceServer
 // for forward compatibility.
+//
+// KycService ведёт Know Your Customer — регулируемую процедуру, решающую,
+// можно ли вообще обслуживать этого человека.
+//
+// Каждое решение записывается как ApplicationEvent, а не как изменение
+// текущего состояния. Регулятор спрашивает "кто одобрил и когда", и ответ
+// обязан пережить все последующие правки со стороны клиента.
 type KycServiceServer interface {
+	// SubmitApplication начинает проверку — или подаёт заново ту анкету, которую
+	// вернули за недостающими документами.
 	SubmitApplication(context.Context, *SubmitApplicationRequest) (*SubmitApplicationResponse, error)
 	GetApplication(context.Context, *GetApplicationRequest) (*GetApplicationResponse, error)
+	// ListApplications — рабочая очередь офицера.
 	ListApplications(context.Context, *ListApplicationsRequest) (*ListApplicationsResponse, error)
+	// ClaimApplication закрепляет анкету за вызывающим офицером.
+	//
+	// Взятие в работу существует для того, чтобы двое не разбирали одну анкету
+	// параллельно и не пришли к противоположным выводам. Это единственный вызов
+	// с version — потому что это единственный вызов, который гоняется.
 	ClaimApplication(context.Context, *ClaimApplicationRequest) (*ClaimApplicationResponse, error)
+	// ApproveApplication пропускает клиента. Терминальный: публикует событие,
+	// которое переводит клиента в ACTIVE и открывает дорогу к счетам.
 	ApproveApplication(context.Context, *ApproveApplicationRequest) (*ApproveApplicationResponse, error)
+	// RejectApplication отказывает клиенту. Терминальный для этой анкеты.
 	RejectApplication(context.Context, *RejectApplicationRequest) (*RejectApplicationResponse, error)
+	// RequestMoreDocuments возвращает анкету клиенту, не вынося решения, —
+	// середина между "одобрить на слабых основаниях" и "отказать человеку,
+	// который просто загрузил не тот файл".
 	RequestMoreDocuments(context.Context, *RequestMoreDocumentsRequest) (*RequestMoreDocumentsResponse, error)
 	mustEmbedUnimplementedKycServiceServer()
 }

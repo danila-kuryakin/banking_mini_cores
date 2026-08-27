@@ -28,10 +28,27 @@ const (
 // CustomerServiceClient is the client API for CustomerService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// CustomerService владеет тем, кто такой клиент: имя, адрес, контакты, статус.
+//
+// Учётные данные живут в auth-service и связаны только через user_id. Это
+// разные сервисы, потому что у персональных данных и у секретов входа разные
+// сроки хранения, разные требования к аудиту и разный масштаб последствий при
+// утечке.
 type CustomerServiceClient interface {
 	GetCustomer(ctx context.Context, in *GetCustomerRequest, opts ...grpc.CallOption) (*GetCustomerResponse, error)
+	// UpdateProfile заменяет профиль целиком.
+	//
+	// По HTTP это PATCH, но передаётся и сохраняется весь Profile: пропущенное
+	// поле обнуляется, а не остаётся прежним. Сначала прочитайте клиента,
+	// измените нужное, отправьте результат обратно.
 	UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*UpdateProfileResponse, error)
+	// GetCustomerStatus отдаёт только статус и время его последней смены.
+	//
+	// Отдельно от GetCustomer, чтобы опрос решения по KYC не таскал по сети
+	// полный профиль персональных данных каждые несколько секунд.
 	GetCustomerStatus(ctx context.Context, in *GetCustomerStatusRequest, opts ...grpc.CallOption) (*GetCustomerStatusResponse, error)
+	// ListCustomers — очередь офицера. Не для клиентов: возвращает чужие данные.
 	ListCustomers(ctx context.Context, in *ListCustomersRequest, opts ...grpc.CallOption) (*ListCustomersResponse, error)
 }
 
@@ -86,10 +103,27 @@ func (c *customerServiceClient) ListCustomers(ctx context.Context, in *ListCusto
 // CustomerServiceServer is the server API for CustomerService service.
 // All implementations must embed UnimplementedCustomerServiceServer
 // for forward compatibility.
+//
+// CustomerService владеет тем, кто такой клиент: имя, адрес, контакты, статус.
+//
+// Учётные данные живут в auth-service и связаны только через user_id. Это
+// разные сервисы, потому что у персональных данных и у секретов входа разные
+// сроки хранения, разные требования к аудиту и разный масштаб последствий при
+// утечке.
 type CustomerServiceServer interface {
 	GetCustomer(context.Context, *GetCustomerRequest) (*GetCustomerResponse, error)
+	// UpdateProfile заменяет профиль целиком.
+	//
+	// По HTTP это PATCH, но передаётся и сохраняется весь Profile: пропущенное
+	// поле обнуляется, а не остаётся прежним. Сначала прочитайте клиента,
+	// измените нужное, отправьте результат обратно.
 	UpdateProfile(context.Context, *UpdateProfileRequest) (*UpdateProfileResponse, error)
+	// GetCustomerStatus отдаёт только статус и время его последней смены.
+	//
+	// Отдельно от GetCustomer, чтобы опрос решения по KYC не таскал по сети
+	// полный профиль персональных данных каждые несколько секунд.
 	GetCustomerStatus(context.Context, *GetCustomerStatusRequest) (*GetCustomerStatusResponse, error)
+	// ListCustomers — очередь офицера. Не для клиентов: возвращает чужие данные.
 	ListCustomers(context.Context, *ListCustomersRequest) (*ListCustomersResponse, error)
 	mustEmbedUnimplementedCustomerServiceServer()
 }

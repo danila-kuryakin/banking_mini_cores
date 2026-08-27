@@ -21,10 +21,25 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// PageRequest запрашивает одну страницу списка.
+//
+// По токену, а не по смещению: при смещении строки, добавленные или удалённые
+// между двумя запросами, сдвигают окно, и клиент молча пропускает или
+// повторяет элементы. Токен вместо этого закрепляет позицию в выборке.
 type PageRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PageSize      int32                  `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken     string                 `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Сколько элементов вернуть. Ноль означает "по умолчанию на стороне
+	// сервера"; сервер к тому же ограничивает величину сверху, поэтому запрос на
+	// миллион вернёт предел, а не ошибку.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Непрозрачный курсор из next_page_token предыдущего ответа. Пусто — первая
+	// страница.
+	//
+	// Непрозрачность — это контракт, а не описание: клиенту нельзя его
+	// разбирать, собирать и складывать с числами. Кодировка отличается от
+	// сервиса к сервису и меняется без смены версии API именно потому, что
+	// зависеть от неё никто не имеет права.
+	PageToken     string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -73,10 +88,19 @@ func (x *PageRequest) GetPageToken() string {
 	return ""
 }
 
+// PageResponse отдаёт позицию для следующего запроса.
 type PageResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	NextPageToken string                 `protobuf:"bytes,1,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	TotalSize     int32                  `protobuf:"varint,2,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Курсор, который надо передать в page_token, чтобы продолжить. Пусто —
+	// страница была последней. Признак конца именно этот, а не короткая
+	// страница: страница может прийти короче запрошенной, и за ней всё равно
+	// что-то будет.
+	NextPageToken string `protobuf:"bytes,1,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	// Сколько всего элементов подходит под фильтр, без учёта постраничности.
+	//
+	// Может быть оценкой или нулём, когда считать точно слишком дорого. Поле
+	// нужно, чтобы нарисовать "1-20 из 340", а не чтобы управлять обходом.
+	TotalSize     int32 `protobuf:"varint,2,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

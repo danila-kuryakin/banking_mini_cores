@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package document.v1;
+
+option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/pb/gen/document/v1;documentv1";
+
+import "common/v1/pagination.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+service DocumentService {
+  rpc InitUpload(InitUploadRequest) returns (InitUploadResponse) {
+    option (google.api.http) = {
+      post: "/v1/documents:initUpload"
+      body: "*"
+    };
+  }
+
+  rpc ConfirmUpload(ConfirmUploadRequest) returns (ConfirmUploadResponse) {
+    option (google.api.http) = {
+      post: "/v1/documents/{document_id}:confirm"
+      body: "*"
+    };
+  }
+
+  rpc GetDownloadUrl(GetDownloadUrlRequest) returns (GetDownloadUrlResponse) {
+    option (google.api.http) = {get: "/v1/documents/{document_id}/download-url"};
+  }
+
+  rpc ListDocuments(ListDocumentsRequest) returns (ListDocumentsResponse) {
+    option (google.api.http) = {get: "/v1/customers/{customer_id}/documents"};
+  }
+
+  rpc HasRequiredDocuments(HasRequiredDocumentsRequest) returns (HasRequiredDocumentsResponse);
+}
+
+enum DocumentType {
+  DOCUMENT_TYPE_UNSPECIFIED = 0;
+  DOCUMENT_TYPE_PASSPORT = 1;
+  DOCUMENT_TYPE_SELFIE = 2;
+  DOCUMENT_TYPE_PROOF_OF_ADDRESS = 3;
+}
+
+enum DocumentStatus {
+  DOCUMENT_STATUS_UNSPECIFIED = 0;
+  DOCUMENT_STATUS_PENDING = 1;
+  DOCUMENT_STATUS_UPLOADED = 2;
+  DOCUMENT_STATUS_CONFIRMED = 3;
+  DOCUMENT_STATUS_REJECTED = 4;
+}
+
+message Document {
+  string document_id = 1;
+  string customer_id = 2;
+  DocumentType type = 3;
+  DocumentStatus status = 4;
+  string file_name = 5;
+  string content_type = 6;
+  int64 size_bytes = 7;
+  string sha256 = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp confirmed_at = 10;
+}
+
+message InitUploadRequest {
+  string customer_id = 1;
+  DocumentType type = 2;
+  string file_name = 3;
+  string content_type = 4;
+  int64 size_bytes = 5;
+  string idempotency_key = 6;
+}
+
+message InitUploadResponse {
+  string document_id = 1;
+  string upload_url = 2;
+  map<string, string> required_headers = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+message ConfirmUploadRequest {
+  string document_id = 1;
+  string sha256 = 2;
+  string idempotency_key = 3;
+}
+
+message ConfirmUploadResponse {
+  Document document = 1;
+}
+
+message GetDownloadUrlRequest {
+  string document_id = 1;
+}
+
+message GetDownloadUrlResponse {
+  string download_url = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message ListDocumentsRequest {
+  string customer_id = 1;
+  repeated DocumentType types = 2;
+  common.v1.PageRequest page = 3;
+}
+
+message ListDocumentsResponse {
+  repeated Document documents = 1;
+  common.v1.PageResponse page = 2;
+}
+
+message HasRequiredDocumentsRequest {
+  string customer_id = 1;
+  repeated DocumentType required_types = 2;
+}
+
+message HasRequiredDocumentsResponse {
+  bool satisfied = 1;
+  repeated DocumentType missing_types = 2;
+}

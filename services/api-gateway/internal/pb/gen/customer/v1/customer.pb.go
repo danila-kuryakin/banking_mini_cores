@@ -25,21 +25,28 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// CustomerStatus is driven by KYC events, never set directly by the customer.
+// CustomerStatus движется событиями KYC, сам клиент его не выставляет.
 //
 //	NEW -> PROFILE_FILLED -> ON_KYC -> ACTIVE
 //	                                -> REJECTED
-//	any -> BLOCKED
+//	любой -> BLOCKED
 type CustomerStatus int32
 
 const (
-	CustomerStatus_CUSTOMER_STATUS_UNSPECIFIED    CustomerStatus = 0
-	CustomerStatus_CUSTOMER_STATUS_NEW            CustomerStatus = 1
+	CustomerStatus_CUSTOMER_STATUS_UNSPECIFIED CustomerStatus = 0
+	// Зарегистрирован, профиль ещё не заполнен.
+	CustomerStatus_CUSTOMER_STATUS_NEW CustomerStatus = 1
+	// Профиль заполнен, анкета на KYC не подана.
 	CustomerStatus_CUSTOMER_STATUS_PROFILE_FILLED CustomerStatus = 2
-	CustomerStatus_CUSTOMER_STATUS_ON_KYC         CustomerStatus = 3
-	CustomerStatus_CUSTOMER_STATUS_ACTIVE         CustomerStatus = 4
-	CustomerStatus_CUSTOMER_STATUS_REJECTED       CustomerStatus = 5
-	CustomerStatus_CUSTOMER_STATUS_BLOCKED        CustomerStatus = 6
+	// Анкета на проверке. Клиент ждёт, делать ему нечего.
+	CustomerStatus_CUSTOMER_STATUS_ON_KYC CustomerStatus = 3
+	// KYC пройден. Только в этом статусе можно открывать счета и двигать деньги.
+	CustomerStatus_CUSTOMER_STATUS_ACTIVE CustomerStatus = 4
+	// В KYC отказано. Терминальный для этой анкеты; подать новую можно.
+	CustomerStatus_CUSTOMER_STATUS_REJECTED CustomerStatus = 5
+	// Заблокирован банком — подозрение, решение суда, комплаенс. Достижим из
+	// любого статуса, включая ACTIVE, и не стирает того, что было до него.
+	CustomerStatus_CUSTOMER_STATUS_BLOCKED CustomerStatus = 6
 )
 
 // Enum value maps for CustomerStatus.
@@ -91,13 +98,19 @@ func (CustomerStatus) EnumDescriptor() ([]byte, []int) {
 	return file_customer_v1_customer_proto_rawDescGZIP(), []int{0}
 }
 
+// Address — адрес проживания со слов клиента, подтверждаемый документом.
+//
+// Поля свободные, а не строгий формат: раскладка адреса отличается от страны к
+// стране, а KYC нужно то, что прочитает человек-проверяющий, а не то, что
+// провалидирует парсер.
 type Address struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Country       string                 `protobuf:"bytes,1,opt,name=country,proto3" json:"country,omitempty"`
-	City          string                 `protobuf:"bytes,2,opt,name=city,proto3" json:"city,omitempty"`
-	Street        string                 `protobuf:"bytes,3,opt,name=street,proto3" json:"street,omitempty"`
-	Building      string                 `protobuf:"bytes,4,opt,name=building,proto3" json:"building,omitempty"`
-	PostalCode    string                 `protobuf:"bytes,5,opt,name=postal_code,json=postalCode,proto3" json:"postal_code,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ISO 3166-1 alpha-2, в верхнем регистре: "US", "DE".
+	Country       string `protobuf:"bytes,1,opt,name=country,proto3" json:"country,omitempty"`
+	City          string `protobuf:"bytes,2,opt,name=city,proto3" json:"city,omitempty"`
+	Street        string `protobuf:"bytes,3,opt,name=street,proto3" json:"street,omitempty"`
+	Building      string `protobuf:"bytes,4,opt,name=building,proto3" json:"building,omitempty"`
+	PostalCode    string `protobuf:"bytes,5,opt,name=postal_code,json=postalCode,proto3" json:"postal_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -167,14 +180,22 @@ func (x *Address) GetPostalCode() string {
 	return ""
 }
 
+// Profile — персональные данные клиента. Здесь всё регулируемое: писать в лог
+// скупо, отдавать только владельцу и офицерам.
 type Profile struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FirstName     string                 `protobuf:"bytes,1,opt,name=first_name,json=firstName,proto3" json:"first_name,omitempty"`
-	LastName      string                 `protobuf:"bytes,2,opt,name=last_name,json=lastName,proto3" json:"last_name,omitempty"`
-	BirthDate     *date.Date             `protobuf:"bytes,3,opt,name=birth_date,json=birthDate,proto3" json:"birth_date,omitempty"`
-	Citizenship   string                 `protobuf:"bytes,4,opt,name=citizenship,proto3" json:"citizenship,omitempty"`
-	Phone         string                 `protobuf:"bytes,5,opt,name=phone,proto3" json:"phone,omitempty"`
-	Address       *Address               `protobuf:"bytes,6,opt,name=address,proto3" json:"address,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	FirstName string                 `protobuf:"bytes,1,opt,name=first_name,json=firstName,proto3" json:"first_name,omitempty"`
+	LastName  string                 `protobuf:"bytes,2,opt,name=last_name,json=lastName,proto3" json:"last_name,omitempty"`
+	// Только дата, без времени и без часового пояса — потому google.type.Date, а
+	// не Timestamp. Дата рождения — один и тот же календарный день везде, а
+	// timestamp сдвигал бы его через полночь в зависимости от пояса читателя.
+	BirthDate *date.Date `protobuf:"bytes,3,opt,name=birth_date,json=birthDate,proto3" json:"birth_date,omitempty"`
+	// Код страны гражданства, ISO 3166-1 alpha-2. Влияет на санкционные
+	// проверки.
+	Citizenship string `protobuf:"bytes,4,opt,name=citizenship,proto3" json:"citizenship,omitempty"`
+	// E.164 с ведущим плюсом: "+79991234567".
+	Phone         string   `protobuf:"bytes,5,opt,name=phone,proto3" json:"phone,omitempty"`
+	Address       *Address `protobuf:"bytes,6,opt,name=address,proto3" json:"address,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -252,9 +273,11 @@ func (x *Profile) GetAddress() *Address {
 }
 
 type Customer struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CustomerId    string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	CustomerId string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	// Аккаунт в auth-service, которому принадлежит профиль. Один к одному.
+	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Только для чтения. Меняется решениями KYC, а не через UpdateProfile.
 	Status        CustomerStatus         `protobuf:"varint,3,opt,name=status,proto3,enum=customer.v1.CustomerStatus" json:"status,omitempty"`
 	Profile       *Profile               `protobuf:"bytes,4,opt,name=profile,proto3" json:"profile,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
@@ -424,10 +447,11 @@ func (x *GetCustomerResponse) GetCustomer() *Customer {
 }
 
 type UpdateProfileRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	CustomerId     string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	Profile        *Profile               `protobuf:"bytes,2,opt,name=profile,proto3" json:"profile,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	CustomerId string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	// Профиль целиком. См. UpdateProfile: он заменяет, а не сливает.
+	Profile        *Profile `protobuf:"bytes,2,opt,name=profile,proto3" json:"profile,omitempty"`
+	IdempotencyKey string   `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -572,8 +596,10 @@ func (x *GetCustomerStatusRequest) GetCustomerId() string {
 }
 
 type GetCustomerStatusResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        CustomerStatus         `protobuf:"varint,1,opt,name=status,proto3,enum=customer.v1.CustomerStatus" json:"status,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Status CustomerStatus         `protobuf:"varint,1,opt,name=status,proto3,enum=customer.v1.CustomerStatus" json:"status,omitempty"`
+	// Когда статус в последний раз менялся, а не когда его прочитали. Позволяет
+	// отличить свежее решение от того, что клиент уже видел.
 	ChangedAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=changed_at,json=changedAt,proto3" json:"changed_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -624,9 +650,11 @@ func (x *GetCustomerStatusResponse) GetChangedAt() *timestamppb.Timestamp {
 }
 
 type ListCustomersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        CustomerStatus         `protobuf:"varint,1,opt,name=status,proto3,enum=customer.v1.CustomerStatus" json:"status,omitempty"`
-	Page          *v1.PageRequest        `protobuf:"bytes,2,opt,name=page,proto3" json:"page,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Фильтр по статусу. UNSPECIFIED — не фильтровать, поэтому значение по
+	// умолчанию возвращает всех, а не никого.
+	Status        CustomerStatus  `protobuf:"varint,1,opt,name=status,proto3,enum=customer.v1.CustomerStatus" json:"status,omitempty"`
+	Page          *v1.PageRequest `protobuf:"bytes,2,opt,name=page,proto3" json:"page,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
