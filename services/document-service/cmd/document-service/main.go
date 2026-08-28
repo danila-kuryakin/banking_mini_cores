@@ -9,7 +9,7 @@ import (
 
 	conn "github.com/danila-kuryakin/banking_mini_cores/platform/connection"
 	"github.com/danila-kuryakin/banking_mini_cores/platform/grpc_server"
-	service "github.com/danila-kuryakin/banking_mini_cores/services/document-service/internal/adapters"
+	service "github.com/danila-kuryakin/banking_mini_cores/services/document-service/internal/adapters/grpc_server"
 	"github.com/danila-kuryakin/banking_mini_cores/services/document-service/internal/config"
 	documentint "github.com/danila-kuryakin/banking_mini_cores/services/document-service/internal/interceptors"
 	documentv1 "github.com/danila-kuryakin/banking_mini_cores/services/document-service/internal/pb/gen/document/v1"

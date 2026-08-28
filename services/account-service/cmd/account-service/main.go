@@ -10,7 +10,7 @@ import (
 	conn "github.com/danila-kuryakin/banking_mini_cores/platform/connection"
 	"github.com/danila-kuryakin/banking_mini_cores/platform/grpc_server"
 	accountint "github.com/danila-kuryakin/banking_mini_cores/services/account-service/interceptors"
-	service "github.com/danila-kuryakin/banking_mini_cores/services/account-service/internal/adapters"
+	service "github.com/danila-kuryakin/banking_mini_cores/services/account-service/internal/adapters/grpc_server"
 	"github.com/danila-kuryakin/banking_mini_cores/services/account-service/internal/config"
 	accountv1 "github.com/danila-kuryakin/banking_mini_cores/services/account-service/internal/pb/gen/account/v1"
 	"google.golang.org/grpc"

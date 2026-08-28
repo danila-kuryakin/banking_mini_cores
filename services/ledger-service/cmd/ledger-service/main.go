@@ -9,7 +9,7 @@ import (
 
 	conn "github.com/danila-kuryakin/banking_mini_cores/platform/connection"
 	"github.com/danila-kuryakin/banking_mini_cores/platform/grpc_server"
-	service "github.com/danila-kuryakin/banking_mini_cores/services/ledger-service/internal/adapters"
+	service "github.com/danila-kuryakin/banking_mini_cores/services/ledger-service/internal/adapters/grpc_server"
 	"github.com/danila-kuryakin/banking_mini_cores/services/ledger-service/internal/adapters/kafka"
 	"github.com/danila-kuryakin/banking_mini_cores/services/ledger-service/internal/config"
 	ledgerint "github.com/danila-kuryakin/banking_mini_cores/services/ledger-service/internal/interceptors"

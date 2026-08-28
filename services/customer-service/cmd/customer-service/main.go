@@ -10,7 +10,7 @@ import (
 	conn "github.com/danila-kuryakin/banking_mini_cores/platform/connection"
 	"github.com/danila-kuryakin/banking_mini_cores/platform/grpc_server"
 	customerint "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/interceptors"
-	service "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/adapters"
+	service "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/adapters/grpc_server"
 	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/adapters/kafka"
 	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/config"
 	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/pb/gen/customer/v1"

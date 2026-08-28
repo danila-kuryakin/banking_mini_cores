@@ -5,8 +5,8 @@ server:
 database:
   host: localhost
   port: 5432
-  user: 1
-  password: 1
+  user: banking_ledger
+  password: 123
   dbname: banking_mc
   ssl_mode: disable
 

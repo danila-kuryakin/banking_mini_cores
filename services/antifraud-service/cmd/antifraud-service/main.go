@@ -9,7 +9,7 @@ import (
 
 	conn "github.com/danila-kuryakin/banking_mini_cores/platform/connection"
 	"github.com/danila-kuryakin/banking_mini_cores/platform/grpc_server"
-	service "github.com/danila-kuryakin/banking_mini_cores/services/antifraud-service/internal/adapters"
+	service "github.com/danila-kuryakin/banking_mini_cores/services/antifraud-service/internal/adapters/grpc_server"
 	"github.com/danila-kuryakin/banking_mini_cores/services/antifraud-service/internal/config"
 	antifraudint "github.com/danila-kuryakin/banking_mini_cores/services/antifraud-service/internal/interceptors"
 	antifraudv1 "github.com/danila-kuryakin/banking_mini_cores/services/antifraud-service/internal/pb/gen/antifraud/v1"
