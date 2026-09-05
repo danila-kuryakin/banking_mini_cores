@@ -33,22 +33,15 @@ func (u Upstreams) All() map[string]string {
 	}
 }
 
-// Config is the api-gateway configuration beyond the common base.
 type Config struct {
-	RestServer config.Server `mapstructure:"server"`
-	// GRPC - адрес health-сервера. Остальные микросервисы доступны по адресам
-	// из Upstreams.
-	GRPCServer          config.Server `mapstructure:"grpc"`
+	RestServer          config.Server `mapstructure:"server"`
+	GRPCServer          config.Server `mapstructure:"grpc_client"`
 	Upstreams           Upstreams     `mapstructure:"upstreams"`
 	JWKSURL             string        `mapstructure:"jwks_url"`
 	JWKSRefreshInterval time.Duration `mapstructure:"jwks_refresh_interval"`
 	RequestTimeout      time.Duration `mapstructure:"request_timeout"`
-	ShutdownTimeout     time.Duration `mapstructure:"shutdown_timeout"`
 }
 
-// Validate реализует config.Validator: Read вызовет его сам после разбора.
-// Пустой адрес апстрима - это отказ на первом же запросе к сервису, поэтому
-// ловим его на старте.
 func (c *Config) Validate() error {
 	for name, addr := range c.Upstreams.All() {
 		if addr == "" {
@@ -59,7 +52,6 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// Load reads the configuration from the environment.
 func Load() (*Config, error) {
 
 	cfg, err := config.Read[Config]("./configs")

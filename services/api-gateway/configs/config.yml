@@ -2,7 +2,7 @@ server:
   host: localhost
   port: 8080
 
-grpc:
+grpc_client:
   host: localhost
   port: 50059
 

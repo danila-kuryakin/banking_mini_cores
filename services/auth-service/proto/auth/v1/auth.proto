@@ -4,55 +4,25 @@ package auth.v1;
 
 option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/pb/gen/auth/v1;authv1";
 
-import "common/v1/actor.proto";
-import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
+import "common/v1/actor.proto";
 
 service AuthService {
-  rpc Register(RegisterRequest) returns (RegisterResponse) {
-    option (google.api.http) = {
-      post: "/v1/auth/register"
-      body: "*"
-    };
-  }
-
-  rpc Login(LoginRequest) returns (LoginResponse) {
-    option (google.api.http) = {
-      post: "/v1/auth/login"
-      body: "*"
-    };
-  }
-
-  rpc Refresh(RefreshRequest) returns (RefreshResponse) {
-    option (google.api.http) = {
-      post: "/v1/auth/refresh"
-      body: "*"
-    };
-  }
-
-  rpc Logout(LogoutRequest) returns (LogoutResponse) {
-    option (google.api.http) = {
-      post: "/v1/auth/logout"
-      body: "*"
-    };
-  }
-
+  rpc Register(RegisterRequest) returns (User);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Refresh(RefreshRequest) returns (TokenPair);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
-
-  rpc CreateOfficer(CreateOfficerRequest) returns (CreateOfficerResponse) {
-    option (google.api.http) = {
-      post: "/v1/auth/officers"
-      body: "*"
-    };
-  }
+  rpc CreateOfficer(RegisterRequest) returns (User);
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
 }
 
+
 message User {
-  string user_id = 1;
+  string id = 1;
   string email = 2;
   common.v1.Role role = 3;
-  string customer_id = 4;
-  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp created_at = 4;
 }
 
 message TokenPair {
@@ -65,11 +35,6 @@ message TokenPair {
 message RegisterRequest {
   string email = 1;
   string password = 2;
-  string idempotency_key = 3;
-}
-
-message RegisterResponse {
-  User user = 1;
 }
 
 message LoginRequest {
@@ -86,10 +51,6 @@ message RefreshRequest {
   string refresh_token = 1;
 }
 
-message RefreshResponse {
-  TokenPair tokens = 1;
-}
-
 message LogoutRequest {
   string refresh_token = 1;
 }
@@ -102,18 +63,13 @@ message ValidateTokenRequest {
 
 message ValidateTokenResponse {
   bool valid = 1;
-  string user_id = 2;
+  string id = 2;
   common.v1.Role role = 3;
-  string customer_id = 4;
   google.protobuf.Timestamp expires_at = 5;
 }
 
-message CreateOfficerRequest {
-  string email = 1;
-  string password = 2;
-  string idempotency_key = 3;
+message DeleteUserRequest {
+  string id = 1;
 }
 
-message CreateOfficerResponse {
-  User user = 1;
-}
+message DeleteUserResponse {}

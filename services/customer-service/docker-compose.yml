@@ -33,7 +33,7 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-123}
       POSTGRES_DB: ${DATABASE_DBNAME:-banking_customer}
     ports:
-      # Наружу — нестандартный порт, чтобы не спорить с локальным postgres
+      # Наружу — нестандартный порт, чтобы не спорить с локальным repository
       # и с БД соседних сервисов.
       - "${CUSTOMER_DB_PORT:-5434}:5432"
     volumes:

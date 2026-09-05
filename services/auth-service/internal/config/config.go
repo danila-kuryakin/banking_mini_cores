@@ -1,24 +1,42 @@
 package config
 
 import (
-	"log"
+	"time"
 
 	"github.com/danila-kuryakin/banking_mini_cores/platform/config"
+	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/domain"
 )
 
-// Config is the auth-service configuration beyond the common base.
-type Config struct {
-	Server   config.Server         `mapstructure:"server"`
-	Postgres config.DataBaseConfig `mapstructure:"database"`
-	Kafka    config.KafkaConfig    `mapstructure:"kafka"`
+type JWT struct {
+	PrivateKeyPath string        `mapstructure:"private_key_path"`
+	AccessTTL      time.Duration `mapstructure:"access_ttl"`
+	RefreshTTL     time.Duration `mapstructure:"refresh_ttl"`
 }
 
-// Load reads the configuration from the environment.
-func Load() (*Config, error) {
+type Config struct {
+	Server         config.Server         `mapstructure:"server"`
+	JWKS           config.Server         `mapstructure:"jwks"`
+	Postgres       config.DataBaseConfig `mapstructure:"database"`
+	JWT            JWT                   `mapstructure:"jwt"`
+	RequestTimeout time.Duration         `mapstructure:"request_timeout"`
+}
 
+func Load() (*Config, error) {
 	cfg, err := config.Read[Config]("./configs")
 	if err != nil {
-		log.Fatalf("config: %v", err)
+		return nil, err
+	}
+
+	if cfg.JWT.AccessTTL <= 0 {
+		cfg.JWT.AccessTTL = domain.DEFAULT_ACCESS_TTL
+	}
+
+	if cfg.JWT.RefreshTTL <= 0 {
+		cfg.JWT.RefreshTTL = domain.DEFAULT_REFRESH_TTL
+	}
+
+	if cfg.RequestTimeout <= 0 {
+		cfg.RequestTimeout = domain.DEFAULT_REQEST_TIMEOUT
 	}
 
 	return cfg, nil

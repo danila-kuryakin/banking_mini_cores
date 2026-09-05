@@ -75,9 +75,8 @@ func (Role) EnumDescriptor() ([]byte, []int) {
 
 type Actor struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Role          Role                   `protobuf:"varint,2,opt,name=role,proto3,enum=common.v1.Role" json:"role,omitempty"`
-	CustomerId    string                 `protobuf:"bytes,3,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -112,9 +111,9 @@ func (*Actor) Descriptor() ([]byte, []int) {
 	return file_common_v1_actor_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Actor) GetUserId() string {
+func (x *Actor) GetId() string {
 	if x != nil {
-		return x.UserId
+		return x.Id
 	}
 	return ""
 }
@@ -126,23 +125,14 @@ func (x *Actor) GetRole() Role {
 	return Role_ROLE_UNSPECIFIED
 }
 
-func (x *Actor) GetCustomerId() string {
-	if x != nil {
-		return x.CustomerId
-	}
-	return ""
-}
-
 var File_common_v1_actor_proto protoreflect.FileDescriptor
 
 const file_common_v1_actor_proto_rawDesc = "" +
 	"\n" +
-	"\x15common/v1/actor.proto\x12\tcommon.v1\"f\n" +
-	"\x05Actor\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12#\n" +
-	"\x04role\x18\x02 \x01(\x0e2\x0f.common.v1.RoleR\x04role\x12\x1f\n" +
-	"\vcustomer_id\x18\x03 \x01(\tR\n" +
-	"customerId*O\n" +
+	"\x15common/v1/actor.proto\x12\tcommon.v1\"<\n" +
+	"\x05Actor\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
+	"\x04role\x18\x02 \x01(\x0e2\x0f.common.v1.RoleR\x04role*O\n" +
 	"\x04Role\x12\x14\n" +
 	"\x10ROLE_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vROLE_CLIENT\x10\x01\x12\x10\n" +

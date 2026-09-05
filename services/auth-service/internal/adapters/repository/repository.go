@@ -1,12 +1,11 @@
-package postgres
+package repository
 
 import (
-	repositoryApp "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/repository"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Repository struct {
-	Auth repositoryApp.Auth
+	Auth *AuthRepo
 }
 
 func NewRepository(db *pgxpool.Pool) *Repository {
