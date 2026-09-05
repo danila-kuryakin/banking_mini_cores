@@ -4,169 +4,70 @@ package customer.v1;
 
 option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/customer/v1;customerv1";
 
-import "common/v1/pagination.proto";
-import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 import "google/type/date.proto";
 
-// CustomerService владеет тем, кто такой клиент: имя, адрес, контакты, статус.
-//
-// Учётные данные живут в auth-service и связаны только через user_id. Это
-// разные сервисы, потому что у персональных данных и у секретов входа разные
-// сроки хранения, разные требования к аудиту и разный масштаб последствий при
-// утечке.
 service CustomerService {
-  rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse) {
-    option (google.api.http) = {get: "/v1/customers/{customer_id}"};
-  }
-
-  // UpdateProfile заменяет профиль целиком.
-  //
-  // По HTTP это PATCH, но передаётся и сохраняется весь Profile: пропущенное
-  // поле обнуляется, а не остаётся прежним. Сначала прочитайте клиента,
-  // измените нужное, отправьте результат обратно.
-  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse) {
-    option (google.api.http) = {
-      patch: "/v1/customers/{customer_id}"
-      body: "*"
-    };
-  }
-
-  // GetCustomerStatus отдаёт только статус и время его последней смены.
-  //
-  // Отдельно от GetCustomer, чтобы опрос решения по KYC не таскал по сети
-  // полный профиль персональных данных каждые несколько секунд.
-  rpc GetCustomerStatus(GetCustomerStatusRequest) returns (GetCustomerStatusResponse) {
-    option (google.api.http) = {get: "/v1/customers/{customer_id}/status"};
-  }
-
-  // ListCustomers — очередь офицера. Не для клиентов: возвращает чужие данные.
-  rpc ListCustomers(ListCustomersRequest) returns (ListCustomersResponse) {
-    option (google.api.http) = {get: "/v1/customers"};
-  }
+  rpc CreateProfile(CreateProfileRequest) returns (Customer);
+  rpc GetCustomer(GetCustomerRequest) returns (Customer);
+  rpc GetCustomerStatus(GetCustomerStatusRequest) returns (Customer);
+  rpc UpdateProfile(UpdateProfileRequest) returns (Customer);
+  rpc ListCustomers(ListCustomersRequest) returns (ListCustomersResponse);
 }
 
-// CustomerStatus движется событиями KYC, сам клиент его не выставляет.
-//
-//   NEW -> PROFILE_FILLED -> ON_KYC -> ACTIVE
-//                                   -> REJECTED
-//   любой -> BLOCKED
 enum CustomerStatus {
-  CUSTOMER_STATUS_UNSPECIFIED = 0;
-
-  // Зарегистрирован, профиль ещё не заполнен.
-  CUSTOMER_STATUS_NEW = 1;
-
-  // Профиль заполнен, анкета на KYC не подана.
-  CUSTOMER_STATUS_PROFILE_FILLED = 2;
-
-  // Анкета на проверке. Клиент ждёт, делать ему нечего.
-  CUSTOMER_STATUS_ON_KYC = 3;
-
-  // KYC пройден. Только в этом статусе можно открывать счета и двигать деньги.
-  CUSTOMER_STATUS_ACTIVE = 4;
-
-  // В KYC отказано. Терминальный для этой анкеты; подать новую можно.
-  CUSTOMER_STATUS_REJECTED = 5;
-
-  // Заблокирован банком — подозрение, решение суда, комплаенс. Достижим из
-  // любого статуса, включая ACTIVE, и не стирает того, что было до него.
-  CUSTOMER_STATUS_BLOCKED = 6;
+  CUSTOMER_STATUS_NEW = 0;
+  CUSTOMER_STATUS_PROFILE_FILLED = 1;
+  CUSTOMER_STATUS_ON_KYC = 2;
+  CUSTOMER_STATUS_ACTIVE = 3;
+  CUSTOMER_STATUS_REJECTED = 4;
+  CUSTOMER_STATUS_BLOCKED = 5;
 }
 
-// Address — адрес проживания со слов клиента, подтверждаемый документом.
-//
-// Поля свободные, а не строгий формат: раскладка адреса отличается от страны к
-// стране, а KYC нужно то, что прочитает человек-проверяющий, а не то, что
-// провалидирует парсер.
-message Address {
-  // ISO 3166-1 alpha-2, в верхнем регистре: "US", "DE".
-  string country = 1;
-
-  string city = 2;
-  string street = 3;
-  string building = 4;
-  string postal_code = 5;
-}
-
-// Profile — персональные данные клиента. Здесь всё регулируемое: писать в лог
-// скупо, отдавать только владельцу и офицерам.
 message Profile {
   string first_name = 1;
   string last_name = 2;
-
-  // Только дата, без времени и без часового пояса — потому google.type.Date, а
-  // не Timestamp. Дата рождения — один и тот же календарный день везде, а
-  // timestamp сдвигал бы его через полночь в зависимости от пояса читателя.
   google.type.Date birth_date = 3;
-
-  // Код страны гражданства, ISO 3166-1 alpha-2. Влияет на санкционные
-  // проверки.
   string citizenship = 4;
-
-  // E.164 с ведущим плюсом: "+79991234567".
   string phone = 5;
-
-  Address address = 6;
 }
 
 message Customer {
-  string customer_id = 1;
-
-  // Аккаунт в auth-service, которому принадлежит профиль. Один к одному.
+  string id = 1;
   string user_id = 2;
-
-  // Только для чтения. Меняется решениями KYC, а не через UpdateProfile.
   CustomerStatus status = 3;
-
   Profile profile = 4;
-
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
 }
 
-message GetCustomerRequest {
-  string customer_id = 1;
+message CreateProfileRequest {
+  string user_id = 1;
+  Profile profile = 2;
 }
 
-message GetCustomerResponse {
-  Customer customer = 1;
+message GetCustomerRequest {
+  string id = 1;
 }
 
 message UpdateProfileRequest {
-  string customer_id = 1;
-
-  // Профиль целиком. См. UpdateProfile: он заменяет, а не сливает.
+  string id = 1;
   Profile profile = 2;
-
-  string idempotency_key = 3;
-}
-
-message UpdateProfileResponse {
-  Customer customer = 1;
 }
 
 message GetCustomerStatusRequest {
-  string customer_id = 1;
+  string id = 1;
 }
 
 message GetCustomerStatusResponse {
   CustomerStatus status = 1;
-
-  // Когда статус в последний раз менялся, а не когда его прочитали. Позволяет
-  // отличить свежее решение от того, что клиент уже видел.
   google.protobuf.Timestamp changed_at = 2;
 }
 
 message ListCustomersRequest {
-  // Фильтр по статусу. UNSPECIFIED — не фильтровать, поэтому значение по
-  // умолчанию возвращает всех, а не никого.
   CustomerStatus status = 1;
-
-  common.v1.PageRequest page = 2;
 }
 
 message ListCustomersResponse {
   repeated Customer customers = 1;
-  common.v1.PageResponse page = 2;
 }

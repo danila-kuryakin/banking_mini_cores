@@ -38,11 +38,12 @@ type Config struct {
 	RestServer config.Server `mapstructure:"server"`
 	// GRPC - адрес health-сервера. Остальные микросервисы доступны по адресам
 	// из Upstreams.
-	GRPCServer      config.Server `mapstructure:"grpc"`
-	Upstreams       Upstreams     `mapstructure:"upstreams"`
-	JWKSURL         string        `mapstructure:"jwks_url"`
-	RequestTimeout  time.Duration `mapstructure:"request_timeout"`
-	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
+	GRPCServer          config.Server `mapstructure:"grpc"`
+	Upstreams           Upstreams     `mapstructure:"upstreams"`
+	JWKSURL             string        `mapstructure:"jwks_url"`
+	JWKSRefreshInterval time.Duration `mapstructure:"jwks_refresh_interval"`
+	RequestTimeout      time.Duration `mapstructure:"request_timeout"`
+	ShutdownTimeout     time.Duration `mapstructure:"shutdown_timeout"`
 }
 
 // Validate реализует config.Validator: Read вызовет его сам после разбора.

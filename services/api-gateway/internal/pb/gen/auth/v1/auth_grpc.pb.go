@@ -25,52 +25,20 @@ const (
 	AuthService_Logout_FullMethodName        = "/auth.v1.AuthService/Logout"
 	AuthService_ValidateToken_FullMethodName = "/auth.v1.AuthService/ValidateToken"
 	AuthService_CreateOfficer_FullMethodName = "/auth.v1.AuthService/CreateOfficer"
+	AuthService_DeleteUser_FullMethodName    = "/auth.v1.AuthService/DeleteUser"
 )
 
 // AuthServiceClient is the client API for AuthService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-//
-// AuthService владеет логинами, паролями и токенами. Это единственный сервис,
-// который вообще видит пароль, и хранит он только его хеш.
-//
-// О клиенте он намеренно не знает ничего, кроме непрозрачного customer_id: кто
-// этот человек — забота customer-service. Такое разделение означает, что взлом
-// одного сервиса не отдаёт данные второго.
 type AuthServiceClient interface {
-	// Register создаёт аккаунт с ролью ROLE_CLIENT.
-	//
-	// Профиль клиента здесь не заводится — это дело customer-service, которое
-	// запускается событием auth.user.registered, публикуемым этим вызовом.
-	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
-	// Login обменивает учётные данные на пару токенов.
-	//
-	// Об ошибке сообщается одинаково, неизвестен ли адрес или неверен пароль:
-	// если различать эти два случая, атакующий сможет перебором выяснить, какие
-	// адреса зарегистрированы.
+	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*User, error)
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
-	// Refresh обменивает refresh-токен на свежую пару.
-	//
-	// Предъявленный refresh-токен при этом гасится: на один токен — ровно одна
-	// новая пара. Поэтому украденный токен перестаёт работать, как только
-	// настоящий владелец обновится, а повторное использование уже погашенного
-	// токена — заметный признак утечки.
-	Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*RefreshResponse, error)
-	// Logout отзывает refresh-токен.
-	//
-	// Уже выданные access-токены останутся действительными до истечения срока —
-	// это цена за то, что их проверяют без похода в базу. Поэтому срок их жизни
-	// держат коротким: так окно остаётся маленьким.
+	Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*TokenPair, error)
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
-	// ValidateToken проверяет access-токен и говорит, кому он принадлежит.
-	//
-	// HTTP-маппинга нет намеренно: это вызов сервис-сервис для gateway, и до
-	// браузера он доходить не должен.
 	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
-	// CreateOfficer заводит аккаунт с ролью ROLE_OFFICER. Только для админа:
-	// офицер одобряет KYC-анкеты, то есть выдать эту роль — значит выдать право
-	// заводить в банк клиентов.
-	CreateOfficer(ctx context.Context, in *CreateOfficerRequest, opts ...grpc.CallOption) (*CreateOfficerResponse, error)
+	CreateOfficer(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*User, error)
+	DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error)
 }
 
 type authServiceClient struct {
@@ -81,9 +49,9 @@ func NewAuthServiceClient(cc grpc.ClientConnInterface) AuthServiceClient {
 	return &authServiceClient{cc}
 }
 
-func (c *authServiceClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
+func (c *authServiceClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*User, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RegisterResponse)
+	out := new(User)
 	err := c.cc.Invoke(ctx, AuthService_Register_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -101,9 +69,9 @@ func (c *authServiceClient) Login(ctx context.Context, in *LoginRequest, opts ..
 	return out, nil
 }
 
-func (c *authServiceClient) Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*RefreshResponse, error) {
+func (c *authServiceClient) Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*TokenPair, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RefreshResponse)
+	out := new(TokenPair)
 	err := c.cc.Invoke(ctx, AuthService_Refresh_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -131,10 +99,20 @@ func (c *authServiceClient) ValidateToken(ctx context.Context, in *ValidateToken
 	return out, nil
 }
 
-func (c *authServiceClient) CreateOfficer(ctx context.Context, in *CreateOfficerRequest, opts ...grpc.CallOption) (*CreateOfficerResponse, error) {
+func (c *authServiceClient) CreateOfficer(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*User, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateOfficerResponse)
+	out := new(User)
 	err := c.cc.Invoke(ctx, AuthService_CreateOfficer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteUserResponse)
+	err := c.cc.Invoke(ctx, AuthService_DeleteUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -144,47 +122,14 @@ func (c *authServiceClient) CreateOfficer(ctx context.Context, in *CreateOfficer
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
-//
-// AuthService владеет логинами, паролями и токенами. Это единственный сервис,
-// который вообще видит пароль, и хранит он только его хеш.
-//
-// О клиенте он намеренно не знает ничего, кроме непрозрачного customer_id: кто
-// этот человек — забота customer-service. Такое разделение означает, что взлом
-// одного сервиса не отдаёт данные второго.
 type AuthServiceServer interface {
-	// Register создаёт аккаунт с ролью ROLE_CLIENT.
-	//
-	// Профиль клиента здесь не заводится — это дело customer-service, которое
-	// запускается событием auth.user.registered, публикуемым этим вызовом.
-	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
-	// Login обменивает учётные данные на пару токенов.
-	//
-	// Об ошибке сообщается одинаково, неизвестен ли адрес или неверен пароль:
-	// если различать эти два случая, атакующий сможет перебором выяснить, какие
-	// адреса зарегистрированы.
+	Register(context.Context, *RegisterRequest) (*User, error)
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
-	// Refresh обменивает refresh-токен на свежую пару.
-	//
-	// Предъявленный refresh-токен при этом гасится: на один токен — ровно одна
-	// новая пара. Поэтому украденный токен перестаёт работать, как только
-	// настоящий владелец обновится, а повторное использование уже погашенного
-	// токена — заметный признак утечки.
-	Refresh(context.Context, *RefreshRequest) (*RefreshResponse, error)
-	// Logout отзывает refresh-токен.
-	//
-	// Уже выданные access-токены останутся действительными до истечения срока —
-	// это цена за то, что их проверяют без похода в базу. Поэтому срок их жизни
-	// держат коротким: так окно остаётся маленьким.
+	Refresh(context.Context, *RefreshRequest) (*TokenPair, error)
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
-	// ValidateToken проверяет access-токен и говорит, кому он принадлежит.
-	//
-	// HTTP-маппинга нет намеренно: это вызов сервис-сервис для gateway, и до
-	// браузера он доходить не должен.
 	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
-	// CreateOfficer заводит аккаунт с ролью ROLE_OFFICER. Только для админа:
-	// офицер одобряет KYC-анкеты, то есть выдать эту роль — значит выдать право
-	// заводить в банк клиентов.
-	CreateOfficer(context.Context, *CreateOfficerRequest) (*CreateOfficerResponse, error)
+	CreateOfficer(context.Context, *RegisterRequest) (*User, error)
+	DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -195,13 +140,13 @@ type AuthServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAuthServiceServer struct{}
 
-func (UnimplementedAuthServiceServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
+func (UnimplementedAuthServiceServer) Register(context.Context, *RegisterRequest) (*User, error) {
 	return nil, status.Error(codes.Unimplemented, "method Register not implemented")
 }
 func (UnimplementedAuthServiceServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Login not implemented")
 }
-func (UnimplementedAuthServiceServer) Refresh(context.Context, *RefreshRequest) (*RefreshResponse, error) {
+func (UnimplementedAuthServiceServer) Refresh(context.Context, *RefreshRequest) (*TokenPair, error) {
 	return nil, status.Error(codes.Unimplemented, "method Refresh not implemented")
 }
 func (UnimplementedAuthServiceServer) Logout(context.Context, *LogoutRequest) (*LogoutResponse, error) {
@@ -210,8 +155,11 @@ func (UnimplementedAuthServiceServer) Logout(context.Context, *LogoutRequest) (*
 func (UnimplementedAuthServiceServer) ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ValidateToken not implemented")
 }
-func (UnimplementedAuthServiceServer) CreateOfficer(context.Context, *CreateOfficerRequest) (*CreateOfficerResponse, error) {
+func (UnimplementedAuthServiceServer) CreateOfficer(context.Context, *RegisterRequest) (*User, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateOfficer not implemented")
+}
+func (UnimplementedAuthServiceServer) DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteUser not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -325,7 +273,7 @@ func _AuthService_ValidateToken_Handler(srv interface{}, ctx context.Context, de
 }
 
 func _AuthService_CreateOfficer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateOfficerRequest)
+	in := new(RegisterRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -337,7 +285,25 @@ func _AuthService_CreateOfficer_Handler(srv interface{}, ctx context.Context, de
 		FullMethod: AuthService_CreateOfficer_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).CreateOfficer(ctx, req.(*CreateOfficerRequest))
+		return srv.(AuthServiceServer).CreateOfficer(ctx, req.(*RegisterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_DeleteUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).DeleteUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_DeleteUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).DeleteUser(ctx, req.(*DeleteUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -372,6 +338,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateOfficer",
 			Handler:    _AuthService_CreateOfficer_Handler,
+		},
+		{
+			MethodName: "DeleteUser",
+			Handler:    _AuthService_DeleteUser_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -4,135 +4,37 @@ package auth.v1;
 
 option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/auth/v1;authv1";
 
-import "common/v1/actor.proto";
-import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
+import "common/v1/actor.proto";
 
-// AuthService владеет логинами, паролями и токенами. Это единственный сервис,
-// который вообще видит пароль, и хранит он только его хеш.
-//
-// О клиенте он намеренно не знает ничего, кроме непрозрачного customer_id: кто
-// этот человек — забота customer-service. Такое разделение означает, что взлом
-// одного сервиса не отдаёт данные второго.
 service AuthService {
-  // Register создаёт аккаунт с ролью ROLE_CLIENT.
-  //
-  // Профиль клиента здесь не заводится — это дело customer-service, которое
-  // запускается событием auth.user.registered, публикуемым этим вызовом.
-  rpc Register(RegisterRequest) returns (RegisterResponse) {
-    option (google.api.http) = {
-      post: "/v1/auth/register"
-      body: "*"
-    };
-  }
-
-  // Login обменивает учётные данные на пару токенов.
-  //
-  // Об ошибке сообщается одинаково, неизвестен ли адрес или неверен пароль:
-  // если различать эти два случая, атакующий сможет перебором выяснить, какие
-  // адреса зарегистрированы.
-  rpc Login(LoginRequest) returns (LoginResponse) {
-    option (google.api.http) = {
-      post: "/v1/auth/login"
-      body: "*"
-    };
-  }
-
-  // Refresh обменивает refresh-токен на свежую пару.
-  //
-  // Предъявленный refresh-токен при этом гасится: на один токен — ровно одна
-  // новая пара. Поэтому украденный токен перестаёт работать, как только
-  // настоящий владелец обновится, а повторное использование уже погашенного
-  // токена — заметный признак утечки.
-  rpc Refresh(RefreshRequest) returns (RefreshResponse) {
-    option (google.api.http) = {
-      post: "/v1/auth/refresh"
-      body: "*"
-    };
-  }
-
-  // Logout отзывает refresh-токен.
-  //
-  // Уже выданные access-токены останутся действительными до истечения срока —
-  // это цена за то, что их проверяют без похода в базу. Поэтому срок их жизни
-  // держат коротким: так окно остаётся маленьким.
-  rpc Logout(LogoutRequest) returns (LogoutResponse) {
-    option (google.api.http) = {
-      post: "/v1/auth/logout"
-      body: "*"
-    };
-  }
-
-  // ValidateToken проверяет access-токен и говорит, кому он принадлежит.
-  //
-  // HTTP-маппинга нет намеренно: это вызов сервис-сервис для gateway, и до
-  // браузера он доходить не должен.
+  rpc Register(RegisterRequest) returns (User);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Refresh(RefreshRequest) returns (TokenPair);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
-
-  // CreateOfficer заводит аккаунт с ролью ROLE_OFFICER. Только для админа:
-  // офицер одобряет KYC-анкеты, то есть выдать эту роль — значит выдать право
-  // заводить в банк клиентов.
-  rpc CreateOfficer(CreateOfficerRequest) returns (CreateOfficerResponse) {
-    option (google.api.http) = {
-      post: "/v1/auth/officers"
-      body: "*"
-    };
-  }
+  rpc CreateOfficer(RegisterRequest) returns (User);
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
 }
 
-// User — аккаунт, каким его видит остальная система. Поля с паролем тут нет ни
-// в каком виде: это сообщение уезжает клиентам.
+
 message User {
-  string user_id = 1;
+  string id = 1;
   string email = 2;
   common.v1.Role role = 3;
-
-  // Связанный профиль клиента. Пуст, пока customer-service его не создал, и
-  // навсегда пуст у офицеров и админов.
-  string customer_id = 4;
-
-  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp created_at = 4;
 }
 
-// TokenPair — то, что клиент получает после успешного входа или обновления.
-//
-// Токенов два, а не один: короткоживущий access ходит с каждым запросом и
-// проверяется без похода в базу, а долгоживущий refresh ходит редко, зато его
-// можно отозвать.
 message TokenPair {
-  // Отправляется с каждым запросом как "Authorization: Bearer <token>". Живёт
-  // минуты, а не часы: отозвать его нельзя, поэтому он обязан протухать.
   string access_token = 1;
-
-  // Используется только в Refresh. Хранить его надо не там, где место
-  // access-токену, и обращаться как с учётными данными: он выпускает новые
-  // access-токены.
   string refresh_token = 2;
-
-  // Подсказки о сроках, чтобы клиент обновлялся заранее, а не дожидался
-  // отказа. Носят справочный характер: сервер проверяет сам токен и не верит
-  // тому, что клиент о нём думает.
   google.protobuf.Timestamp access_expires_at = 3;
   google.protobuf.Timestamp refresh_expires_at = 4;
 }
 
 message RegisterRequest {
   string email = 1;
-
-  // Открытым текстом, под защитой TLS в пути, хешируется перед сохранением.
-  // Его нельзя писать в лог, возвращать обратно и вставлять в текст ошибки.
   string password = 2;
-
-  // Уникальная строка от клиента, которая делает повтор запроса безопасным.
-  //
-  // После таймаута сети вызывающий не знает, создан аккаунт или нет, поэтому
-  // повторяет запрос с тем же ключом и получает тот же результат — вместо
-  // второго аккаунта или ответа "email уже занят".
-  string idempotency_key = 3;
-}
-
-message RegisterResponse {
-  User user = 1;
 }
 
 message LoginRequest {
@@ -149,45 +51,25 @@ message RefreshRequest {
   string refresh_token = 1;
 }
 
-message RefreshResponse {
-  TokenPair tokens = 1;
-}
-
 message LogoutRequest {
   string refresh_token = 1;
 }
 
-// Пустое намеренно: сообщать после выхода нечего, кроме самого факта успеха, а
-// пустое сообщение потом можно дополнить полями, ничего никому не сломав.
 message LogoutResponse {}
 
 message ValidateTokenRequest {
   string access_token = 1;
 }
 
-// ValidateTokenResponse описывает токен; поля после valid осмысленны, только
-// когда он true.
-//
-// Недействительный токен возвращается как valid=false, а не ошибкой, потому
-// что "токен протух" — это нормальный ответ на нормальный вопрос: gateway
-// задаёт его на каждом запросе.
 message ValidateTokenResponse {
   bool valid = 1;
-  string user_id = 2;
+  string id = 2;
   common.v1.Role role = 3;
-  string customer_id = 4;
   google.protobuf.Timestamp expires_at = 5;
 }
 
-message CreateOfficerRequest {
-  string email = 1;
-
-  // Начальный пароль. Предполагается, что офицер сменит его при первом входе.
-  string password = 2;
-
-  string idempotency_key = 3;
+message DeleteUserRequest {
+  string id = 1;
 }
 
-message CreateOfficerResponse {
-  User user = 1;
-}
+message DeleteUserResponse {}

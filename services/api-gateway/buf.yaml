@@ -8,10 +8,8 @@ lint:
     - STANDARD
   ignore:
     - proto/google
-    - proto/protoc-gen-openapiv2
 breaking:
   use:
     - FILE
   ignore:
     - proto/google
-    - proto/protoc-gen-openapiv2

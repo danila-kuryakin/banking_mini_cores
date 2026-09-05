@@ -3,15 +3,15 @@ version: v2
 inputs:
   - directory: .
     paths:
-      - proto/account
-      - proto/antifraud
+#      - proto/account
+#      - proto/antifraud
       - proto/auth
       - proto/common
       - proto/customer
-      - proto/document
-      - proto/kyc
-      - proto/ledger
-      - proto/notification
+#      - proto/document
+#      - proto/kyc
+#      - proto/ledger
+#      - proto/notification
 
 plugins:
   - local: protoc-gen-go
@@ -22,14 +22,3 @@ plugins:
     out: .
     opt:
       - module=github.com/danila-kuryakin/banking_mini_cores/services/api-gateway
-  - local: protoc-gen-grpc-gateway
-    out: .
-    opt:
-      - module=github.com/danila-kuryakin/banking_mini_cores/services/api-gateway
-  - local: protoc-gen-openapiv2
-    out: internal/swaggerui
-    strategy: all
-    opt:
-      - allow_merge=true
-      - merge_file_name=openapi
-      - json_names_for_fields=false

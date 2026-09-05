@@ -21,22 +21,13 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Role решает, что вызывающему позволено. Авторизация живёт в каждом сервисе
-// своя, но словарь общий — чтобы все читали токен одинаково.
 type Role int32
 
 const (
-	// Не задана. Трактуется как "нет прав", но никогда как роль по умолчанию:
-	// запрос, пришедший без роли, — это сломанный запрос, а не анонимный.
 	Role_ROLE_UNSPECIFIED Role = 0
-	// Клиент банка. Видит и меняет только свои данные — потому для этой роли и
-	// важен Actor.customer_id, а для остальных нет.
-	Role_ROLE_CLIENT Role = 1
-	// Сотрудник банка, разбирающий KYC-анкеты: проверяет, одобряет, отказывает.
-	// Видит чужие данные, но не меняет настройки системы.
-	Role_ROLE_OFFICER Role = 2
-	// Полный доступ, включая правила антифрода.
-	Role_ROLE_ADMIN Role = 3
+	Role_ROLE_CLIENT      Role = 1
+	Role_ROLE_OFFICER     Role = 2
+	Role_ROLE_ADMIN       Role = 3
 )
 
 // Enum value maps for Role.
@@ -82,24 +73,10 @@ func (Role) EnumDescriptor() ([]byte, []int) {
 	return file_common_v1_actor_proto_rawDescGZIP(), []int{0}
 }
 
-// Actor — аутентифицированный инициатор запроса, каким его восстановили из
-// access-токена.
-//
-// Сервисы получают его от gateway, а не перечитывают токен сами: формат токена
-// так и остаётся делом одного лишь gateway.
 type Actor struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Личность в auth-service. Не меняется за всё время жизни аккаунта и служит
-	// для аудита: отвечает на вопрос "кто это сделал" — в том числе для офицеров
-	// и админов, у которых customer_id нет вовсе.
-	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Role   Role   `protobuf:"varint,2,opt,name=role,proto3,enum=common.v1.Role" json:"role,omitempty"`
-	// Клиент, от имени которого действует actor. Заполнен для ROLE_CLIENT, пуст
-	// для офицеров и админов: те действуют от себя, а не от имени клиента.
-	//
-	// Отдельно от user_id, потому что у этих двух идентичностей разное время
-	// жизни: логин существует раньше, чем появляется профиль клиента.
-	CustomerId    string `protobuf:"bytes,3,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Role          Role                   `protobuf:"varint,2,opt,name=role,proto3,enum=common.v1.Role" json:"role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -134,9 +111,9 @@ func (*Actor) Descriptor() ([]byte, []int) {
 	return file_common_v1_actor_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Actor) GetUserId() string {
+func (x *Actor) GetId() string {
 	if x != nil {
-		return x.UserId
+		return x.Id
 	}
 	return ""
 }
@@ -148,23 +125,14 @@ func (x *Actor) GetRole() Role {
 	return Role_ROLE_UNSPECIFIED
 }
 
-func (x *Actor) GetCustomerId() string {
-	if x != nil {
-		return x.CustomerId
-	}
-	return ""
-}
-
 var File_common_v1_actor_proto protoreflect.FileDescriptor
 
 const file_common_v1_actor_proto_rawDesc = "" +
 	"\n" +
-	"\x15common/v1/actor.proto\x12\tcommon.v1\"f\n" +
-	"\x05Actor\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12#\n" +
-	"\x04role\x18\x02 \x01(\x0e2\x0f.common.v1.RoleR\x04role\x12\x1f\n" +
-	"\vcustomer_id\x18\x03 \x01(\tR\n" +
-	"customerId*O\n" +
+	"\x15common/v1/actor.proto\x12\tcommon.v1\"<\n" +
+	"\x05Actor\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
+	"\x04role\x18\x02 \x01(\x0e2\x0f.common.v1.RoleR\x04role*O\n" +
 	"\x04Role\x12\x14\n" +
 	"\x10ROLE_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vROLE_CLIENT\x10\x01\x12\x10\n" +
