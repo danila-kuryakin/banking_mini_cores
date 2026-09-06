@@ -24,6 +24,18 @@ func NewCustomerHandler(service *service.Service) *CustomerHandler {
 	}
 }
 
+// GetCustomer godoc
+//
+//	@Summary		Карточка клиента
+//	@Description	Возвращает клиента вместе с профилем и текущим статусом.
+//	@Tags			customer
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			customer_id	path		string	true	"Идентификатор клиента (UUID)"	format(uuid)
+//	@Success		200			{object}	dto.Customer		"Клиент найден"
+//	@Failure		401			{object}	dto.ErrorResponse	"Отсутствует или недействителен access-токен"
+//	@Failure		500			{object}	dto.ErrorResponse	"Клиент не найден или ошибка customer-service"
+//	@Router			/customer/{customer_id} [get]
 func (h CustomerHandler) GetCustomer(c *gin.Context) {
 	id := c.Param("id")
 
@@ -48,6 +60,21 @@ func (h CustomerHandler) GetCustomer(c *gin.Context) {
 	})
 }
 
+// UpdateProfile godoc
+//
+//	@Summary		Обновление профиля клиента
+//	@Description	Записывает анкетные данные. Поле birth_date передаётся строкой в формате YYYY-MM-DD. Когда профиль заполнен целиком, клиент переходит в статус profile_filled; после начала KYC редактирование запрещено.
+//	@Tags			customer
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			customer_id	path		string				true	"Идентификатор клиента (UUID)"	format(uuid)
+//	@Param			request		body		dto.UpdateProfile	true	"Поля профиля"
+//	@Success		200			{object}	dto.Customer		"Профиль обновлён"
+//	@Failure		400			{object}	dto.ErrorResponse	"Некорректное тело запроса или профиль заблокирован"
+//	@Failure		401			{object}	dto.ErrorResponse	"Отсутствует или недействителен access-токен"
+//	@Failure		500			{object}	dto.ErrorResponse	"birth_date не в формате YYYY-MM-DD"
+//	@Router			/customer/{customer_id} [post]
 func (h CustomerHandler) UpdateProfile(c *gin.Context) {
 	var req dto.UpdateProfile
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -91,6 +118,18 @@ func (h CustomerHandler) UpdateProfile(c *gin.Context) {
 	})
 }
 
+// GetCustomerStatus godoc
+//
+//	@Summary		Статус клиента
+//	@Description	Возвращает текущий статус и момент его последней смены. Возможные значения: new, profile_filled, on_kyc, active, rejected, blocked.
+//	@Tags			customer
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			customer_id	path		string	true	"Идентификатор клиента (UUID)"	format(uuid)
+//	@Success		200			{object}	dto.CustomerStatus	"Текущий статус"
+//	@Failure		400			{object}	dto.ErrorResponse	"Клиент не найден или ошибка customer-service"
+//	@Failure		401			{object}	dto.ErrorResponse	"Отсутствует или недействителен access-токен"
+//	@Router			/customer/{customer_id}/status [get]
 func (h CustomerHandler) GetCustomerStatus(c *gin.Context) {
 	id := c.Param("id")
 	resp, err := h.service.Customer.GetCustomerStatus(c.Request.Context(), id)
@@ -105,6 +144,20 @@ func (h CustomerHandler) GetCustomerStatus(c *gin.Context) {
 	})
 }
 
+// ListCustomers godoc
+//
+//	@Summary		Список клиентов
+//	@Description	Постраничный список клиентов, отсортированный по дате создания по убыванию. Доступно ролям officer и admin.
+//	@Tags			customer
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			limit	query		int					false	"Размер страницы, по умолчанию 20"	minimum(0)	maximum(100)
+//	@Param			offset	query		int					false	"Сколько записей пропустить"			minimum(0)
+//	@Success		200		{object}	dto.ListCustomers	"Страница списка"
+//	@Failure		400		{object}	dto.ErrorResponse	"Некорректные параметры запроса"
+//	@Failure		401		{object}	dto.ErrorResponse	"Отсутствует или недействителен access-токен"
+//	@Failure		403		{object}	dto.ErrorResponse	"Роль не officer и не admin"
+//	@Router			/customer [get]
 func (h CustomerHandler) ListCustomers(c *gin.Context) {
 	var query dto.ListCustomersQuery
 	if err := c.ShouldBindQuery(&query); err != nil {

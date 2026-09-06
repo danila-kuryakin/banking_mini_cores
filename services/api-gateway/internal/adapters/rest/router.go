@@ -8,6 +8,13 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// SWAGGER_ROUTE обслуживает всю статику Swagger UI, SWAGGER_PAGE - точка входа
+// для человека.
+const (
+	SWAGGER_ROUTE = "/swagger/*any"
+	SWAGGER_PAGE  = "/swagger/index.html"
+)
+
 type Router struct {
 	handler *handler.Handler
 }
@@ -24,7 +31,7 @@ func (r *Router) Init(g *gin.Engine) {
 	r.initAuthRoutes(api)
 	r.initCustomerRoutes(api)
 
-	g.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	g.GET(SWAGGER_ROUTE, ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
 
 func (r *Router) initAuthRoutes(api *gin.RouterGroup) {

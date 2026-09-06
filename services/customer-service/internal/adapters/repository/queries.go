@@ -10,10 +10,10 @@ const CUSTOMER_COLUMNS = `
 const (
 	CREATE_CUSTOMER_QUERY = `
 		INSERT INTO ` + TABLE_CUSTOMERS + ` (
-    	id, user_id, status, status_changed_at, created_at, updated_at
+    	user_id, status
 		)
 		VALUES ($1, $2)
-		RETURNING ` + CUSTOMER_COLUMNS
+		RETURNING id, user_id, status, status_changed_at, created_at, updated_at`
 
 	GET_CUSTOMER_QUERY = `
 		SELECT ` + CUSTOMER_COLUMNS + `

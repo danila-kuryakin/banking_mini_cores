@@ -50,6 +50,7 @@ func (s *Server) Run() error {
 	s.logger.Info("api-gateway listening",
 		"http", s.rest.Addr(),
 		"health", s.health.Addr(),
+		"swagger", s.rest.SwaggerURL(),
 	)
 
 	select {

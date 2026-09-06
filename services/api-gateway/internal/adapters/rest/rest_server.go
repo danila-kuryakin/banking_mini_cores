@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -49,4 +50,21 @@ func (s *RestServer) Shutdown(ctx context.Context) error {
 
 func (s *RestServer) Addr() string {
 	return s.server.Addr
+}
+
+// SwaggerURL - ссылка на страницу документации, пригодная для открытия в
+// браузере. Слушающий адрес может быть ":8080" или "0.0.0.0:8080": как хост в
+// ссылке это бесполезно, поэтому подставляется localhost.
+func (s *RestServer) SwaggerURL() string {
+	host, port, err := net.SplitHostPort(s.server.Addr)
+	if err != nil {
+		return "http://" + s.server.Addr + SWAGGER_PAGE
+	}
+
+	switch host {
+	case "", "0.0.0.0", "::":
+		host = "localhost"
+	}
+
+	return "http://" + net.JoinHostPort(host, port) + SWAGGER_PAGE
 }
