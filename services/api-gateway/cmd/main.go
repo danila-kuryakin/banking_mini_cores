@@ -4,29 +4,23 @@ import (
 	"log/slog"
 	"os"
 
+	_ "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/docs"
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/adapters/auth"
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/adapters/grpc"
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/adapters/rest/handler"
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/adapters/server"
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/app/service"
 	gwconfig "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/config"
-
-	// Регистрирует сгенерированную спецификацию в реестре swag - без этого
-	// /swagger/doc.json отдаёт 404. Файлы создаёт "make swagger".
-	_ "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/docs"
 )
 
 //	@title						Banking Mini Cores API Gateway
 //	@version					1.0
 //	@description				HTTP-фасад над gRPC-сервисами: аутентификация и работа с клиентами.
-//	@description				Все защищённые методы ждут заголовок Authorization: Bearer <access_token>.
 
 //	@contact.name				Danila Kuryakin
 //	@contact.url				https://github.com/danila-kuryakin/banking_mini_cores
 
-//	@host						localhost:8080
-//	@BasePath					/api/v1
-//	@schemes					http
+//	@BasePath	/api/v1
 
 //	@securityDefinitions.apikey	BearerAuth
 //	@in							header
@@ -43,14 +37,14 @@ func main() {
 
 	cfg, err := gwconfig.Load()
 	if err != nil {
-		logger.Error("Error loading config", "error", err)
-		return
+		logger.Error("failed to load config", "error", err)
+		os.Exit(1)
 	}
 
 	clients, err := grpc.NewGRPCClients(cfg)
 	if err != nil {
-		logger.Error("Clients error", "error", err)
-		return
+		logger.Error("failed to create grpc clients", "error", err)
+		os.Exit(1)
 	}
 	defer clients.Close()
 
@@ -60,9 +54,8 @@ func main() {
 
 	handlers := handler.NewHandler(svc)
 
-	err = server.NewServer(cfg, handlers, logger).Run()
-	if err != nil {
-		logger.Error("Server error", "error", err)
-		return
+	if err := server.NewServer(cfg, handlers, logger).Run(); err != nil {
+		logger.Error("server stopped", "error", err)
+		os.Exit(1)
 	}
 }

@@ -35,8 +35,8 @@ type CustomerStatus struct {
 }
 
 type ListCustomersQuery struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	Limit  int32 `form:"limit"`
+	Offset int32 `form:"offset"`
 }
 
 type ListCustomers struct {

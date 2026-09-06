@@ -168,14 +168,11 @@ definitions:
       valid:
         type: boolean
     type: object
-host: localhost:8080
 info:
   contact:
     name: Danila Kuryakin
     url: https://github.com/danila-kuryakin/banking_mini_cores
-  description: |-
-    HTTP-фасад над gRPC-сервисами: аутентификация и работа с клиентами.
-    Все защищённые методы ждут заголовок Authorization: Bearer <access_token>.
+  description: 'HTTP-фасад над gRPC-сервисами: аутентификация и работа с клиентами.'
   title: Banking Mini Cores API Gateway
   version: "1.0"
 paths:
@@ -203,8 +200,12 @@ paths:
           description: Тело запроса не прошло валидацию
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Неверные учётные данные
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
         "500":
-          description: Неверные учётные данные или ошибка auth-service
+          description: Ошибка auth-service
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       summary: Вход по email и паролю
@@ -229,7 +230,7 @@ paths:
         "204":
           description: Сессия завершена, тело ответа пустое
         "400":
-          description: Тело запроса не прошло валидацию
+          description: Тело запроса не прошло валидацию или токен неизвестен
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
         "500":
@@ -270,6 +271,10 @@ paths:
           description: Роль не admin
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Email уже зарегистрирован
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
         "500":
           description: Ошибка auth-service
           schema:
@@ -303,8 +308,12 @@ paths:
           description: Тело запроса не прошло валидацию
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Refresh-токен просрочен или отозван
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
         "500":
-          description: Refresh-токен просрочен, отозван или ошибка auth-service
+          description: Ошибка auth-service
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       summary: Обновление пары токенов
@@ -331,6 +340,10 @@ paths:
             $ref: '#/definitions/dto.RegisterResponse'
         "400":
           description: Тело запроса не прошло валидацию
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Email уже зарегистрирован
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
         "500":
@@ -411,14 +424,14 @@ paths:
       summary: Список клиентов
       tags:
       - customer
-  /customer/{customer_id}:
+  /customer/{user_id}:
     get:
-      description: Возвращает клиента вместе с профилем и текущим статусом.
+      description: Возвращает клиента вместе с профилем и текущим статусом. Клиент
+        видит только себя, officer и admin - любого.
       parameters:
-      - description: Идентификатор клиента (UUID)
-        format: uuid
+      - description: UUID пользователя или me - текущий пользователь
         in: path
-        name: customer_id
+        name: user_id
         required: true
         type: string
       produces:
@@ -432,8 +445,12 @@ paths:
           description: Отсутствует или недействителен access-токен
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: Клиент не найден или ошибка customer-service
+        "403":
+          description: Профиль принадлежит другому пользователю
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Клиент не найден
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       security:
@@ -445,13 +462,12 @@ paths:
       consumes:
       - application/json
       description: Записывает анкетные данные. Поле birth_date передаётся строкой
-        в формате YYYY-MM-DD. Когда профиль заполнен целиком, клиент переходит в статус
-        profile_filled; после начала KYC редактирование запрещено.
+        в формате YYYY-MM-DD и может быть пустым. Когда профиль заполнен целиком,
+        клиент переходит в статус profile_filled и дальнейшее редактирование запрещается.
       parameters:
-      - description: Идентификатор клиента (UUID)
-        format: uuid
+      - description: UUID пользователя или me - текущий пользователь
         in: path
-        name: customer_id
+        name: user_id
         required: true
         type: string
       - description: Поля профиля
@@ -468,15 +484,19 @@ paths:
           schema:
             $ref: '#/definitions/dto.Customer'
         "400":
-          description: Некорректное тело запроса или профиль заблокирован
+          description: Некорректное тело запроса или профиль больше не редактируется
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
         "401":
           description: Отсутствует или недействителен access-токен
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: birth_date не в формате YYYY-MM-DD
+        "403":
+          description: Профиль принадлежит другому пользователю
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Клиент не найден
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       security:
@@ -484,15 +504,14 @@ paths:
       summary: Обновление профиля клиента
       tags:
       - customer
-  /customer/{customer_id}/status:
+  /customer/{user_id}/status:
     get:
       description: 'Возвращает текущий статус и момент его последней смены. Возможные
         значения: new, profile_filled, on_kyc, active, rejected, blocked.'
       parameters:
-      - description: Идентификатор клиента (UUID)
-        format: uuid
+      - description: UUID пользователя или me - текущий пользователь
         in: path
-        name: customer_id
+        name: user_id
         required: true
         type: string
       produces:
@@ -502,12 +521,16 @@ paths:
           description: Текущий статус
           schema:
             $ref: '#/definitions/dto.CustomerStatus'
-        "400":
-          description: Клиент не найден или ошибка customer-service
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
         "401":
           description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Профиль принадлежит другому пользователю
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Клиент не найден
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       security:
@@ -515,8 +538,6 @@ paths:
       summary: Статус клиента
       tags:
       - customer
-schemes:
-- http
 securityDefinitions:
   BearerAuth:
     description: Access-токен из POST /auth/login в формате "Bearer <token>".

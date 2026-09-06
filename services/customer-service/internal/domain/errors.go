@@ -8,15 +8,14 @@ import (
 )
 
 var (
-	ErrCustomerExists              = errors.New("customer already exists")
-	ErrCustomerNotFound            = errors.New("customer not found")
-	ErrCountCustomersWithoutStatus = errors.New("count customers without status")
+	ErrCustomerExists   = errors.New("customer already exists")
+	ErrCustomerNotFound = errors.New("customer not found")
 )
 
 var (
 	ErrUserIDMustBeUUID      = status.Error(codes.InvalidArgument, "user_id must be a uuid")
-	ErrCustomerIDMustBeUUID  = status.Error(codes.InvalidArgument, "customer_id must be a uuid")
 	ErrCustomerAlreadyExists = status.Error(codes.AlreadyExists, "customer already exists for this user")
+	ErrProfileRequired       = status.Error(codes.InvalidArgument, "profile is required")
 	ErrCustomerMissing       = status.Error(codes.NotFound, "customer not found")
 	ErrCreateProfileFailed   = status.Error(codes.Internal, "failed to create profile")
 	ErrListCustomersFailed   = status.Error(codes.Internal, "failed to list customers")
@@ -35,5 +34,5 @@ var (
 )
 
 var (
-	ErrProfileLocked = status.Error(codes.FailedPrecondition, "profile cannot be edited after kyc has started")
+	ErrProfileLocked = status.Error(codes.FailedPrecondition, "profile can only be edited while the customer is in the new status")
 )

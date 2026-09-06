@@ -20,7 +20,6 @@ const (
 type Profile struct {
 	FirstName   string
 	LastName    string
-	Patronymic  string
 	BirthDate   *time.Time
 	Citizenship string
 	Phone       string
@@ -42,10 +41,4 @@ type Customer struct {
 	Profile         Profile
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
-}
-
-type Page struct {
-	Customer   []Customer
-	PageNumber int
-	PageSize   int
 }

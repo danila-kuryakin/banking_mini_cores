@@ -113,10 +113,7 @@ func (s *AuthServer) Logout(ctx context.Context, in *authv1.LogoutRequest) (*aut
 	return &authv1.LogoutResponse{}, nil
 }
 
-func (s *AuthServer) ValidateToken(ctx context.Context, in *authv1.ValidateTokenRequest) (*authv1.ValidateTokenResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, s.timeout)
-	defer cancel()
-
+func (s *AuthServer) ValidateToken(_ context.Context, in *authv1.ValidateTokenRequest) (*authv1.ValidateTokenResponse, error) {
 	claims, err := s.service.Auth.ValidateToken(in.AccessToken)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidToken) {

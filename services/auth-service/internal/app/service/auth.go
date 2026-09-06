@@ -16,10 +16,6 @@ import (
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/token"
 )
 
-type Publisher interface {
-	PublishUserRegistered(ctx context.Context, event models.UserRegistered) error
-}
-
 type AuthService struct {
 	repo   *repository.Repository
 	tokens *token.Manager
@@ -38,6 +34,28 @@ func (s *AuthService) Register(ctx context.Context, email, plainPassword string)
 
 func (s *AuthService) CreateOfficer(ctx context.Context, email, plainPassword string) (*models.User, error) {
 	return s.createUser(ctx, email, plainPassword, domain.ROLE_OFFICER)
+}
+
+func (s *AuthService) EnsureAdmin(ctx context.Context, email, plainPassword string) (bool, error) {
+	normalizedEmail, _, err := normalizeCredentials(email, plainPassword)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = s.repo.Auth.GetUserByEmail(ctx, normalizedEmail)
+	if err == nil {
+		return false, nil
+	}
+
+	if !errors.Is(err, domain.ErrUserNotFound) {
+		return false, err
+	}
+
+	if _, err := s.createUser(ctx, email, plainPassword, domain.ROLE_ADMIN); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (s *AuthService) Login(ctx context.Context, email, plainPassword string) (*models.User, *token.Pair, error) {
@@ -100,6 +118,8 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*token.
 		if err := s.repo.Auth.RevokeUserTokens(ctx, refToken.UserID); err != nil {
 			return nil, err
 		}
+
+		return nil, domain.ErrInvalidRefreshToken
 	}
 
 	user, err := s.repo.Auth.GetUserByID(ctx, refToken.UserID)
@@ -138,7 +158,15 @@ func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
 		return domain.ErrInvalidRefreshToken
 	}
 
-	return s.repo.Auth.RevokeRefreshToken(ctx, token.Hash(refreshToken))
+	if err := s.repo.Auth.RevokeRefreshToken(ctx, token.Hash(refreshToken)); err != nil {
+		if errors.Is(err, domain.ErrRefreshTokenNotFound) {
+			return domain.ErrInvalidRefreshToken
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 func (s *AuthService) ValidateToken(accessToken string) (*token.Claims, error) {

@@ -7,7 +7,6 @@ import (
 	"github.com/danila-kuryakin/banking_mini_cores/platform/grpc_server"
 	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/interceptors"
 	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/app/service"
-	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/domain"
 	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/pb/gen/customer/v1"
 	"google.golang.org/grpc"
 )
@@ -16,13 +15,15 @@ type GRPCServer struct {
 	addr           string
 	customerServer *CustomerServer
 	logger         *slog.Logger
+	timeout        time.Duration
 }
 
-func NewGRPCServer(addr string, service *service.Service, logger *slog.Logger) *GRPCServer {
+func NewGRPCServer(addr string, service *service.Service, logger *slog.Logger, timeout time.Duration) *GRPCServer {
 	return &GRPCServer{
 		addr:           addr,
-		customerServer: NewCustomerServer(service, logger, time.Second),
+		customerServer: NewCustomerServer(service, logger),
 		logger:         logger,
+		timeout:        timeout,
 	}
 }
 
@@ -38,7 +39,7 @@ func (s *GRPCServer) Run() error {
 		grpc_server.WithUnaryInterceptors(
 			interceptors.Validate(),
 		),
-		grpc_server.WithHandlerTimeout(domain.DEFAULT_REQEST_TIMEOUT),
+		grpc_server.WithHandlerTimeout(s.timeout),
 	)
 }
 

@@ -131,9 +131,13 @@ func (r *CustomerRepo) UpdateProfile(ctx context.Context, userID uuid.UUID, prof
 		&resp.UpdatedAt,
 	)
 	if err != nil {
+		// Существование клиента сервис проверил перед вызовом, поэтому пустой
+		// результат означает, что между проверкой и обновлением статус успел
+		// уехать из "new" - профиль больше не редактируется.
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrCustomerNotFound
+			return nil, domain.ErrProfileLocked
 		}
+
 		return nil, fmt.Errorf("update profile: %w", err)
 	}
 	resp.Status = models.Status(statusResp)
@@ -168,7 +172,7 @@ func (r *CustomerRepo) ListCustomers(ctx context.Context, limit, offset int) ([]
 			&ret.UpdatedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("scan customers list : %w", err)
+			return nil, fmt.Errorf("scan customers list: %w", err)
 		}
 		ret.Status = models.Status(status)
 
@@ -176,24 +180,8 @@ func (r *CustomerRepo) ListCustomers(ctx context.Context, limit, offset int) ([]
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("eror customers list : %w", err)
+		return nil, fmt.Errorf("iterate customers list: %w", err)
 	}
 
 	return customers, nil
-}
-
-func (r *CustomerRepo) CountCustomers(ctx context.Context, status models.Status) (*int, error) {
-	var total int
-
-	if status == "" {
-		return nil, domain.ErrCountCustomersWithoutStatus
-	}
-
-	row := r.db.QueryRow(ctx, COUNT_CUSTOMERS_QUERY, status)
-
-	if err := row.Scan(&total); err != nil {
-		return nil, fmt.Errorf("count customers: %w", err)
-	}
-
-	return &total, nil
 }

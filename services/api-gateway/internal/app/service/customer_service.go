@@ -19,12 +19,12 @@ func NewCustomerService(customerCli customerv1.CustomerServiceClient, timeout ti
 	}
 }
 
-func (s CustomerService) GetCustomer(ctx context.Context, customerID string) (*customerv1.Customer, error) {
+func (s CustomerService) GetCustomer(ctx context.Context, userID string) (*customerv1.Customer, error) {
 	ctx, cancel := context.WithTimeout(ctx, s.timeout)
 	defer cancel()
 
 	resp, err := s.customerClient.GetCustomer(ctx, &customerv1.GetCustomerRequest{
-		UserId: customerID,
+		UserId: userID,
 	})
 	if err != nil {
 		return nil, err
@@ -33,12 +33,12 @@ func (s CustomerService) GetCustomer(ctx context.Context, customerID string) (*c
 	return resp, nil
 }
 
-func (s CustomerService) UpdateProfile(ctx context.Context, customerID string, profile *customerv1.Profile) (*customerv1.Customer, error) {
+func (s CustomerService) UpdateProfile(ctx context.Context, userID string, profile *customerv1.Profile) (*customerv1.Customer, error) {
 	ctx, cancel := context.WithTimeout(ctx, s.timeout)
 	defer cancel()
 
 	resp, err := s.customerClient.UpdateProfile(ctx, &customerv1.UpdateProfileRequest{
-		UserId:  customerID,
+		UserId:  userID,
 		Profile: profile,
 	})
 	if err != nil {
@@ -48,11 +48,11 @@ func (s CustomerService) UpdateProfile(ctx context.Context, customerID string, p
 	return resp, nil
 }
 
-func (s CustomerService) GetCustomerStatus(ctx context.Context, customerID string) (*customerv1.GetCustomerStatusResponse, error) {
+func (s CustomerService) GetCustomerStatus(ctx context.Context, userID string) (*customerv1.GetCustomerStatusResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, s.timeout)
 	defer cancel()
 
-	resp, err := s.customerClient.GetCustomerStatus(ctx, &customerv1.GetCustomerStatusRequest{UserId: customerID})
+	resp, err := s.customerClient.GetCustomerStatus(ctx, &customerv1.GetCustomerStatusRequest{UserId: userID})
 	if err != nil {
 		return nil, err
 	}

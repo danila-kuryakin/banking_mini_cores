@@ -30,12 +30,14 @@ func NewAuthHandler(service *service.Service) *AuthHandler {
 //	@Param			request	body		dto.RegisterRequest		true	"Email и пароль"
 //	@Success		201		{object}	dto.RegisterResponse	"Пользователь создан"
 //	@Failure		400		{object}	dto.ErrorResponse		"Тело запроса не прошло валидацию"
+//	@Failure		409		{object}	dto.ErrorResponse		"Email уже зарегистрирован"
 //	@Failure		500		{object}	dto.ErrorResponse		"Ошибка auth-service"
 //	@Router			/auth/register [post]
 func (h AuthHandler) Register(c *gin.Context) {
 	var req dto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "StatusBadRequest"})
+		writeBindError(c, err)
+
 		return
 	}
 
@@ -44,7 +46,8 @@ func (h AuthHandler) Register(c *gin.Context) {
 		Password: req.Password,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: "StatusInternalServerError"})
+		writeError(c, err)
+
 		return
 	}
 	if user == nil {
@@ -69,12 +72,14 @@ func (h AuthHandler) Register(c *gin.Context) {
 //	@Param			request	body		dto.LoginRequest	true	"Email и пароль"
 //	@Success		200		{object}	dto.LoginResponse	"Пользователь и пара токенов"
 //	@Failure		400		{object}	dto.ErrorResponse	"Тело запроса не прошло валидацию"
-//	@Failure		500		{object}	dto.ErrorResponse	"Неверные учётные данные или ошибка auth-service"
+//	@Failure		401		{object}	dto.ErrorResponse	"Неверные учётные данные"
+//	@Failure		500		{object}	dto.ErrorResponse	"Ошибка auth-service"
 //	@Router			/auth/login [post]
 func (h AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "StatusBadRequest"})
+		writeBindError(c, err)
+
 		return
 	}
 
@@ -83,7 +88,8 @@ func (h AuthHandler) Login(c *gin.Context) {
 		Password: req.Password,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: "StatusInternalServerError"})
+		writeError(c, err)
+
 		return
 	}
 
@@ -113,18 +119,21 @@ func (h AuthHandler) Login(c *gin.Context) {
 //	@Param			request	body		dto.RefreshRequest	true	"Refresh-токен"
 //	@Success		200		{object}	dto.TokenPair		"Новая пара токенов"
 //	@Failure		400		{object}	dto.ErrorResponse	"Тело запроса не прошло валидацию"
-//	@Failure		500		{object}	dto.ErrorResponse	"Refresh-токен просрочен, отозван или ошибка auth-service"
+//	@Failure		401		{object}	dto.ErrorResponse	"Refresh-токен просрочен или отозван"
+//	@Failure		500		{object}	dto.ErrorResponse	"Ошибка auth-service"
 //	@Router			/auth/refresh [post]
 func (h AuthHandler) RefreshToken(c *gin.Context) {
 	var req dto.RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "StatusBadRequest"})
+		writeBindError(c, err)
+
 		return
 	}
 
 	out, err := h.service.Auth.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: "StatusInternalServerError"})
+		writeError(c, err)
+
 		return
 	}
 
@@ -145,18 +154,20 @@ func (h AuthHandler) RefreshToken(c *gin.Context) {
 //	@Produce		json
 //	@Param			request	body	dto.LogoutRequest	true	"Refresh-токен"
 //	@Success		204		"Сессия завершена, тело ответа пустое"
-//	@Failure		400		{object}	dto.ErrorResponse	"Тело запроса не прошло валидацию"
+//	@Failure		400		{object}	dto.ErrorResponse	"Тело запроса не прошло валидацию или токен неизвестен"
 //	@Failure		500		{object}	dto.ErrorResponse	"Ошибка auth-service"
 //	@Router			/auth/logout [post]
 func (h AuthHandler) Logout(c *gin.Context) {
 	var req dto.LogoutRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "StatusBadRequest"})
+		writeBindError(c, err)
+
 		return
 	}
 
 	if err := h.service.Auth.Logout(c.Request.Context(), req.RefreshToken); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: "StatusInternalServerError"})
+		writeError(c, err)
+
 		return
 	}
 
@@ -178,13 +189,15 @@ func (h AuthHandler) Logout(c *gin.Context) {
 func (h AuthHandler) ValidateToken(c *gin.Context) {
 	var req dto.ValidateTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "StatusBadRequest"})
+		writeBindError(c, err)
+
 		return
 	}
 
 	out, err := h.service.Auth.ValidateToken(c.Request.Context(), req.AccessToken)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: "StatusInternalServerError"})
+		writeError(c, err)
+
 		return
 	}
 
@@ -209,12 +222,14 @@ func (h AuthHandler) ValidateToken(c *gin.Context) {
 //	@Failure		400		{object}	dto.ErrorResponse			"Тело запроса не прошло валидацию"
 //	@Failure		401		{object}	dto.ErrorResponse			"Отсутствует или недействителен access-токен"
 //	@Failure		403		{object}	dto.ErrorResponse			"Роль не admin"
+//	@Failure		409		{object}	dto.ErrorResponse			"Email уже зарегистрирован"
 //	@Failure		500		{object}	dto.ErrorResponse			"Ошибка auth-service"
 //	@Router			/auth/officers [post]
 func (h AuthHandler) CreateOfficers(c *gin.Context) {
 	var req dto.CreateOfficerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "StatusBadRequest"})
+		writeBindError(c, err)
+
 		return
 	}
 
@@ -223,7 +238,8 @@ func (h AuthHandler) CreateOfficers(c *gin.Context) {
 		Password: req.Password,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: "StatusInternalServerError"})
+		writeError(c, err)
+
 		return
 	}
 

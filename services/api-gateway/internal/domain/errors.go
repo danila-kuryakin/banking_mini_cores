@@ -16,10 +16,10 @@ var (
 	ErrAccessTokenNotValid  = errors.New("access token is not valid")
 	ErrAuthenticationNeeded = errors.New("authentication is required")
 	ErrRoleNotAllowed       = errors.New("role is not allowed to use this endpoint")
+	ErrForeignCustomer      = errors.New("customer profile belongs to another user")
 )
 
 var (
-	ErrJWKSURLRequired     = errors.New("jwks_url is empty")
 	ErrSigningKeyNotFound  = errors.New("signing key is not published by the auth endpoint")
 	ErrSigningKeyMalformed = errors.New("signing key from the auth endpoint is malformed")
 )

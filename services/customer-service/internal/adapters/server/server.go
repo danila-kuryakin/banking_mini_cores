@@ -14,7 +14,7 @@ type Server struct {
 }
 
 func NewServer(cfg *config.Config, service *service.Service, logger *slog.Logger) (*Server, error) {
-	grpcServer := grpcSrv.NewGRPCServer(cfg.Server.GetAddr(), service, logger)
+	grpcServer := grpcSrv.NewGRPCServer(cfg.Server.GetAddr(), service, logger, cfg.RequestTimeout)
 
 	return &Server{
 		grpc:   grpcServer,

@@ -55,8 +55,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
+                    "401": {
+                        "description": "Неверные учётные данные",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
                     "500": {
-                        "description": "Неверные учётные данные или ошибка auth-service",
+                        "description": "Ошибка auth-service",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -93,7 +99,7 @@ const docTemplate = `{
                         "description": "Сессия завершена, тело ответа пустое"
                     },
                     "400": {
-                        "description": "Тело запроса не прошло валидацию",
+                        "description": "Тело запроса не прошло валидацию или токен неизвестен",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -161,6 +167,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
+                    "409": {
+                        "description": "Email уже зарегистрирован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Ошибка auth-service",
                         "schema": {
@@ -207,8 +219,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
+                    "401": {
+                        "description": "Refresh-токен просрочен или отозван",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
                     "500": {
-                        "description": "Refresh-токен просрочен, отозван или ошибка auth-service",
+                        "description": "Ошибка auth-service",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -249,6 +267,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Тело запроса не прошло валидацию",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Email уже зарегистрирован",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -368,14 +392,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/customer/{customer_id}": {
+        "/customer/{user_id}": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Возвращает клиента вместе с профилем и текущим статусом.",
+                "description": "Возвращает клиента вместе с профилем и текущим статусом. Клиент видит только себя, officer и admin - любого.",
                 "produces": [
                     "application/json"
                 ],
@@ -386,9 +410,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "format": "uuid",
-                        "description": "Идентификатор клиента (UUID)",
-                        "name": "customer_id",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
                         "in": "path",
                         "required": true
                     }
@@ -406,8 +429,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
-                    "500": {
-                        "description": "Клиент не найден или ошибка customer-service",
+                    "403": {
+                        "description": "Профиль принадлежит другому пользователю",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Клиент не найден",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -420,7 +449,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Записывает анкетные данные. Поле birth_date передаётся строкой в формате YYYY-MM-DD. Когда профиль заполнен целиком, клиент переходит в статус profile_filled; после начала KYC редактирование запрещено.",
+                "description": "Записывает анкетные данные. Поле birth_date передаётся строкой в формате YYYY-MM-DD и может быть пустым. Когда профиль заполнен целиком, клиент переходит в статус profile_filled и дальнейшее редактирование запрещается.",
                 "consumes": [
                     "application/json"
                 ],
@@ -434,9 +463,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "format": "uuid",
-                        "description": "Идентификатор клиента (UUID)",
-                        "name": "customer_id",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
                         "in": "path",
                         "required": true
                     },
@@ -458,7 +486,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Некорректное тело запроса или профиль заблокирован",
+                        "description": "Некорректное тело запроса или профиль больше не редактируется",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -469,8 +497,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
-                    "500": {
-                        "description": "birth_date не в формате YYYY-MM-DD",
+                    "403": {
+                        "description": "Профиль принадлежит другому пользователю",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Клиент не найден",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -478,7 +512,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/customer/{customer_id}/status": {
+        "/customer/{user_id}/status": {
             "get": {
                 "security": [
                     {
@@ -496,9 +530,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "format": "uuid",
-                        "description": "Идентификатор клиента (UUID)",
-                        "name": "customer_id",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
                         "in": "path",
                         "required": true
                     }
@@ -510,14 +543,20 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.CustomerStatus"
                         }
                     },
-                    "400": {
-                        "description": "Клиент не найден или ошибка customer-service",
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
-                    "401": {
-                        "description": "Отсутствует или недействителен access-токен",
+                    "403": {
+                        "description": "Профиль принадлежит другому пользователю",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Клиент не найден",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -807,11 +846,11 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
+	Host:             "",
 	BasePath:         "/api/v1",
-	Schemes:          []string{"http"},
+	Schemes:          []string{},
 	Title:            "Banking Mini Cores API Gateway",
-	Description:      "HTTP-фасад над gRPC-сервисами: аутентификация и работа с клиентами.\nВсе защищённые методы ждут заголовок Authorization: Bearer <access_token>.",
+	Description:      "HTTP-фасад над gRPC-сервисами: аутентификация и работа с клиентами.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

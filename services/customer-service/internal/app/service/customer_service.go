@@ -37,7 +37,15 @@ func (s *CustomerService) UpdateProfile(ctx context.Context, userID uuid.UUID, p
 		return nil, domain.ErrProfileLocked
 	}
 
-	return s.repo.Customer.UpdateProfile(ctx, userID, profile, models.STATUS_PROFILE_FILLED)
+	return s.repo.Customer.UpdateProfile(ctx, userID, profile, nextStatus(profile))
+}
+
+func nextStatus(profile models.Profile) models.Status {
+	if profile.IsComplete() {
+		return models.STATUS_PROFILE_FILLED
+	}
+
+	return models.STATUS_NEW
 }
 
 func (s *CustomerService) GetCustomerStatus(ctx context.Context, userID uuid.UUID) (*models.Status, *time.Time, error) {

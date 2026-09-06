@@ -2,10 +2,10 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/danila-kuryakin/banking_mini_cores/platform/config"
+	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/domain"
 )
 
 // Upstreams are the gRPC addresses of the services the gateway forwards to.
@@ -40,6 +40,7 @@ type Config struct {
 	JWKSURL             string        `mapstructure:"jwks_url"`
 	JWKSRefreshInterval time.Duration `mapstructure:"jwks_refresh_interval"`
 	RequestTimeout      time.Duration `mapstructure:"request_timeout"`
+	ShutdownTimeout     time.Duration `mapstructure:"shutdown_timeout"`
 }
 
 func (c *Config) Validate() error {
@@ -53,10 +54,21 @@ func (c *Config) Validate() error {
 }
 
 func Load() (*Config, error) {
-
 	cfg, err := config.Read[Config]("./configs")
 	if err != nil {
-		log.Fatalf("config: %v", err)
+		return nil, fmt.Errorf("config: %w", err)
+	}
+
+	if cfg.RequestTimeout <= 0 {
+		cfg.RequestTimeout = domain.DEFAULT_REQUEST_TIMEOUT
+	}
+
+	if cfg.JWKSRefreshInterval <= 0 {
+		cfg.JWKSRefreshInterval = domain.DEFAULT_JWKS_REFRESH_INTERVAL
+	}
+
+	if cfg.ShutdownTimeout <= 0 {
+		cfg.ShutdownTimeout = domain.DEFAULT_SHUTDOWN_TIMEOUT
 	}
 
 	return cfg, nil

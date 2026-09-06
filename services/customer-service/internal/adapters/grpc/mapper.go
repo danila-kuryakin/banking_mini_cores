@@ -5,9 +5,22 @@ import (
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/domain/models"
 	"google.golang.org/genproto/googleapis/type/date"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/pb/gen/customer/v1"
 )
+
+func customerToProto(customer *models.Customer) *customerv1.Customer {
+	return &customerv1.Customer{
+		Id:              customer.ID.String(),
+		UserId:          customer.UserID.String(),
+		Status:          statusToProto(customer.Status),
+		StatusChangedAt: timestamppb.New(customer.StatusChangedAt),
+		Profile:         profileToProto(customer.Profile),
+		CreatedAt:       timestamppb.New(customer.CreatedAt),
+		UpdatedAt:       timestamppb.New(customer.UpdatedAt),
+	}
+}
 
 func profileToProto(profile models.Profile) *customerv1.Profile {
 	return &customerv1.Profile{

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	grpcSrv "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters/grpc"
@@ -19,7 +20,7 @@ type Server struct {
 }
 
 func NewServer(cfg *config.Config, service *service.Service, keys token.Set, logger *slog.Logger) (*Server, error) {
-	grpcServer := grpcSrv.NewGRPCServer(cfg.Server.GetAddr(), service, logger)
+	grpcServer := grpcSrv.NewGRPCServer(cfg.Server.GetAddr(), service, logger, cfg.RequestTimeout)
 
 	jwksServer, err := httpSrv.NewJWKSServer(cfg.JWKS.GetAddr(), keys)
 	if err != nil {
@@ -34,17 +35,33 @@ func NewServer(cfg *config.Config, service *service.Service, keys token.Set, log
 }
 
 func (s *Server) Run() error {
+	errCh := make(chan error, 2)
+
 	go func() {
 		s.logger.Info("jwks listening", "addr", s.jwks.Addr(), "path", domain.JWKS_PATH)
 
 		if err := s.jwks.Run(); err != nil {
-			s.logger.Error("auth server stopped", "error", err)
+			errCh <- fmt.Errorf("jwks server: %w", err)
+
+			return
 		}
+
+		errCh <- nil
+	}()
+
+	go func() {
+		if err := s.grpc.Run(); err != nil {
+			errCh <- fmt.Errorf("grpc server: %w", err)
+
+			return
+		}
+
+		errCh <- nil
 	}()
 
 	defer s.shutdownJWKS()
 
-	return s.grpc.Run()
+	return <-errCh
 }
 
 func (s *Server) shutdownJWKS() {
@@ -52,6 +69,6 @@ func (s *Server) shutdownJWKS() {
 	defer cancel()
 
 	if err := s.jwks.Shutdown(ctx); err != nil {
-		s.logger.Error("failed to shutdown auth server", "error", err)
+		s.logger.Error("failed to shutdown jwks server", "error", err)
 	}
 }

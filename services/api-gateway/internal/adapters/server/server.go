@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/adapters/grpc"
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/adapters/rest"
@@ -14,16 +15,18 @@ import (
 )
 
 type Server struct {
-	rest   *rest.RestServer
-	health *grpc.HealthServer
-	logger *slog.Logger
+	rest            *rest.RestServer
+	health          *grpc.HealthServer
+	logger          *slog.Logger
+	shutdownTimeout time.Duration
 }
 
 func NewServer(cfg *config.Config, handler *handler.Handler, logger *slog.Logger) *Server {
 	return &Server{
-		rest:   rest.NewRestServer(cfg.RestServer.GetAddr(), handler, logger),
-		health: grpc.NewHealthServer(cfg.GRPCServer.GetAddr()),
-		logger: logger,
+		rest:            rest.NewRestServer(cfg.RestServer.GetAddr(), handler, logger),
+		health:          grpc.NewHealthServer(cfg.GRPCServer.GetAddr()),
+		logger:          logger,
+		shutdownTimeout: cfg.ShutdownTimeout,
 	}
 }
 
@@ -55,7 +58,10 @@ func (s *Server) Run() error {
 
 	select {
 	case err := <-errCh:
-		s.shutdown()
+		err = s.shutdown()
+		if err != nil {
+			return err
+		}
 		return err
 	case <-ctx.Done():
 		return s.shutdown()
@@ -67,7 +73,10 @@ func (s *Server) shutdown() error {
 
 	s.health.Shutdown()
 
-	if err := s.rest.Shutdown(context.Background()); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), s.shutdownTimeout)
+	defer cancel()
+
+	if err := s.rest.Shutdown(ctx); err != nil {
 		return fmt.Errorf("rest shutdown: %w", err)
 	}
 

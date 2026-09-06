@@ -129,8 +129,13 @@ func (r *AuthRepo) GetRefreshToken(ctx context.Context, hash []byte) (*models.Re
 }
 
 func (r *AuthRepo) RevokeRefreshToken(ctx context.Context, hash []byte) error {
-	if _, err := r.db.Exec(ctx, REVOKE_REFRESH_TOKEN_QUERY, hash); err != nil {
+	revoked, err := r.db.Exec(ctx, REVOKE_REFRESH_TOKEN_QUERY, hash)
+	if err != nil {
 		return fmt.Errorf("revoke refresh token: %w", err)
+	}
+
+	if revoked.RowsAffected() == 0 {
+		return domain.ErrRefreshTokenNotFound
 	}
 
 	return nil

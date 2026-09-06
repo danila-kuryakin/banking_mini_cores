@@ -18,32 +18,33 @@ func main() {
 
 	cfg, err := config.Load()
 	if err != nil {
-		logger.Error("error loading config", "error", err)
-		return
+		logger.Error("failed to load config", "error", err)
+		os.Exit(1)
 	}
 
 	dbPool, err := conn.NewConnectionDB(cfg.Postgres)
 	if err != nil {
 		logger.Error("failed to connect to database", "error", err)
-		return
+		os.Exit(1)
 	}
 	defer dbPool.Close()
 
 	if err := migrator.Up(cfg.Postgres, migrations.FS, migrations.Dir); err != nil {
 		logger.Error("failed to run migrations", "error", err)
-		return
+		os.Exit(1)
 	}
 
 	repo := repository.NewRepository(dbPool)
 	serv := service.NewService(repo)
+
 	srv, err := server.NewServer(cfg, serv, logger)
 	if err != nil {
 		logger.Error("failed to create server", "error", err)
-		return
+		os.Exit(1)
 	}
 
 	if err := srv.Run(); err != nil {
-		logger.Error("failed to run server", "error", err)
-		return
+		logger.Error("server stopped", "error", err)
+		os.Exit(1)
 	}
 }

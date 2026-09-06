@@ -18,7 +18,7 @@ type JWKSServer struct {
 func NewJWKSServer(addr string, set token.Set) (*JWKSServer, error) {
 	body, err := json.Marshal(set)
 	if err != nil {
-		return nil, fmt.Errorf("marshal auth: %w", err)
+		return nil, fmt.Errorf("marshal jwks: %w", err)
 	}
 
 	mux := http.NewServeMux()
@@ -38,7 +38,7 @@ func NewJWKSServer(addr string, set token.Set) (*JWKSServer, error) {
 
 func (s *JWKSServer) Run() error {
 	if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("serve auth on %s: %w", s.server.Addr, err)
+		return fmt.Errorf("serve jwks on %s: %w", s.server.Addr, err)
 	}
 
 	return nil

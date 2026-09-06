@@ -4,6 +4,7 @@ import (
 	"context"
 	"regexp"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"google.golang.org/genproto/googleapis/type/date"
@@ -60,11 +61,11 @@ func validateProfile(profile *customerv1.Profile) error {
 	}
 
 	switch {
-	case len(profile.FirstName) > domain.NAME_MAX_LENGTH:
+	case utf8.RuneCountInString(profile.FirstName) > domain.NAME_MAX_LENGTH:
 		return domain.ErrFirstNameIsTooLong
-	case len(profile.LastName) > domain.NAME_MAX_LENGTH:
+	case utf8.RuneCountInString(profile.LastName) > domain.NAME_MAX_LENGTH:
 		return domain.ErrLastNameIsTooLong
-	case len(profile.Citizenship) > domain.CITIZENSHIP_MAX_LENGTH:
+	case utf8.RuneCountInString(profile.Citizenship) > domain.CITIZENSHIP_MAX_LENGTH:
 		return domain.ErrCitizenshipIsTooLong
 	case profile.Phone != "" && !phonePattern.MatchString(profile.Phone):
 		return domain.ErrPhoneIsNotValid

@@ -7,7 +7,6 @@ import (
 	"github.com/danila-kuryakin/banking_mini_cores/platform/grpc_server"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/interceptors"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/service"
-	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/domain"
 	authv1 "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/pb/gen/auth/v1"
 	"google.golang.org/grpc"
 )
@@ -16,13 +15,15 @@ type GRPCServer struct {
 	addr       string
 	authServer *AuthServer
 	logger     *slog.Logger
+	timeout    time.Duration
 }
 
-func NewGRPCServer(addr string, service *service.Service, logger *slog.Logger) *GRPCServer {
+func NewGRPCServer(addr string, service *service.Service, logger *slog.Logger, timeout time.Duration) *GRPCServer {
 	return &GRPCServer{
 		addr:       addr,
-		authServer: NewAuthServer(service, logger, time.Second),
+		authServer: NewAuthServer(service, logger, timeout),
 		logger:     logger,
+		timeout:    timeout,
 	}
 }
 
@@ -38,7 +39,7 @@ func (s *GRPCServer) Run() error {
 		grpc_server.WithUnaryInterceptors(
 			interceptors.Validate(),
 		),
-		grpc_server.WithHandlerTimeout(domain.DEFAULT_REQEST_TIMEOUT),
+		grpc_server.WithHandlerTimeout(s.timeout),
 	)
 }
 

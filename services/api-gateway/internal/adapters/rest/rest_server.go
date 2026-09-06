@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/domain"
 	"github.com/gin-gonic/gin"
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/adapters/rest/handler"
@@ -52,13 +53,10 @@ func (s *RestServer) Addr() string {
 	return s.server.Addr
 }
 
-// SwaggerURL - ссылка на страницу документации, пригодная для открытия в
-// браузере. Слушающий адрес может быть ":8080" или "0.0.0.0:8080": как хост в
-// ссылке это бесполезно, поэтому подставляется localhost.
 func (s *RestServer) SwaggerURL() string {
 	host, port, err := net.SplitHostPort(s.server.Addr)
 	if err != nil {
-		return "http://" + s.server.Addr + SWAGGER_PAGE
+		return "http://" + s.server.Addr + domain.SWAGGER_PAGE
 	}
 
 	switch host {
@@ -66,5 +64,5 @@ func (s *RestServer) SwaggerURL() string {
 		host = "localhost"
 	}
 
-	return "http://" + net.JoinHostPort(host, port) + SWAGGER_PAGE
+	return "http://" + net.JoinHostPort(host, port) + domain.SWAGGER_PAGE
 }

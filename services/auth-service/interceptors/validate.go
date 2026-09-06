@@ -12,10 +12,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-//type validator interface {
-//	Validate() error
-//}
-
 func Validate() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		if err := validate(req); err != nil {
@@ -55,7 +51,7 @@ func validateCredentials(email, password string) error {
 
 func validateEmail(email string) error {
 	email = strings.TrimSpace(email)
-	emailPattern := regexp.MustCompile(domain.EMAIL_PATTERN)
+	var emailPattern = regexp.MustCompile(domain.EMAIL_PATTERN)
 
 	switch {
 	case email == "":

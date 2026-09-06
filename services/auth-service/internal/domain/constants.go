@@ -13,9 +13,13 @@ const (
 )
 
 const (
+	DEFAULT_ADMIN_EMAIL = "admin@banking.local"
+)
+
+const (
 	DEFAULT_ACCESS_TTL          = 15 * time.Minute
 	DEFAULT_REFRESH_TTL         = 720 * time.Hour
-	DEFAULT_REQEST_TIMEOUT      = 30 * time.Second
+	DEFAULT_REQUEST_TIMEOUT     = 30 * time.Second
 	DEFAULT_SHUTDOWN_TIMEOUT    = 5 * time.Second
 	DEFAULT_READ_HEADER_TIMEOUT = 5 * time.Second
 )
@@ -40,6 +44,9 @@ const (
 	JWK_KEY_USE       = "sig"
 	JWK_ALGORITHM     = "RS256"
 	JWK_KEY_ID_HEADER = "kid"
+
+	// PEM_RSA_PRIVATE_KEY - заголовок блока для ключа в формате PKCS#1.
+	PEM_RSA_PRIVATE_KEY = "RSA PRIVATE KEY"
 )
 
 const (

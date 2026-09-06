@@ -8,13 +8,6 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-// SWAGGER_ROUTE обслуживает всю статику Swagger UI, SWAGGER_PAGE - точка входа
-// для человека.
-const (
-	SWAGGER_ROUTE = "/swagger/*any"
-	SWAGGER_PAGE  = "/swagger/index.html"
-)
-
 type Router struct {
 	handler *handler.Handler
 }
@@ -31,7 +24,7 @@ func (r *Router) Init(g *gin.Engine) {
 	r.initAuthRoutes(api)
 	r.initCustomerRoutes(api)
 
-	g.GET(SWAGGER_ROUTE, ginSwagger.WrapHandler(swaggerFiles.Handler))
+	g.GET(domain.SWAGGER_ROUTE, ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
 
 func (r *Router) initAuthRoutes(api *gin.RouterGroup) {
@@ -51,10 +44,14 @@ func (r *Router) initAuthRoutes(api *gin.RouterGroup) {
 func (r *Router) initCustomerRoutes(api *gin.RouterGroup) {
 	customers := api.Group("/customer", r.handler.Middleware.RequireAuth())
 	{
-		customers.GET("/:customer_id", r.handler.Customer.GetCustomer)
-		customers.POST("/:customer_id", r.handler.Customer.UpdateProfile)
+		own := customers.Group("/:"+domain.USER_ID_PARAM,
+			r.handler.Middleware.RequireSelfOrRole(domain.USER_ID_PARAM, domain.ROLE_OFFICER, domain.ROLE_ADMIN))
+		{
+			own.GET("", r.handler.Customer.GetCustomer)
+			own.POST("", r.handler.Customer.UpdateProfile)
+			own.GET("/status", r.handler.Customer.GetCustomerStatus)
+		}
 
-		customers.GET("/:customer_id/status", r.handler.Customer.GetCustomerStatus)
 		customers.GET("", r.handler.Middleware.RequireRole(domain.ROLE_OFFICER, domain.ROLE_ADMIN), r.handler.Customer.ListCustomers)
 	}
 }

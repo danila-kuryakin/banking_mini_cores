@@ -1,7 +1,7 @@
 package config
 
 import (
-	"log"
+	"fmt"
 	"time"
 
 	"github.com/danila-kuryakin/banking_mini_cores/platform/config"
@@ -15,14 +15,13 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-
 	cfg, err := config.Read[Config]("./configs")
 	if err != nil {
-		log.Fatalf("config: %v", err)
+		return nil, fmt.Errorf("config: %w", err)
 	}
 
 	if cfg.RequestTimeout <= 0 {
-		cfg.RequestTimeout = domain.DEFAULT_REQEST_TIMEOUT
+		cfg.RequestTimeout = domain.DEFAULT_REQUEST_TIMEOUT
 	}
 
 	return cfg, nil
