@@ -18,7 +18,7 @@ var testInfo = &grpc.UnaryServerInfo{FullMethod: "/auth.v1.AuthService/Login"}
 
 const testTimeout = 50 * time.Millisecond
 
-// call прогоняет handler через ту же цепочку, что собирает grpc_server,
+// call прогоняет handler через ту же цепочку, что собирает grpc,
 // в том же порядке. Логи глушим, метрики уводим в локальный реестр.
 func call(ctx context.Context, handler grpc.UnaryHandler) (any, error) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))

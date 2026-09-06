@@ -2,26 +2,26 @@ syntax = "proto3";
 
 package customer.v1;
 
-option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/customer/v1;customerv1";
+option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/pb/gen/customer/v1;customerv1";
 
 import "google/protobuf/timestamp.proto";
 import "google/type/date.proto";
 
 service CustomerService {
-  rpc CreateProfile(CreateProfileRequest) returns (Customer);
+  rpc CreateProfile(CreateProfileRequest) returns (CreateProfileResponse);
   rpc GetCustomer(GetCustomerRequest) returns (Customer);
-  rpc GetCustomerStatus(GetCustomerStatusRequest) returns (Customer);
+  rpc GetCustomerStatus(GetCustomerStatusRequest) returns (GetCustomerStatusResponse);
   rpc UpdateProfile(UpdateProfileRequest) returns (Customer);
   rpc ListCustomers(ListCustomersRequest) returns (ListCustomersResponse);
 }
 
 enum CustomerStatus {
-  CUSTOMER_STATUS_NEW = 0;
-  CUSTOMER_STATUS_PROFILE_FILLED = 1;
-  CUSTOMER_STATUS_ON_KYC = 2;
-  CUSTOMER_STATUS_ACTIVE = 3;
-  CUSTOMER_STATUS_REJECTED = 4;
-  CUSTOMER_STATUS_BLOCKED = 5;
+  NEW = 0;
+  PROFILE_FILLED = 1;
+  ON_KYC = 2;
+  ACTIVE = 3;
+  REJECTED = 4;
+  BLOCKED = 5;
 }
 
 message Profile {
@@ -36,36 +36,46 @@ message Customer {
   string id = 1;
   string user_id = 2;
   CustomerStatus status = 3;
-  Profile profile = 4;
-  google.protobuf.Timestamp created_at = 5;
-  google.protobuf.Timestamp updated_at = 6;
+  google.protobuf.Timestamp status_changed_at = 4;
+  Profile profile = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
 }
 
 message CreateProfileRequest {
   string user_id = 1;
-  Profile profile = 2;
+}
+
+message CreateProfileResponse {
+  string id = 1;
+  string user_id = 2;
+  CustomerStatus status = 3;
+  google.protobuf.Timestamp status_changed_at = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
 }
 
 message GetCustomerRequest {
-  string id = 1;
+  string user_id = 1;
 }
 
 message UpdateProfileRequest {
-  string id = 1;
+  string user_id = 1;
   Profile profile = 2;
 }
 
 message GetCustomerStatusRequest {
-  string id = 1;
+  string user_id = 1;
 }
 
 message GetCustomerStatusResponse {
   CustomerStatus status = 1;
-  google.protobuf.Timestamp changed_at = 2;
+  google.protobuf.Timestamp status_changed_at = 2;
 }
 
 message ListCustomersRequest {
-  CustomerStatus status = 1;
+  int32 limit = 2;
+  int32 offset = 3;
 }
 
 message ListCustomersResponse {

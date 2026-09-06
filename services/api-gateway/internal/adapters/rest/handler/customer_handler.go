@@ -3,7 +3,6 @@ package handler
 import (
 	"errors"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/domain"
@@ -102,7 +101,7 @@ func (h CustomerHandler) GetCustomerStatus(c *gin.Context) {
 
 	c.JSON(http.StatusOK, dto.CustomerStatus{
 		Status:    resp.Status.String(),
-		UpdatedAt: resp.UpdatedAt.AsTime(),
+		ChangedAt: resp.StatusChangedAt.AsTime(),
 	})
 }
 
@@ -113,15 +112,9 @@ func (h CustomerHandler) ListCustomers(c *gin.Context) {
 		return
 	}
 
-	status, err := parseCustomerStatus(query.Status)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "StatusBadRequest"})
-
-		return
-	}
-
 	resp, err := h.service.Customer.ListCustomers(c.Request.Context(), &customerv1.ListCustomersRequest{
-		Status: status,
+		Limit:  query.Limit,
+		Offset: query.Offset,
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "StatusBadRequest"})
@@ -168,20 +161,39 @@ func parseBirthDate(s string) (*date.Date, error) {
 	}, nil
 }
 
-func parseCustomerStatus(s string) (customerv1.CustomerStatus, error) {
-	var customerStatuses = map[string]customerv1.CustomerStatus{
-		string(domain.STATUS_NEW):            customerv1.CustomerStatus_CUSTOMER_STATUS_NEW,
-		string(domain.STATUS_PROFILE_FILLED): customerv1.CustomerStatus_CUSTOMER_STATUS_PROFILE_FILLED,
-		string(domain.STATUS_ON_KYC):         customerv1.CustomerStatus_CUSTOMER_STATUS_ON_KYC,
-		string(domain.STATUS_ACTIVE):         customerv1.CustomerStatus_CUSTOMER_STATUS_ACTIVE,
-		string(domain.STATUS_REJECTED):       customerv1.CustomerStatus_CUSTOMER_STATUS_REJECTED,
-		string(domain.STATUS_BLOCKED):        customerv1.CustomerStatus_CUSTOMER_STATUS_BLOCKED,
-	}
+//func parseCustomerStatus(s string) (customerv1.CustomerStatus, error) {
+//	var customerStatuses = map[string]customerv1.CustomerStatus{
+//		string(models.STATUS_NEW):            customerv1.CustomerStatus_NEW,
+//		string(models.STATUS_PROFILE_FILLED): customerv1.CustomerStatus_PROFILE_FILLED,
+//		string(models.STATUS_ON_KYC):         customerv1.CustomerStatus_ON_KYC,
+//		string(models.STATUS_ACTIVE):         customerv1.CustomerStatus_ACTIVE,
+//		string(models.STATUS_REJECTED):       customerv1.CustomerStatus_REJECTED,
+//		string(models.STATUS_BLOCKED):        customerv1.CustomerStatus_BLOCKED,
+//	}
+//
+//	status, ok := customerStatuses[strings.ToLower(strings.TrimSpace(s))]
+//	if !ok {
+//		return 0, ErrInvalidCustomerStatus
+//	}
+//
+//	return status, nil
+//}
 
-	status, ok := customerStatuses[strings.ToLower(strings.TrimSpace(s))]
-	if !ok {
-		return 0, ErrInvalidCustomerStatus
-	}
-
-	return status, nil
-}
+//func statusFromProto(status customerv1.CustomerStatus) models.Status {
+//	switch status {
+//	case customerv1.CustomerStatus_NEW:
+//		return models.STATUS_NEW
+//	case customerv1.CustomerStatus_PROFILE_FILLED:
+//		return models.STATUS_PROFILE_FILLED
+//	case customerv1.CustomerStatus_ON_KYC:
+//		return models.STATUS_ON_KYC
+//	case customerv1.CustomerStatus_ACTIVE:
+//		return models.STATUS_ACTIVE
+//	case customerv1.CustomerStatus_REJECTED:
+//		return models.STATUS_REJECTED
+//	case customerv1.CustomerStatus_BLOCKED:
+//		return models.STATUS_BLOCKED
+//	default:
+//		return models.STATUS_NEW
+//	}
+//}

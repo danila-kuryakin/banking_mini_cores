@@ -24,7 +24,7 @@ func (s CustomerService) GetCustomer(ctx context.Context, customerID string) (*c
 	defer cancel()
 
 	resp, err := s.customerClient.GetCustomer(ctx, &customerv1.GetCustomerRequest{
-		Id: customerID,
+		UserId: customerID,
 	})
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func (s CustomerService) UpdateProfile(ctx context.Context, customerID string, p
 	defer cancel()
 
 	resp, err := s.customerClient.UpdateProfile(ctx, &customerv1.UpdateProfileRequest{
-		Id:      customerID,
+		UserId:  customerID,
 		Profile: profile,
 	})
 	if err != nil {
@@ -48,11 +48,11 @@ func (s CustomerService) UpdateProfile(ctx context.Context, customerID string, p
 	return resp, nil
 }
 
-func (s CustomerService) GetCustomerStatus(ctx context.Context, customerID string) (*customerv1.Customer, error) {
+func (s CustomerService) GetCustomerStatus(ctx context.Context, customerID string) (*customerv1.GetCustomerStatusResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, s.timeout)
 	defer cancel()
 
-	resp, err := s.customerClient.GetCustomerStatus(ctx, &customerv1.GetCustomerStatusRequest{Id: customerID})
+	resp, err := s.customerClient.GetCustomerStatus(ctx, &customerv1.GetCustomerStatusRequest{UserId: customerID})
 	if err != nil {
 		return nil, err
 	}

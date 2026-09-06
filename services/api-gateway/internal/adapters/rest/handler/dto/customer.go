@@ -31,17 +31,14 @@ type Customer struct {
 
 type CustomerStatus struct {
 	Status    string    `json:"status"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ChangedAt time.Time `json:"changed_at"`
 }
 
 type ListCustomersQuery struct {
-	Status    string `json:"status"`
-	PageSize  int32  `json:"page_size"`
-	PageToken string `json:"page_token"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
 }
 
 type ListCustomers struct {
-	Customers     []Customer `json:"customers"`
-	NextPageToken string     `json:"next_page_token"`
-	TotalSize     int32      `json:"total_size"`
+	Customers []Customer `json:"customers"`
 }

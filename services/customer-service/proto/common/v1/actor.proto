@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package common.v1;
 
-option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/common/v1;commonv1";
+option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/pb/gen/common/v1;commonv1";
 
 enum Role {
   ROLE_UNSPECIFIED = 0;

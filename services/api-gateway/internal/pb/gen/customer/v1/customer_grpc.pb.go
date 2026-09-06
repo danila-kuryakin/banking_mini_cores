@@ -30,9 +30,9 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CustomerServiceClient interface {
-	CreateProfile(ctx context.Context, in *CreateProfileRequest, opts ...grpc.CallOption) (*Customer, error)
+	CreateProfile(ctx context.Context, in *CreateProfileRequest, opts ...grpc.CallOption) (*CreateProfileResponse, error)
 	GetCustomer(ctx context.Context, in *GetCustomerRequest, opts ...grpc.CallOption) (*Customer, error)
-	GetCustomerStatus(ctx context.Context, in *GetCustomerStatusRequest, opts ...grpc.CallOption) (*Customer, error)
+	GetCustomerStatus(ctx context.Context, in *GetCustomerStatusRequest, opts ...grpc.CallOption) (*GetCustomerStatusResponse, error)
 	UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*Customer, error)
 	ListCustomers(ctx context.Context, in *ListCustomersRequest, opts ...grpc.CallOption) (*ListCustomersResponse, error)
 }
@@ -45,9 +45,9 @@ func NewCustomerServiceClient(cc grpc.ClientConnInterface) CustomerServiceClient
 	return &customerServiceClient{cc}
 }
 
-func (c *customerServiceClient) CreateProfile(ctx context.Context, in *CreateProfileRequest, opts ...grpc.CallOption) (*Customer, error) {
+func (c *customerServiceClient) CreateProfile(ctx context.Context, in *CreateProfileRequest, opts ...grpc.CallOption) (*CreateProfileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Customer)
+	out := new(CreateProfileResponse)
 	err := c.cc.Invoke(ctx, CustomerService_CreateProfile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -65,9 +65,9 @@ func (c *customerServiceClient) GetCustomer(ctx context.Context, in *GetCustomer
 	return out, nil
 }
 
-func (c *customerServiceClient) GetCustomerStatus(ctx context.Context, in *GetCustomerStatusRequest, opts ...grpc.CallOption) (*Customer, error) {
+func (c *customerServiceClient) GetCustomerStatus(ctx context.Context, in *GetCustomerStatusRequest, opts ...grpc.CallOption) (*GetCustomerStatusResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Customer)
+	out := new(GetCustomerStatusResponse)
 	err := c.cc.Invoke(ctx, CustomerService_GetCustomerStatus_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -99,9 +99,9 @@ func (c *customerServiceClient) ListCustomers(ctx context.Context, in *ListCusto
 // All implementations must embed UnimplementedCustomerServiceServer
 // for forward compatibility.
 type CustomerServiceServer interface {
-	CreateProfile(context.Context, *CreateProfileRequest) (*Customer, error)
+	CreateProfile(context.Context, *CreateProfileRequest) (*CreateProfileResponse, error)
 	GetCustomer(context.Context, *GetCustomerRequest) (*Customer, error)
-	GetCustomerStatus(context.Context, *GetCustomerStatusRequest) (*Customer, error)
+	GetCustomerStatus(context.Context, *GetCustomerStatusRequest) (*GetCustomerStatusResponse, error)
 	UpdateProfile(context.Context, *UpdateProfileRequest) (*Customer, error)
 	ListCustomers(context.Context, *ListCustomersRequest) (*ListCustomersResponse, error)
 	mustEmbedUnimplementedCustomerServiceServer()
@@ -114,13 +114,13 @@ type CustomerServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedCustomerServiceServer struct{}
 
-func (UnimplementedCustomerServiceServer) CreateProfile(context.Context, *CreateProfileRequest) (*Customer, error) {
+func (UnimplementedCustomerServiceServer) CreateProfile(context.Context, *CreateProfileRequest) (*CreateProfileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateProfile not implemented")
 }
 func (UnimplementedCustomerServiceServer) GetCustomer(context.Context, *GetCustomerRequest) (*Customer, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCustomer not implemented")
 }
-func (UnimplementedCustomerServiceServer) GetCustomerStatus(context.Context, *GetCustomerStatusRequest) (*Customer, error) {
+func (UnimplementedCustomerServiceServer) GetCustomerStatus(context.Context, *GetCustomerStatusRequest) (*GetCustomerStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCustomerStatus not implemented")
 }
 func (UnimplementedCustomerServiceServer) UpdateProfile(context.Context, *UpdateProfileRequest) (*Customer, error) {

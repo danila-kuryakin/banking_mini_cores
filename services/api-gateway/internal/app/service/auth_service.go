@@ -7,6 +7,7 @@ import (
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/adapters/auth"
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/domain"
+	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/domain/models"
 	authv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/auth/v1"
 	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/customer/v1"
 )
@@ -92,17 +93,17 @@ func (s AuthService) Logout(ctx context.Context, refreshToken string) error {
 	return err
 }
 
-func (s AuthService) ValidateToken(ctx context.Context, accessToken string) (domain.ValidateTokenOutput, error) {
+func (s AuthService) ValidateToken(ctx context.Context, accessToken string) (models.ValidateTokenOutput, error) {
 	claims, err := s.verifier.Verify(ctx, accessToken)
 	if err != nil {
 		if errors.Is(err, domain.ErrAccessTokenNotValid) {
-			return domain.ValidateTokenOutput{Valid: false}, nil
+			return models.ValidateTokenOutput{Valid: false}, nil
 		}
 
-		return domain.ValidateTokenOutput{}, err
+		return models.ValidateTokenOutput{}, err
 	}
 
-	return domain.ValidateTokenOutput{
+	return models.ValidateTokenOutput{
 		Valid:     true,
 		ID:        claims.UserID,
 		Role:      claims.Role,

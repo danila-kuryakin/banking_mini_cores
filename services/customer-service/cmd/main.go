@@ -6,11 +6,11 @@ import (
 
 	conn "github.com/danila-kuryakin/banking_mini_cores/platform/connection"
 	"github.com/danila-kuryakin/banking_mini_cores/platform/migrator"
-	service "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/adapters/grpc_server"
 	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/adapters/repository"
+	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/adapters/server"
+	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/app/service"
 	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/config"
-	"github.com/danila-kuryakin/banking_mini_cores/services/services/customer-service/migrations"
-	"github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/migrations"
 )
 
 func main() {
@@ -34,15 +34,9 @@ func main() {
 		return
 	}
 
-	tokenManager, err := token.NewManager(cfg.JWT.PrivateKeyPath, cfg.JWT.AccessTTL, cfg.JWT.RefreshTTL, logger)
-	if err != nil {
-		logger.Error("failed to prepare jwt private key", "error", err)
-		return
-	}
-
 	repo := repository.NewRepository(dbPool)
-	serv := service.NewService(repo, tokenManager)
-	srv, err := server.NewServer(cfg, serv, tokenManager.JWKS(), logger)
+	serv := service.NewService(repo)
+	srv, err := server.NewServer(cfg, serv, logger)
 	if err != nil {
 		logger.Error("failed to create server", "error", err)
 		return
