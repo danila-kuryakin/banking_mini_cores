@@ -2,6 +2,10 @@ server:
   host: localhost
   port: 50051
 
+jwks:
+  host: localhost
+  port: 8081
+
 database:
   host: localhost
   port: 5432
@@ -10,27 +14,13 @@ database:
   dbname: banking_auth
   ssl_mode: disable
 
-# Шина событий.
-#
-# 29092 - это порт, который брокер из docker-compose публикует на хост.
-# Внутри docker-сети сервис ходит на kafka:9092, туда его переключает
-# переменная KAFKA_BROKERS из compose-файла.
-#
-# Закомментированный brokers - штатный режим: сервис поднимется без Kafka,
-# а публикация событий станет no-op. Именно закомментировать, а не задать
-# KAFKA_BROKERS= пустым: viper считает пустую переменную окружения
-# незаданной, и значение отсюда останется в силе.
-#
-# Непустой список из окружения задаётся строкой через запятую:
-# KAFKA_BROKERS=kafka:9092,kafka-2:9092.
-kafka:
-  brokers:
-    - localhost:29092
-  topic: auth.events
-  group_id: auth-service
-  client_id: auth-service
-  # none | leader | all. Доменное событие терять нельзя, поэтому all.
-  required_acks: all
-  batch_timeout: 200ms
-  write_timeout: 10s
-  max_attempts: 5
+admin:
+  email: admin@banking.local
+  password: "admin123"
+
+jwt:
+  private_key_path: ./configs/jwt_private_key.pem
+  access_ttl: 15m
+  refresh_ttl: 720h
+
+request_timeout: 30s

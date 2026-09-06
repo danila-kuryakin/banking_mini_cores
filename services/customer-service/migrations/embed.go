@@ -1,10 +1,8 @@
-// Package migrations хранит SQL-миграции customer-service, вшитые в бинарь,
-// чтобы накат не зависел от рабочего каталога и раскладки файлов.
 package migrations
 
 import "embed"
 
-// FS — все *.sql этого каталога. Каталог для source/iofs — ".".
-//
+const Dir = "."
+
 //go:embed *.sql
 var FS embed.FS

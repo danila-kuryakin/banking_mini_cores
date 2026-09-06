@@ -7,8 +7,6 @@
 package customerv1
 
 import (
-	v1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/common/v1"
-	_ "google.golang.org/genproto/googleapis/api/annotations"
 	date "google.golang.org/genproto/googleapis/type/date"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -25,49 +23,34 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// CustomerStatus движется событиями KYC, сам клиент его не выставляет.
-//
-//	NEW -> PROFILE_FILLED -> ON_KYC -> ACTIVE
-//	                                -> REJECTED
-//	любой -> BLOCKED
 type CustomerStatus int32
 
 const (
-	CustomerStatus_CUSTOMER_STATUS_UNSPECIFIED CustomerStatus = 0
-	// Зарегистрирован, профиль ещё не заполнен.
-	CustomerStatus_CUSTOMER_STATUS_NEW CustomerStatus = 1
-	// Профиль заполнен, анкета на KYC не подана.
-	CustomerStatus_CUSTOMER_STATUS_PROFILE_FILLED CustomerStatus = 2
-	// Анкета на проверке. Клиент ждёт, делать ему нечего.
-	CustomerStatus_CUSTOMER_STATUS_ON_KYC CustomerStatus = 3
-	// KYC пройден. Только в этом статусе можно открывать счета и двигать деньги.
-	CustomerStatus_CUSTOMER_STATUS_ACTIVE CustomerStatus = 4
-	// В KYC отказано. Терминальный для этой анкеты; подать новую можно.
-	CustomerStatus_CUSTOMER_STATUS_REJECTED CustomerStatus = 5
-	// Заблокирован банком — подозрение, решение суда, комплаенс. Достижим из
-	// любого статуса, включая ACTIVE, и не стирает того, что было до него.
-	CustomerStatus_CUSTOMER_STATUS_BLOCKED CustomerStatus = 6
+	CustomerStatus_NEW            CustomerStatus = 0
+	CustomerStatus_PROFILE_FILLED CustomerStatus = 1
+	CustomerStatus_ON_KYC         CustomerStatus = 2
+	CustomerStatus_ACTIVE         CustomerStatus = 3
+	CustomerStatus_REJECTED       CustomerStatus = 4
+	CustomerStatus_BLOCKED        CustomerStatus = 5
 )
 
 // Enum value maps for CustomerStatus.
 var (
 	CustomerStatus_name = map[int32]string{
-		0: "CUSTOMER_STATUS_UNSPECIFIED",
-		1: "CUSTOMER_STATUS_NEW",
-		2: "CUSTOMER_STATUS_PROFILE_FILLED",
-		3: "CUSTOMER_STATUS_ON_KYC",
-		4: "CUSTOMER_STATUS_ACTIVE",
-		5: "CUSTOMER_STATUS_REJECTED",
-		6: "CUSTOMER_STATUS_BLOCKED",
+		0: "NEW",
+		1: "PROFILE_FILLED",
+		2: "ON_KYC",
+		3: "ACTIVE",
+		4: "REJECTED",
+		5: "BLOCKED",
 	}
 	CustomerStatus_value = map[string]int32{
-		"CUSTOMER_STATUS_UNSPECIFIED":    0,
-		"CUSTOMER_STATUS_NEW":            1,
-		"CUSTOMER_STATUS_PROFILE_FILLED": 2,
-		"CUSTOMER_STATUS_ON_KYC":         3,
-		"CUSTOMER_STATUS_ACTIVE":         4,
-		"CUSTOMER_STATUS_REJECTED":       5,
-		"CUSTOMER_STATUS_BLOCKED":        6,
+		"NEW":            0,
+		"PROFILE_FILLED": 1,
+		"ON_KYC":         2,
+		"ACTIVE":         3,
+		"REJECTED":       4,
+		"BLOCKED":        5,
 	}
 )
 
@@ -98,111 +81,20 @@ func (CustomerStatus) EnumDescriptor() ([]byte, []int) {
 	return file_customer_v1_customer_proto_rawDescGZIP(), []int{0}
 }
 
-// Address — адрес проживания со слов клиента, подтверждаемый документом.
-//
-// Поля свободные, а не строгий формат: раскладка адреса отличается от страны к
-// стране, а KYC нужно то, что прочитает человек-проверяющий, а не то, что
-// провалидирует парсер.
-type Address struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// ISO 3166-1 alpha-2, в верхнем регистре: "US", "DE".
-	Country       string `protobuf:"bytes,1,opt,name=country,proto3" json:"country,omitempty"`
-	City          string `protobuf:"bytes,2,opt,name=city,proto3" json:"city,omitempty"`
-	Street        string `protobuf:"bytes,3,opt,name=street,proto3" json:"street,omitempty"`
-	Building      string `protobuf:"bytes,4,opt,name=building,proto3" json:"building,omitempty"`
-	PostalCode    string `protobuf:"bytes,5,opt,name=postal_code,json=postalCode,proto3" json:"postal_code,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Address) Reset() {
-	*x = Address{}
-	mi := &file_customer_v1_customer_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Address) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Address) ProtoMessage() {}
-
-func (x *Address) ProtoReflect() protoreflect.Message {
-	mi := &file_customer_v1_customer_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Address.ProtoReflect.Descriptor instead.
-func (*Address) Descriptor() ([]byte, []int) {
-	return file_customer_v1_customer_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *Address) GetCountry() string {
-	if x != nil {
-		return x.Country
-	}
-	return ""
-}
-
-func (x *Address) GetCity() string {
-	if x != nil {
-		return x.City
-	}
-	return ""
-}
-
-func (x *Address) GetStreet() string {
-	if x != nil {
-		return x.Street
-	}
-	return ""
-}
-
-func (x *Address) GetBuilding() string {
-	if x != nil {
-		return x.Building
-	}
-	return ""
-}
-
-func (x *Address) GetPostalCode() string {
-	if x != nil {
-		return x.PostalCode
-	}
-	return ""
-}
-
-// Profile — персональные данные клиента. Здесь всё регулируемое: писать в лог
-// скупо, отдавать только владельцу и офицерам.
 type Profile struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	FirstName string                 `protobuf:"bytes,1,opt,name=first_name,json=firstName,proto3" json:"first_name,omitempty"`
-	LastName  string                 `protobuf:"bytes,2,opt,name=last_name,json=lastName,proto3" json:"last_name,omitempty"`
-	// Только дата, без времени и без часового пояса — потому google.type.Date, а
-	// не Timestamp. Дата рождения — один и тот же календарный день везде, а
-	// timestamp сдвигал бы его через полночь в зависимости от пояса читателя.
-	BirthDate *date.Date `protobuf:"bytes,3,opt,name=birth_date,json=birthDate,proto3" json:"birth_date,omitempty"`
-	// Код страны гражданства, ISO 3166-1 alpha-2. Влияет на санкционные
-	// проверки.
-	Citizenship string `protobuf:"bytes,4,opt,name=citizenship,proto3" json:"citizenship,omitempty"`
-	// E.164 с ведущим плюсом: "+79991234567".
-	Phone         string   `protobuf:"bytes,5,opt,name=phone,proto3" json:"phone,omitempty"`
-	Address       *Address `protobuf:"bytes,6,opt,name=address,proto3" json:"address,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FirstName     string                 `protobuf:"bytes,1,opt,name=first_name,json=firstName,proto3" json:"first_name,omitempty"`
+	LastName      string                 `protobuf:"bytes,2,opt,name=last_name,json=lastName,proto3" json:"last_name,omitempty"`
+	BirthDate     *date.Date             `protobuf:"bytes,3,opt,name=birth_date,json=birthDate,proto3" json:"birth_date,omitempty"`
+	Citizenship   string                 `protobuf:"bytes,4,opt,name=citizenship,proto3" json:"citizenship,omitempty"`
+	Phone         string                 `protobuf:"bytes,5,opt,name=phone,proto3" json:"phone,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Profile) Reset() {
 	*x = Profile{}
-	mi := &file_customer_v1_customer_proto_msgTypes[1]
+	mi := &file_customer_v1_customer_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -214,7 +106,7 @@ func (x *Profile) String() string {
 func (*Profile) ProtoMessage() {}
 
 func (x *Profile) ProtoReflect() protoreflect.Message {
-	mi := &file_customer_v1_customer_proto_msgTypes[1]
+	mi := &file_customer_v1_customer_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -227,7 +119,7 @@ func (x *Profile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Profile.ProtoReflect.Descriptor instead.
 func (*Profile) Descriptor() ([]byte, []int) {
-	return file_customer_v1_customer_proto_rawDescGZIP(), []int{1}
+	return file_customer_v1_customer_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Profile) GetFirstName() string {
@@ -265,30 +157,22 @@ func (x *Profile) GetPhone() string {
 	return ""
 }
 
-func (x *Profile) GetAddress() *Address {
-	if x != nil {
-		return x.Address
-	}
-	return nil
-}
-
 type Customer struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	CustomerId string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	// Аккаунт в auth-service, которому принадлежит профиль. Один к одному.
-	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// Только для чтения. Меняется решениями KYC, а не через UpdateProfile.
-	Status        CustomerStatus         `protobuf:"varint,3,opt,name=status,proto3,enum=customer.v1.CustomerStatus" json:"status,omitempty"`
-	Profile       *Profile               `protobuf:"bytes,4,opt,name=profile,proto3" json:"profile,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	UserId          string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Status          CustomerStatus         `protobuf:"varint,3,opt,name=status,proto3,enum=customer.v1.CustomerStatus" json:"status,omitempty"`
+	StatusChangedAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=status_changed_at,json=statusChangedAt,proto3" json:"status_changed_at,omitempty"`
+	Profile         *Profile               `protobuf:"bytes,5,opt,name=profile,proto3" json:"profile,omitempty"`
+	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Customer) Reset() {
 	*x = Customer{}
-	mi := &file_customer_v1_customer_proto_msgTypes[2]
+	mi := &file_customer_v1_customer_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -300,7 +184,7 @@ func (x *Customer) String() string {
 func (*Customer) ProtoMessage() {}
 
 func (x *Customer) ProtoReflect() protoreflect.Message {
-	mi := &file_customer_v1_customer_proto_msgTypes[2]
+	mi := &file_customer_v1_customer_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -313,12 +197,12 @@ func (x *Customer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Customer.ProtoReflect.Descriptor instead.
 func (*Customer) Descriptor() ([]byte, []int) {
-	return file_customer_v1_customer_proto_rawDescGZIP(), []int{2}
+	return file_customer_v1_customer_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *Customer) GetCustomerId() string {
+func (x *Customer) GetId() string {
 	if x != nil {
-		return x.CustomerId
+		return x.Id
 	}
 	return ""
 }
@@ -334,7 +218,14 @@ func (x *Customer) GetStatus() CustomerStatus {
 	if x != nil {
 		return x.Status
 	}
-	return CustomerStatus_CUSTOMER_STATUS_UNSPECIFIED
+	return CustomerStatus_NEW
+}
+
+func (x *Customer) GetStatusChangedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StatusChangedAt
+	}
+	return nil
 }
 
 func (x *Customer) GetProfile() *Profile {
@@ -358,16 +249,144 @@ func (x *Customer) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type CreateProfileRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateProfileRequest) Reset() {
+	*x = CreateProfileRequest{}
+	mi := &file_customer_v1_customer_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateProfileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateProfileRequest) ProtoMessage() {}
+
+func (x *CreateProfileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_customer_v1_customer_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateProfileRequest.ProtoReflect.Descriptor instead.
+func (*CreateProfileRequest) Descriptor() ([]byte, []int) {
+	return file_customer_v1_customer_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CreateProfileRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type CreateProfileResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	UserId          string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Status          CustomerStatus         `protobuf:"varint,3,opt,name=status,proto3,enum=customer.v1.CustomerStatus" json:"status,omitempty"`
+	StatusChangedAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=status_changed_at,json=statusChangedAt,proto3" json:"status_changed_at,omitempty"`
+	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CreateProfileResponse) Reset() {
+	*x = CreateProfileResponse{}
+	mi := &file_customer_v1_customer_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateProfileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateProfileResponse) ProtoMessage() {}
+
+func (x *CreateProfileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_customer_v1_customer_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateProfileResponse.ProtoReflect.Descriptor instead.
+func (*CreateProfileResponse) Descriptor() ([]byte, []int) {
+	return file_customer_v1_customer_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CreateProfileResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CreateProfileResponse) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *CreateProfileResponse) GetStatus() CustomerStatus {
+	if x != nil {
+		return x.Status
+	}
+	return CustomerStatus_NEW
+}
+
+func (x *CreateProfileResponse) GetStatusChangedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StatusChangedAt
+	}
+	return nil
+}
+
+func (x *CreateProfileResponse) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *CreateProfileResponse) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type GetCustomerRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CustomerId    string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetCustomerRequest) Reset() {
 	*x = GetCustomerRequest{}
-	mi := &file_customer_v1_customer_proto_msgTypes[3]
+	mi := &file_customer_v1_customer_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -379,7 +398,7 @@ func (x *GetCustomerRequest) String() string {
 func (*GetCustomerRequest) ProtoMessage() {}
 
 func (x *GetCustomerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_customer_v1_customer_proto_msgTypes[3]
+	mi := &file_customer_v1_customer_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -392,68 +411,22 @@ func (x *GetCustomerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCustomerRequest.ProtoReflect.Descriptor instead.
 func (*GetCustomerRequest) Descriptor() ([]byte, []int) {
-	return file_customer_v1_customer_proto_rawDescGZIP(), []int{3}
+	return file_customer_v1_customer_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *GetCustomerRequest) GetCustomerId() string {
+func (x *GetCustomerRequest) GetUserId() string {
 	if x != nil {
-		return x.CustomerId
+		return x.UserId
 	}
 	return ""
 }
 
-type GetCustomerResponse struct {
+type UpdateProfileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Customer      *Customer              `protobuf:"bytes,1,opt,name=customer,proto3" json:"customer,omitempty"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Profile       *Profile               `protobuf:"bytes,2,opt,name=profile,proto3" json:"profile,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetCustomerResponse) Reset() {
-	*x = GetCustomerResponse{}
-	mi := &file_customer_v1_customer_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetCustomerResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetCustomerResponse) ProtoMessage() {}
-
-func (x *GetCustomerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_customer_v1_customer_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetCustomerResponse.ProtoReflect.Descriptor instead.
-func (*GetCustomerResponse) Descriptor() ([]byte, []int) {
-	return file_customer_v1_customer_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *GetCustomerResponse) GetCustomer() *Customer {
-	if x != nil {
-		return x.Customer
-	}
-	return nil
-}
-
-type UpdateProfileRequest struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	CustomerId string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	// Профиль целиком. См. UpdateProfile: он заменяет, а не сливает.
-	Profile        *Profile `protobuf:"bytes,2,opt,name=profile,proto3" json:"profile,omitempty"`
-	IdempotencyKey string   `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UpdateProfileRequest) Reset() {
@@ -486,9 +459,9 @@ func (*UpdateProfileRequest) Descriptor() ([]byte, []int) {
 	return file_customer_v1_customer_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *UpdateProfileRequest) GetCustomerId() string {
+func (x *UpdateProfileRequest) GetUserId() string {
 	if x != nil {
-		return x.CustomerId
+		return x.UserId
 	}
 	return ""
 }
@@ -500,67 +473,16 @@ func (x *UpdateProfileRequest) GetProfile() *Profile {
 	return nil
 }
 
-func (x *UpdateProfileRequest) GetIdempotencyKey() string {
-	if x != nil {
-		return x.IdempotencyKey
-	}
-	return ""
-}
-
-type UpdateProfileResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Customer      *Customer              `protobuf:"bytes,1,opt,name=customer,proto3" json:"customer,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateProfileResponse) Reset() {
-	*x = UpdateProfileResponse{}
-	mi := &file_customer_v1_customer_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateProfileResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateProfileResponse) ProtoMessage() {}
-
-func (x *UpdateProfileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_customer_v1_customer_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateProfileResponse.ProtoReflect.Descriptor instead.
-func (*UpdateProfileResponse) Descriptor() ([]byte, []int) {
-	return file_customer_v1_customer_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *UpdateProfileResponse) GetCustomer() *Customer {
-	if x != nil {
-		return x.Customer
-	}
-	return nil
-}
-
 type GetCustomerStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CustomerId    string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetCustomerStatusRequest) Reset() {
 	*x = GetCustomerStatusRequest{}
-	mi := &file_customer_v1_customer_proto_msgTypes[7]
+	mi := &file_customer_v1_customer_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -572,7 +494,7 @@ func (x *GetCustomerStatusRequest) String() string {
 func (*GetCustomerStatusRequest) ProtoMessage() {}
 
 func (x *GetCustomerStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_customer_v1_customer_proto_msgTypes[7]
+	mi := &file_customer_v1_customer_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -585,29 +507,27 @@ func (x *GetCustomerStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCustomerStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetCustomerStatusRequest) Descriptor() ([]byte, []int) {
-	return file_customer_v1_customer_proto_rawDescGZIP(), []int{7}
+	return file_customer_v1_customer_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *GetCustomerStatusRequest) GetCustomerId() string {
+func (x *GetCustomerStatusRequest) GetUserId() string {
 	if x != nil {
-		return x.CustomerId
+		return x.UserId
 	}
 	return ""
 }
 
 type GetCustomerStatusResponse struct {
-	state  protoimpl.MessageState `protogen:"open.v1"`
-	Status CustomerStatus         `protobuf:"varint,1,opt,name=status,proto3,enum=customer.v1.CustomerStatus" json:"status,omitempty"`
-	// Когда статус в последний раз менялся, а не когда его прочитали. Позволяет
-	// отличить свежее решение от того, что клиент уже видел.
-	ChangedAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=changed_at,json=changedAt,proto3" json:"changed_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Status          CustomerStatus         `protobuf:"varint,1,opt,name=status,proto3,enum=customer.v1.CustomerStatus" json:"status,omitempty"`
+	StatusChangedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=status_changed_at,json=statusChangedAt,proto3" json:"status_changed_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GetCustomerStatusResponse) Reset() {
 	*x = GetCustomerStatusResponse{}
-	mi := &file_customer_v1_customer_proto_msgTypes[8]
+	mi := &file_customer_v1_customer_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -619,7 +539,7 @@ func (x *GetCustomerStatusResponse) String() string {
 func (*GetCustomerStatusResponse) ProtoMessage() {}
 
 func (x *GetCustomerStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_customer_v1_customer_proto_msgTypes[8]
+	mi := &file_customer_v1_customer_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -632,36 +552,34 @@ func (x *GetCustomerStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCustomerStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetCustomerStatusResponse) Descriptor() ([]byte, []int) {
-	return file_customer_v1_customer_proto_rawDescGZIP(), []int{8}
+	return file_customer_v1_customer_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetCustomerStatusResponse) GetStatus() CustomerStatus {
 	if x != nil {
 		return x.Status
 	}
-	return CustomerStatus_CUSTOMER_STATUS_UNSPECIFIED
+	return CustomerStatus_NEW
 }
 
-func (x *GetCustomerStatusResponse) GetChangedAt() *timestamppb.Timestamp {
+func (x *GetCustomerStatusResponse) GetStatusChangedAt() *timestamppb.Timestamp {
 	if x != nil {
-		return x.ChangedAt
+		return x.StatusChangedAt
 	}
 	return nil
 }
 
 type ListCustomersRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Фильтр по статусу. UNSPECIFIED — не фильтровать, поэтому значение по
-	// умолчанию возвращает всех, а не никого.
-	Status        CustomerStatus  `protobuf:"varint,1,opt,name=status,proto3,enum=customer.v1.CustomerStatus" json:"status,omitempty"`
-	Page          *v1.PageRequest `protobuf:"bytes,2,opt,name=page,proto3" json:"page,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32                  `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListCustomersRequest) Reset() {
 	*x = ListCustomersRequest{}
-	mi := &file_customer_v1_customer_proto_msgTypes[9]
+	mi := &file_customer_v1_customer_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -673,7 +591,7 @@ func (x *ListCustomersRequest) String() string {
 func (*ListCustomersRequest) ProtoMessage() {}
 
 func (x *ListCustomersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_customer_v1_customer_proto_msgTypes[9]
+	mi := &file_customer_v1_customer_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -686,34 +604,33 @@ func (x *ListCustomersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCustomersRequest.ProtoReflect.Descriptor instead.
 func (*ListCustomersRequest) Descriptor() ([]byte, []int) {
-	return file_customer_v1_customer_proto_rawDescGZIP(), []int{9}
+	return file_customer_v1_customer_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *ListCustomersRequest) GetStatus() CustomerStatus {
+func (x *ListCustomersRequest) GetLimit() int32 {
 	if x != nil {
-		return x.Status
+		return x.Limit
 	}
-	return CustomerStatus_CUSTOMER_STATUS_UNSPECIFIED
+	return 0
 }
 
-func (x *ListCustomersRequest) GetPage() *v1.PageRequest {
+func (x *ListCustomersRequest) GetOffset() int32 {
 	if x != nil {
-		return x.Page
+		return x.Offset
 	}
-	return nil
+	return 0
 }
 
 type ListCustomersResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Customers     []*Customer            `protobuf:"bytes,1,rep,name=customers,proto3" json:"customers,omitempty"`
-	Page          *v1.PageResponse       `protobuf:"bytes,2,opt,name=page,proto3" json:"page,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListCustomersResponse) Reset() {
 	*x = ListCustomersResponse{}
-	mi := &file_customer_v1_customer_proto_msgTypes[10]
+	mi := &file_customer_v1_customer_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -725,7 +642,7 @@ func (x *ListCustomersResponse) String() string {
 func (*ListCustomersResponse) ProtoMessage() {}
 
 func (x *ListCustomersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_customer_v1_customer_proto_msgTypes[10]
+	mi := &file_customer_v1_customer_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -738,7 +655,7 @@ func (x *ListCustomersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCustomersResponse.ProtoReflect.Descriptor instead.
 func (*ListCustomersResponse) Descriptor() ([]byte, []int) {
-	return file_customer_v1_customer_proto_rawDescGZIP(), []int{10}
+	return file_customer_v1_customer_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListCustomersResponse) GetCustomers() []*Customer {
@@ -748,25 +665,11 @@ func (x *ListCustomersResponse) GetCustomers() []*Customer {
 	return nil
 }
 
-func (x *ListCustomersResponse) GetPage() *v1.PageResponse {
-	if x != nil {
-		return x.Page
-	}
-	return nil
-}
-
 var File_customer_v1_customer_proto protoreflect.FileDescriptor
 
 const file_customer_v1_customer_proto_rawDesc = "" +
 	"\n" +
-	"\x1acustomer/v1/customer.proto\x12\vcustomer.v1\x1a\x1acommon/v1/pagination.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16google/type/date.proto\"\x8c\x01\n" +
-	"\aAddress\x12\x18\n" +
-	"\acountry\x18\x01 \x01(\tR\acountry\x12\x12\n" +
-	"\x04city\x18\x02 \x01(\tR\x04city\x12\x16\n" +
-	"\x06street\x18\x03 \x01(\tR\x06street\x12\x1a\n" +
-	"\bbuilding\x18\x04 \x01(\tR\bbuilding\x12\x1f\n" +
-	"\vpostal_code\x18\x05 \x01(\tR\n" +
-	"postalCode\"\xdf\x01\n" +
+	"\x1acustomer/v1/customer.proto\x12\vcustomer.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16google/type/date.proto\"\xaf\x01\n" +
 	"\aProfile\x12\x1d\n" +
 	"\n" +
 	"first_name\x18\x01 \x01(\tR\tfirstName\x12\x1b\n" +
@@ -774,56 +677,58 @@ const file_customer_v1_customer_proto_rawDesc = "" +
 	"\n" +
 	"birth_date\x18\x03 \x01(\v2\x11.google.type.DateR\tbirthDate\x12 \n" +
 	"\vcitizenship\x18\x04 \x01(\tR\vcitizenship\x12\x14\n" +
-	"\x05phone\x18\x05 \x01(\tR\x05phone\x12.\n" +
-	"\aaddress\x18\x06 \x01(\v2\x14.customer.v1.AddressR\aaddress\"\x9f\x02\n" +
-	"\bCustomer\x12\x1f\n" +
-	"\vcustomer_id\x18\x01 \x01(\tR\n" +
-	"customerId\x12\x17\n" +
+	"\x05phone\x18\x05 \x01(\tR\x05phone\"\xd6\x02\n" +
+	"\bCustomer\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x123\n" +
-	"\x06status\x18\x03 \x01(\x0e2\x1b.customer.v1.CustomerStatusR\x06status\x12.\n" +
-	"\aprofile\x18\x04 \x01(\v2\x14.customer.v1.ProfileR\aprofile\x129\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x1b.customer.v1.CustomerStatusR\x06status\x12F\n" +
+	"\x11status_changed_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x0fstatusChangedAt\x12.\n" +
+	"\aprofile\x18\x05 \x01(\v2\x14.customer.v1.ProfileR\aprofile\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"/\n" +
+	"\x14CreateProfileRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\xb3\x02\n" +
+	"\x15CreateProfileResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x123\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x1b.customer.v1.CustomerStatusR\x06status\x12F\n" +
+	"\x11status_changed_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x0fstatusChangedAt\x129\n" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"5\n" +
-	"\x12GetCustomerRequest\x12\x1f\n" +
-	"\vcustomer_id\x18\x01 \x01(\tR\n" +
-	"customerId\"H\n" +
-	"\x13GetCustomerResponse\x121\n" +
-	"\bcustomer\x18\x01 \x01(\v2\x15.customer.v1.CustomerR\bcustomer\"\x90\x01\n" +
-	"\x14UpdateProfileRequest\x12\x1f\n" +
-	"\vcustomer_id\x18\x01 \x01(\tR\n" +
-	"customerId\x12.\n" +
-	"\aprofile\x18\x02 \x01(\v2\x14.customer.v1.ProfileR\aprofile\x12'\n" +
-	"\x0fidempotency_key\x18\x03 \x01(\tR\x0eidempotencyKey\"J\n" +
-	"\x15UpdateProfileResponse\x121\n" +
-	"\bcustomer\x18\x01 \x01(\v2\x15.customer.v1.CustomerR\bcustomer\";\n" +
-	"\x18GetCustomerStatusRequest\x12\x1f\n" +
-	"\vcustomer_id\x18\x01 \x01(\tR\n" +
-	"customerId\"\x8b\x01\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"-\n" +
+	"\x12GetCustomerRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"_\n" +
+	"\x14UpdateProfileRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12.\n" +
+	"\aprofile\x18\x02 \x01(\v2\x14.customer.v1.ProfileR\aprofile\"3\n" +
+	"\x18GetCustomerStatusRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x98\x01\n" +
 	"\x19GetCustomerStatusResponse\x123\n" +
-	"\x06status\x18\x01 \x01(\x0e2\x1b.customer.v1.CustomerStatusR\x06status\x129\n" +
-	"\n" +
-	"changed_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tchangedAt\"w\n" +
-	"\x14ListCustomersRequest\x123\n" +
-	"\x06status\x18\x01 \x01(\x0e2\x1b.customer.v1.CustomerStatusR\x06status\x12*\n" +
-	"\x04page\x18\x02 \x01(\v2\x16.common.v1.PageRequestR\x04page\"y\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x1b.customer.v1.CustomerStatusR\x06status\x12F\n" +
+	"\x11status_changed_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x0fstatusChangedAt\"D\n" +
+	"\x14ListCustomersRequest\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\x03 \x01(\x05R\x06offset\"L\n" +
 	"\x15ListCustomersResponse\x123\n" +
-	"\tcustomers\x18\x01 \x03(\v2\x15.customer.v1.CustomerR\tcustomers\x12+\n" +
-	"\x04page\x18\x02 \x01(\v2\x17.common.v1.PageResponseR\x04page*\xe1\x01\n" +
-	"\x0eCustomerStatus\x12\x1f\n" +
-	"\x1bCUSTOMER_STATUS_UNSPECIFIED\x10\x00\x12\x17\n" +
-	"\x13CUSTOMER_STATUS_NEW\x10\x01\x12\"\n" +
-	"\x1eCUSTOMER_STATUS_PROFILE_FILLED\x10\x02\x12\x1a\n" +
-	"\x16CUSTOMER_STATUS_ON_KYC\x10\x03\x12\x1a\n" +
-	"\x16CUSTOMER_STATUS_ACTIVE\x10\x04\x12\x1c\n" +
-	"\x18CUSTOMER_STATUS_REJECTED\x10\x05\x12\x1b\n" +
-	"\x17CUSTOMER_STATUS_BLOCKED\x10\x062\x88\x04\n" +
-	"\x0fCustomerService\x12u\n" +
-	"\vGetCustomer\x12\x1f.customer.v1.GetCustomerRequest\x1a .customer.v1.GetCustomerResponse\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/customers/{customer_id}\x12~\n" +
-	"\rUpdateProfile\x12!.customer.v1.UpdateProfileRequest\x1a\".customer.v1.UpdateProfileResponse\"&\x82\xd3\xe4\x93\x02 :\x01*2\x1b/v1/customers/{customer_id}\x12\x8e\x01\n" +
-	"\x11GetCustomerStatus\x12%.customer.v1.GetCustomerStatusRequest\x1a&.customer.v1.GetCustomerStatusResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/v1/customers/{customer_id}/status\x12m\n" +
-	"\rListCustomers\x12!.customer.v1.ListCustomersRequest\x1a\".customer.v1.ListCustomersResponse\"\x15\x82\xd3\xe4\x93\x02\x0f\x12\r/v1/customersBkZigithub.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/customer/v1;customerv1b\x06proto3"
+	"\tcustomers\x18\x01 \x03(\v2\x15.customer.v1.CustomerR\tcustomers*`\n" +
+	"\x0eCustomerStatus\x12\a\n" +
+	"\x03NEW\x10\x00\x12\x12\n" +
+	"\x0ePROFILE_FILLED\x10\x01\x12\n" +
+	"\n" +
+	"\x06ON_KYC\x10\x02\x12\n" +
+	"\n" +
+	"\x06ACTIVE\x10\x03\x12\f\n" +
+	"\bREJECTED\x10\x04\x12\v\n" +
+	"\aBLOCKED\x10\x052\xb7\x03\n" +
+	"\x0fCustomerService\x12V\n" +
+	"\rCreateProfile\x12!.customer.v1.CreateProfileRequest\x1a\".customer.v1.CreateProfileResponse\x12E\n" +
+	"\vGetCustomer\x12\x1f.customer.v1.GetCustomerRequest\x1a\x15.customer.v1.Customer\x12b\n" +
+	"\x11GetCustomerStatus\x12%.customer.v1.GetCustomerStatusRequest\x1a&.customer.v1.GetCustomerStatusResponse\x12I\n" +
+	"\rUpdateProfile\x12!.customer.v1.UpdateProfileRequest\x1a\x15.customer.v1.Customer\x12V\n" +
+	"\rListCustomers\x12!.customer.v1.ListCustomersRequest\x1a\".customer.v1.ListCustomersResponseBkZigithub.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/customer/v1;customerv1b\x06proto3"
 
 var (
 	file_customer_v1_customer_proto_rawDescOnce sync.Once
@@ -838,54 +743,52 @@ func file_customer_v1_customer_proto_rawDescGZIP() []byte {
 }
 
 var file_customer_v1_customer_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_customer_v1_customer_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_customer_v1_customer_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_customer_v1_customer_proto_goTypes = []any{
 	(CustomerStatus)(0),               // 0: customer.v1.CustomerStatus
-	(*Address)(nil),                   // 1: customer.v1.Address
-	(*Profile)(nil),                   // 2: customer.v1.Profile
-	(*Customer)(nil),                  // 3: customer.v1.Customer
-	(*GetCustomerRequest)(nil),        // 4: customer.v1.GetCustomerRequest
-	(*GetCustomerResponse)(nil),       // 5: customer.v1.GetCustomerResponse
+	(*Profile)(nil),                   // 1: customer.v1.Profile
+	(*Customer)(nil),                  // 2: customer.v1.Customer
+	(*CreateProfileRequest)(nil),      // 3: customer.v1.CreateProfileRequest
+	(*CreateProfileResponse)(nil),     // 4: customer.v1.CreateProfileResponse
+	(*GetCustomerRequest)(nil),        // 5: customer.v1.GetCustomerRequest
 	(*UpdateProfileRequest)(nil),      // 6: customer.v1.UpdateProfileRequest
-	(*UpdateProfileResponse)(nil),     // 7: customer.v1.UpdateProfileResponse
-	(*GetCustomerStatusRequest)(nil),  // 8: customer.v1.GetCustomerStatusRequest
-	(*GetCustomerStatusResponse)(nil), // 9: customer.v1.GetCustomerStatusResponse
-	(*ListCustomersRequest)(nil),      // 10: customer.v1.ListCustomersRequest
-	(*ListCustomersResponse)(nil),     // 11: customer.v1.ListCustomersResponse
-	(*date.Date)(nil),                 // 12: google.type.Date
-	(*timestamppb.Timestamp)(nil),     // 13: google.protobuf.Timestamp
-	(*v1.PageRequest)(nil),            // 14: common.v1.PageRequest
-	(*v1.PageResponse)(nil),           // 15: common.v1.PageResponse
+	(*GetCustomerStatusRequest)(nil),  // 7: customer.v1.GetCustomerStatusRequest
+	(*GetCustomerStatusResponse)(nil), // 8: customer.v1.GetCustomerStatusResponse
+	(*ListCustomersRequest)(nil),      // 9: customer.v1.ListCustomersRequest
+	(*ListCustomersResponse)(nil),     // 10: customer.v1.ListCustomersResponse
+	(*date.Date)(nil),                 // 11: google.type.Date
+	(*timestamppb.Timestamp)(nil),     // 12: google.protobuf.Timestamp
 }
 var file_customer_v1_customer_proto_depIdxs = []int32{
-	12, // 0: customer.v1.Profile.birth_date:type_name -> google.type.Date
-	1,  // 1: customer.v1.Profile.address:type_name -> customer.v1.Address
-	0,  // 2: customer.v1.Customer.status:type_name -> customer.v1.CustomerStatus
-	2,  // 3: customer.v1.Customer.profile:type_name -> customer.v1.Profile
-	13, // 4: customer.v1.Customer.created_at:type_name -> google.protobuf.Timestamp
-	13, // 5: customer.v1.Customer.updated_at:type_name -> google.protobuf.Timestamp
-	3,  // 6: customer.v1.GetCustomerResponse.customer:type_name -> customer.v1.Customer
-	2,  // 7: customer.v1.UpdateProfileRequest.profile:type_name -> customer.v1.Profile
-	3,  // 8: customer.v1.UpdateProfileResponse.customer:type_name -> customer.v1.Customer
-	0,  // 9: customer.v1.GetCustomerStatusResponse.status:type_name -> customer.v1.CustomerStatus
-	13, // 10: customer.v1.GetCustomerStatusResponse.changed_at:type_name -> google.protobuf.Timestamp
-	0,  // 11: customer.v1.ListCustomersRequest.status:type_name -> customer.v1.CustomerStatus
-	14, // 12: customer.v1.ListCustomersRequest.page:type_name -> common.v1.PageRequest
-	3,  // 13: customer.v1.ListCustomersResponse.customers:type_name -> customer.v1.Customer
-	15, // 14: customer.v1.ListCustomersResponse.page:type_name -> common.v1.PageResponse
-	4,  // 15: customer.v1.CustomerService.GetCustomer:input_type -> customer.v1.GetCustomerRequest
-	6,  // 16: customer.v1.CustomerService.UpdateProfile:input_type -> customer.v1.UpdateProfileRequest
-	8,  // 17: customer.v1.CustomerService.GetCustomerStatus:input_type -> customer.v1.GetCustomerStatusRequest
-	10, // 18: customer.v1.CustomerService.ListCustomers:input_type -> customer.v1.ListCustomersRequest
-	5,  // 19: customer.v1.CustomerService.GetCustomer:output_type -> customer.v1.GetCustomerResponse
-	7,  // 20: customer.v1.CustomerService.UpdateProfile:output_type -> customer.v1.UpdateProfileResponse
-	9,  // 21: customer.v1.CustomerService.GetCustomerStatus:output_type -> customer.v1.GetCustomerStatusResponse
-	11, // 22: customer.v1.CustomerService.ListCustomers:output_type -> customer.v1.ListCustomersResponse
-	19, // [19:23] is the sub-list for method output_type
-	15, // [15:19] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	11, // 0: customer.v1.Profile.birth_date:type_name -> google.type.Date
+	0,  // 1: customer.v1.Customer.status:type_name -> customer.v1.CustomerStatus
+	12, // 2: customer.v1.Customer.status_changed_at:type_name -> google.protobuf.Timestamp
+	1,  // 3: customer.v1.Customer.profile:type_name -> customer.v1.Profile
+	12, // 4: customer.v1.Customer.created_at:type_name -> google.protobuf.Timestamp
+	12, // 5: customer.v1.Customer.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 6: customer.v1.CreateProfileResponse.status:type_name -> customer.v1.CustomerStatus
+	12, // 7: customer.v1.CreateProfileResponse.status_changed_at:type_name -> google.protobuf.Timestamp
+	12, // 8: customer.v1.CreateProfileResponse.created_at:type_name -> google.protobuf.Timestamp
+	12, // 9: customer.v1.CreateProfileResponse.updated_at:type_name -> google.protobuf.Timestamp
+	1,  // 10: customer.v1.UpdateProfileRequest.profile:type_name -> customer.v1.Profile
+	0,  // 11: customer.v1.GetCustomerStatusResponse.status:type_name -> customer.v1.CustomerStatus
+	12, // 12: customer.v1.GetCustomerStatusResponse.status_changed_at:type_name -> google.protobuf.Timestamp
+	2,  // 13: customer.v1.ListCustomersResponse.customers:type_name -> customer.v1.Customer
+	3,  // 14: customer.v1.CustomerService.CreateProfile:input_type -> customer.v1.CreateProfileRequest
+	5,  // 15: customer.v1.CustomerService.GetCustomer:input_type -> customer.v1.GetCustomerRequest
+	7,  // 16: customer.v1.CustomerService.GetCustomerStatus:input_type -> customer.v1.GetCustomerStatusRequest
+	6,  // 17: customer.v1.CustomerService.UpdateProfile:input_type -> customer.v1.UpdateProfileRequest
+	9,  // 18: customer.v1.CustomerService.ListCustomers:input_type -> customer.v1.ListCustomersRequest
+	4,  // 19: customer.v1.CustomerService.CreateProfile:output_type -> customer.v1.CreateProfileResponse
+	2,  // 20: customer.v1.CustomerService.GetCustomer:output_type -> customer.v1.Customer
+	8,  // 21: customer.v1.CustomerService.GetCustomerStatus:output_type -> customer.v1.GetCustomerStatusResponse
+	2,  // 22: customer.v1.CustomerService.UpdateProfile:output_type -> customer.v1.Customer
+	10, // 23: customer.v1.CustomerService.ListCustomers:output_type -> customer.v1.ListCustomersResponse
+	19, // [19:24] is the sub-list for method output_type
+	14, // [14:19] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_customer_v1_customer_proto_init() }
@@ -899,7 +802,7 @@ func file_customer_v1_customer_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_customer_v1_customer_proto_rawDesc), len(file_customer_v1_customer_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   11,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

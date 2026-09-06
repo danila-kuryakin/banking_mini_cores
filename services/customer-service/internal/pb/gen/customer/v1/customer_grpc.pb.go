@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	CustomerService_CreateProfile_FullMethodName     = "/customer.v1.CustomerService/CreateProfile"
 	CustomerService_GetCustomer_FullMethodName       = "/customer.v1.CustomerService/GetCustomer"
-	CustomerService_UpdateProfile_FullMethodName     = "/customer.v1.CustomerService/UpdateProfile"
 	CustomerService_GetCustomerStatus_FullMethodName = "/customer.v1.CustomerService/GetCustomerStatus"
+	CustomerService_UpdateProfile_FullMethodName     = "/customer.v1.CustomerService/UpdateProfile"
 	CustomerService_ListCustomers_FullMethodName     = "/customer.v1.CustomerService/ListCustomers"
 )
 
@@ -29,9 +30,10 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CustomerServiceClient interface {
-	GetCustomer(ctx context.Context, in *GetCustomerRequest, opts ...grpc.CallOption) (*GetCustomerResponse, error)
-	UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*UpdateProfileResponse, error)
+	CreateProfile(ctx context.Context, in *CreateProfileRequest, opts ...grpc.CallOption) (*CreateProfileResponse, error)
+	GetCustomer(ctx context.Context, in *GetCustomerRequest, opts ...grpc.CallOption) (*Customer, error)
 	GetCustomerStatus(ctx context.Context, in *GetCustomerStatusRequest, opts ...grpc.CallOption) (*GetCustomerStatusResponse, error)
+	UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*Customer, error)
 	ListCustomers(ctx context.Context, in *ListCustomersRequest, opts ...grpc.CallOption) (*ListCustomersResponse, error)
 }
 
@@ -43,20 +45,20 @@ func NewCustomerServiceClient(cc grpc.ClientConnInterface) CustomerServiceClient
 	return &customerServiceClient{cc}
 }
 
-func (c *customerServiceClient) GetCustomer(ctx context.Context, in *GetCustomerRequest, opts ...grpc.CallOption) (*GetCustomerResponse, error) {
+func (c *customerServiceClient) CreateProfile(ctx context.Context, in *CreateProfileRequest, opts ...grpc.CallOption) (*CreateProfileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetCustomerResponse)
-	err := c.cc.Invoke(ctx, CustomerService_GetCustomer_FullMethodName, in, out, cOpts...)
+	out := new(CreateProfileResponse)
+	err := c.cc.Invoke(ctx, CustomerService_CreateProfile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *customerServiceClient) UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*UpdateProfileResponse, error) {
+func (c *customerServiceClient) GetCustomer(ctx context.Context, in *GetCustomerRequest, opts ...grpc.CallOption) (*Customer, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateProfileResponse)
-	err := c.cc.Invoke(ctx, CustomerService_UpdateProfile_FullMethodName, in, out, cOpts...)
+	out := new(Customer)
+	err := c.cc.Invoke(ctx, CustomerService_GetCustomer_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -67,6 +69,16 @@ func (c *customerServiceClient) GetCustomerStatus(ctx context.Context, in *GetCu
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetCustomerStatusResponse)
 	err := c.cc.Invoke(ctx, CustomerService_GetCustomerStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *customerServiceClient) UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*Customer, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Customer)
+	err := c.cc.Invoke(ctx, CustomerService_UpdateProfile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,9 +99,10 @@ func (c *customerServiceClient) ListCustomers(ctx context.Context, in *ListCusto
 // All implementations must embed UnimplementedCustomerServiceServer
 // for forward compatibility.
 type CustomerServiceServer interface {
-	GetCustomer(context.Context, *GetCustomerRequest) (*GetCustomerResponse, error)
-	UpdateProfile(context.Context, *UpdateProfileRequest) (*UpdateProfileResponse, error)
+	CreateProfile(context.Context, *CreateProfileRequest) (*CreateProfileResponse, error)
+	GetCustomer(context.Context, *GetCustomerRequest) (*Customer, error)
 	GetCustomerStatus(context.Context, *GetCustomerStatusRequest) (*GetCustomerStatusResponse, error)
+	UpdateProfile(context.Context, *UpdateProfileRequest) (*Customer, error)
 	ListCustomers(context.Context, *ListCustomersRequest) (*ListCustomersResponse, error)
 	mustEmbedUnimplementedCustomerServiceServer()
 }
@@ -101,14 +114,17 @@ type CustomerServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedCustomerServiceServer struct{}
 
-func (UnimplementedCustomerServiceServer) GetCustomer(context.Context, *GetCustomerRequest) (*GetCustomerResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetCustomer not implemented")
+func (UnimplementedCustomerServiceServer) CreateProfile(context.Context, *CreateProfileRequest) (*CreateProfileResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateProfile not implemented")
 }
-func (UnimplementedCustomerServiceServer) UpdateProfile(context.Context, *UpdateProfileRequest) (*UpdateProfileResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateProfile not implemented")
+func (UnimplementedCustomerServiceServer) GetCustomer(context.Context, *GetCustomerRequest) (*Customer, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCustomer not implemented")
 }
 func (UnimplementedCustomerServiceServer) GetCustomerStatus(context.Context, *GetCustomerStatusRequest) (*GetCustomerStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCustomerStatus not implemented")
+}
+func (UnimplementedCustomerServiceServer) UpdateProfile(context.Context, *UpdateProfileRequest) (*Customer, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateProfile not implemented")
 }
 func (UnimplementedCustomerServiceServer) ListCustomers(context.Context, *ListCustomersRequest) (*ListCustomersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCustomers not implemented")
@@ -134,6 +150,24 @@ func RegisterCustomerServiceServer(s grpc.ServiceRegistrar, srv CustomerServiceS
 	s.RegisterService(&CustomerService_ServiceDesc, srv)
 }
 
+func _CustomerService_CreateProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateProfileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CustomerServiceServer).CreateProfile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CustomerService_CreateProfile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CustomerServiceServer).CreateProfile(ctx, req.(*CreateProfileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CustomerService_GetCustomer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetCustomerRequest)
 	if err := dec(in); err != nil {
@@ -152,24 +186,6 @@ func _CustomerService_GetCustomer_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CustomerService_UpdateProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateProfileRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CustomerServiceServer).UpdateProfile(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CustomerService_UpdateProfile_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CustomerServiceServer).UpdateProfile(ctx, req.(*UpdateProfileRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _CustomerService_GetCustomerStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetCustomerStatusRequest)
 	if err := dec(in); err != nil {
@@ -184,6 +200,24 @@ func _CustomerService_GetCustomerStatus_Handler(srv interface{}, ctx context.Con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CustomerServiceServer).GetCustomerStatus(ctx, req.(*GetCustomerStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CustomerService_UpdateProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateProfileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CustomerServiceServer).UpdateProfile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CustomerService_UpdateProfile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CustomerServiceServer).UpdateProfile(ctx, req.(*UpdateProfileRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -214,16 +248,20 @@ var CustomerService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*CustomerServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "CreateProfile",
+			Handler:    _CustomerService_CreateProfile_Handler,
+		},
+		{
 			MethodName: "GetCustomer",
 			Handler:    _CustomerService_GetCustomer_Handler,
 		},
 		{
-			MethodName: "UpdateProfile",
-			Handler:    _CustomerService_UpdateProfile_Handler,
-		},
-		{
 			MethodName: "GetCustomerStatus",
 			Handler:    _CustomerService_GetCustomerStatus_Handler,
+		},
+		{
+			MethodName: "UpdateProfile",
+			Handler:    _CustomerService_UpdateProfile_Handler,
 		},
 		{
 			MethodName: "ListCustomers",

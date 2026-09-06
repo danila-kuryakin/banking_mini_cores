@@ -1,4 +1,4 @@
-// Package grpc_server is the shared inbound gRPC runtime: it opens the
+// Package grpc is the shared inbound gRPC runtime: it opens the
 // listener, registers the services the caller passes in, wires the platform
 // interceptor chain, exposes reflection and the standard health protocol, and
 // shuts everything down gracefully.
@@ -45,7 +45,7 @@ func NewServer(addr string, logger *slog.Logger, opts ...Option) error {
 	if len(o.services) == 0 {
 		// Иначе сервер молча поднимется пустым и будет отвечать Unimplemented
 		// на всё - диагностировать это по логам неприятно.
-		return fmt.Errorf("no services registered: pass grpc_server.WithServices(...)")
+		return fmt.Errorf("no services registered: pass grpc.WithServices(...)")
 	}
 
 	s := &Server{logger: logger}

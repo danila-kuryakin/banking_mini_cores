@@ -4,53 +4,24 @@ package customer.v1;
 
 option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/pb/gen/customer/v1;customerv1";
 
-import "common/v1/pagination.proto";
-import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 import "google/type/date.proto";
 
 service CustomerService {
-  rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse) {
-    option (google.api.http) = {get: "/v1/customers/{customer_id}"};
-  }
-
-  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse) {
-    option (google.api.http) = {
-      patch: "/v1/customers/{customer_id}"
-      body: "*"
-    };
-  }
-
-  rpc GetCustomerStatus(GetCustomerStatusRequest) returns (GetCustomerStatusResponse) {
-    option (google.api.http) = {get: "/v1/customers/{customer_id}/status"};
-  }
-
-  rpc ListCustomers(ListCustomersRequest) returns (ListCustomersResponse) {
-    option (google.api.http) = {get: "/v1/customers"};
-  }
+  rpc CreateProfile(CreateProfileRequest) returns (CreateProfileResponse);
+  rpc GetCustomer(GetCustomerRequest) returns (Customer);
+  rpc GetCustomerStatus(GetCustomerStatusRequest) returns (GetCustomerStatusResponse);
+  rpc UpdateProfile(UpdateProfileRequest) returns (Customer);
+  rpc ListCustomers(ListCustomersRequest) returns (ListCustomersResponse);
 }
 
-// CustomerStatus is driven by KYC events, never set directly by the customer.
-//
-//   NEW -> PROFILE_FILLED -> ON_KYC -> ACTIVE
-//                                   -> REJECTED
-//   any -> BLOCKED
 enum CustomerStatus {
-  CUSTOMER_STATUS_UNSPECIFIED = 0;
-  CUSTOMER_STATUS_NEW = 1;
-  CUSTOMER_STATUS_PROFILE_FILLED = 2;
-  CUSTOMER_STATUS_ON_KYC = 3;
-  CUSTOMER_STATUS_ACTIVE = 4;
-  CUSTOMER_STATUS_REJECTED = 5;
-  CUSTOMER_STATUS_BLOCKED = 6;
-}
-
-message Address {
-  string country = 1;
-  string city = 2;
-  string street = 3;
-  string building = 4;
-  string postal_code = 5;
+  NEW = 0;
+  PROFILE_FILLED = 1;
+  ON_KYC = 2;
+  ACTIVE = 3;
+  REJECTED = 4;
+  BLOCKED = 5;
 }
 
 message Profile {
@@ -59,51 +30,54 @@ message Profile {
   google.type.Date birth_date = 3;
   string citizenship = 4;
   string phone = 5;
-  Address address = 6;
 }
 
 message Customer {
-  string customer_id = 1;
+  string id = 1;
   string user_id = 2;
   CustomerStatus status = 3;
-  Profile profile = 4;
+  google.protobuf.Timestamp status_changed_at = 4;
+  Profile profile = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message CreateProfileRequest {
+  string user_id = 1;
+}
+
+message CreateProfileResponse {
+  string id = 1;
+  string user_id = 2;
+  CustomerStatus status = 3;
+  google.protobuf.Timestamp status_changed_at = 4;
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
 }
 
 message GetCustomerRequest {
-  string customer_id = 1;
-}
-
-message GetCustomerResponse {
-  Customer customer = 1;
+  string user_id = 1;
 }
 
 message UpdateProfileRequest {
-  string customer_id = 1;
+  string user_id = 1;
   Profile profile = 2;
-  string idempotency_key = 3;
-}
-
-message UpdateProfileResponse {
-  Customer customer = 1;
 }
 
 message GetCustomerStatusRequest {
-  string customer_id = 1;
+  string user_id = 1;
 }
 
 message GetCustomerStatusResponse {
   CustomerStatus status = 1;
-  google.protobuf.Timestamp changed_at = 2;
+  google.protobuf.Timestamp status_changed_at = 2;
 }
 
 message ListCustomersRequest {
-  CustomerStatus status = 1;
-  common.v1.PageRequest page = 2;
+  int32 limit = 2;
+  int32 offset = 3;
 }
 
 message ListCustomersResponse {
   repeated Customer customers = 1;
-  common.v1.PageResponse page = 2;
 }

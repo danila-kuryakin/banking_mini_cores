@@ -1,24 +1,27 @@
 package config
 
 import (
-	"log"
+	"fmt"
+	"time"
 
 	"github.com/danila-kuryakin/banking_mini_cores/platform/config"
+	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/domain"
 )
 
-// Config is the customer-service configuration beyond the common base.
 type Config struct {
-	Server   config.Server         `mapstructure:"server"`
-	Postgres config.DataBaseConfig `mapstructure:"database"`
-	Kafka    config.KafkaConfig    `mapstructure:"kafka"`
+	Server         config.Server         `mapstructure:"server"`
+	Postgres       config.DataBaseConfig `mapstructure:"database"`
+	RequestTimeout time.Duration         `mapstructure:"request_timeout"`
 }
 
-// Load reads the configuration from the environment.
 func Load() (*Config, error) {
-
 	cfg, err := config.Read[Config]("./configs")
 	if err != nil {
-		log.Fatalf("config: %v", err)
+		return nil, fmt.Errorf("config: %w", err)
+	}
+
+	if cfg.RequestTimeout <= 0 {
+		cfg.RequestTimeout = domain.DEFAULT_REQUEST_TIMEOUT
 	}
 
 	return cfg, nil

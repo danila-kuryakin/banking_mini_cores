@@ -2,9 +2,7 @@ server:
   host: localhost
   port: 8080
 
-# Отдельный gRPC-порт: сам gateway отвечает по HTTP, но health-проверку отдаёт
-# по grpc.health.v1.Health - тем же протоколом, что и остальные сервисы.
-grpc:
+grpc_client:
   host: localhost
   port: 50059
 
@@ -18,6 +16,7 @@ upstreams:
   antifraud: localhost:50057
   notification: localhost:50058
 
-jwks_url: ""
+jwks_url: http://localhost:8081/.well-known/jwks.json
+jwks_refresh_interval: 5m # рез сколько клиент берет ключи у jwks сервера
+
 request_timeout: 30s
-shutdown_timeout: 5s
