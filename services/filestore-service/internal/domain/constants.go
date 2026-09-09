@@ -36,3 +36,10 @@ const (
 
 // Формат пути: {user_id}/{type}/{file_id}.
 const OBJECT_PATH_FORMAT = "%s/%s/%s"
+
+// Параметры presigned GET, которыми S3 подменяет заголовки ответа.
+const (
+	RESPONSE_CONTENT_DISPOSITION   = "response-content-disposition"
+	RESPONSE_CONTENT_TYPE          = "response-content-type"
+	CONTENT_DISPOSITION_ATTACHMENT = "attachment"
+)

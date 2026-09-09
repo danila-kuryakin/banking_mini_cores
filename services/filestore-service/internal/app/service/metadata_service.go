@@ -115,7 +115,10 @@ func (s *FileStorageService) GetDownloadURL(ctx context.Context, userID, fileID 
 		return nil, domain.ErrFileNotConfirmed
 	}
 
-	url, err := s.storage.MinIO.PresignedGetURL(ctx, metadata.ObjectPath, domain.DOWNLOAD_URL_TTL)
+	url, err := s.storage.MinIO.PresignedGetURL(ctx, metadata.ObjectPath, domain.DOWNLOAD_URL_TTL, models.DownloadOptions{
+		Filename:    metadata.Filename,
+		ContentType: metadata.ContentType,
+	})
 	if err != nil {
 		return nil, err
 	}

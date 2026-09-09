@@ -57,3 +57,9 @@ type PresignedURL struct {
 	URL       string
 	ExpiresAt time.Time
 }
+
+// DownloadOptions - как хранилище должно представить файл при скачивании.
+type DownloadOptions struct {
+	Filename    string // исходное имя у клиента; пустое - заголовок не ставится
+	ContentType string // реальный тип, определённый на ConfirmUpload
+}

@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mime"
+	"net/url"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -36,13 +38,39 @@ func (r *FileRepository) PresignedPutURL(ctx context.Context, objectPath string,
 }
 
 // PresignedGetURL выдаёт ссылку на скачивание.
-func (r *FileRepository) PresignedGetURL(ctx context.Context, objectPath string, expiry time.Duration) (string, error) {
-	presignedURL, err := r.client.PresignedGetObject(ctx, r.bucketName, objectPath, expiry, nil)
+func (r *FileRepository) PresignedGetURL(ctx context.Context, objectPath string, expiry time.Duration, opts models.DownloadOptions) (string, error) {
+	presignedURL, err := r.client.PresignedGetObject(ctx, r.bucketName, objectPath, expiry, responseParams(opts))
 	if err != nil {
 		return "", fmt.Errorf("presign get %s: %w", objectPath, err)
 	}
 
 	return presignedURL.String(), nil
+}
+
+// responseParams просит S3 подставить в ответ заголовки Content-Disposition и
+// Content-Type. Параметры входят в подпись, поэтому подменить их по дороге
+// нельзя. Без них браузер сохраняет файл под именем последнего сегмента пути.
+func responseParams(opts models.DownloadOptions) url.Values {
+	params := make(url.Values, 2)
+
+	if opts.Filename != "" {
+		// Заголовок собирается mime.FormatMediaType: имя
+		// приходит от клиента, и он сам выберет форму RFC 5987 для кириллицы,
+		// а кавычки и переводы строк заэкранирует.
+		params.Set(domain.RESPONSE_CONTENT_DISPOSITION, mime.FormatMediaType(domain.CONTENT_DISPOSITION_ATTACHMENT, map[string]string{
+			"filename": opts.Filename,
+		}))
+	}
+
+	if opts.ContentType != "" {
+		params.Set(domain.RESPONSE_CONTENT_TYPE, opts.ContentType)
+	}
+
+	if len(params) == 0 {
+		return nil
+	}
+
+	return params
 }
 
 // StatObject проверяет, что файл действительно загружен, и отдаёт его размер.
