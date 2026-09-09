@@ -13,7 +13,7 @@ type Upstreams struct {
 	Auth         string `mapstructure:"auth"`
 	Customer     string `mapstructure:"customer"`
 	KYC          string `mapstructure:"kyc"`
-	Document     string `mapstructure:"document"`
+	Filestore    string `mapstructure:"filestore"`
 	Account      string `mapstructure:"account"`
 	Ledger       string `mapstructure:"ledger"`
 	Antifraud    string `mapstructure:"antifraud"`
@@ -25,7 +25,7 @@ func (u Upstreams) All() map[string]string {
 		"auth-service":         u.Auth,
 		"customer-service":     u.Customer,
 		"kyc-service":          u.KYC,
-		"document-service":     u.Document,
+		"filestore-service":    u.Filestore,
 		"account-service":      u.Account,
 		"ledger-service":       u.Ledger,
 		"antifraud-service":    u.Antifraud,

@@ -15,7 +15,7 @@ import (
 
 //	@title						Banking Mini Cores API Gateway
 //	@version					1.0
-//	@description				HTTP-фасад над gRPC-сервисами: аутентификация и работа с клиентами.
+//	@description				HTTP-фасад над gRPC-сервисами: аутентификация, работа с клиентами и их файлами.
 
 //	@contact.name				Danila Kuryakin
 //	@contact.url				https://github.com/danila-kuryakin/banking_mini_cores
@@ -31,6 +31,8 @@ import (
 //	@tag.description			Регистрация, вход, обновление и отзыв токенов
 //	@tag.name					customer
 //	@tag.description			Карточка клиента, профиль и статус
+//	@tag.name					files
+//	@tag.description			Загрузка и выдача файлов клиента через presigned-ссылки
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))

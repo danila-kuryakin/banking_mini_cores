@@ -23,6 +23,7 @@ func (r *Router) Init(g *gin.Engine) {
 
 	r.initAuthRoutes(api)
 	r.initCustomerRoutes(api)
+	r.initFileRoutes(api)
 
 	g.GET(domain.SWAGGER_ROUTE, ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
@@ -44,7 +45,7 @@ func (r *Router) initAuthRoutes(api *gin.RouterGroup) {
 func (r *Router) initCustomerRoutes(api *gin.RouterGroup) {
 	customers := api.Group("/customer", r.handler.Middleware.RequireAuth())
 	{
-		own := customers.Group("/:"+domain.USER_ID_PARAM,
+		own := customers.Group("/:user_id",
 			r.handler.Middleware.RequireSelfOrRole(domain.USER_ID_PARAM, domain.ROLE_OFFICER, domain.ROLE_ADMIN))
 		{
 			own.GET("", r.handler.Customer.GetCustomer)
@@ -53,5 +54,24 @@ func (r *Router) initCustomerRoutes(api *gin.RouterGroup) {
 		}
 
 		customers.GET("", r.handler.Middleware.RequireRole(domain.ROLE_OFFICER, domain.ROLE_ADMIN), r.handler.Customer.ListCustomers)
+	}
+}
+
+// Файлы висят под тем же /customer/:user_id, поэтому проверка владения и
+// подстановка "me" достаются от группы клиента, без отдельного middleware.
+func (r *Router) initFileRoutes(api *gin.RouterGroup) {
+	files := api.Group("/customer/:user_id/files",
+		r.handler.Middleware.RequireAuth(),
+		r.handler.Middleware.RequireSelfOrRole(domain.USER_ID_PARAM, domain.ROLE_OFFICER, domain.ROLE_ADMIN))
+	{
+		files.POST("", r.handler.Filestore.InitUpload)
+		files.GET("", r.handler.Filestore.ListFiles)
+		files.GET("/required", r.handler.Filestore.HasRequiredFiles)
+
+		file := files.Group("/:file_id")
+		{
+			file.POST("/confirm", r.handler.Filestore.ConfirmUpload)
+			file.GET("/url", r.handler.Filestore.GetDownloadURL)
+		}
 	}
 }

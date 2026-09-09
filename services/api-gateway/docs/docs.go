@@ -512,6 +512,317 @@ const docTemplate = `{
                 }
             }
         },
+        "/customer/{user_id}/files": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Постраничный список файлов, отсортированный по дате создания по убыванию. Незавершённые загрузки тоже видны - у них status = uploaded.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Список файлов клиента",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "Размер страницы, по умолчанию 20",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "Сколько записей пропустить",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Страница списка",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListFiles"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректные параметры запроса",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Файлы принадлежат другому пользователю",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Заводит запись о файле и возвращает presigned-ссылку. Файл клиент кладёт сам: PUT по upload_url с телом файла, gateway байты не принимает. После заливки нужно вызвать confirm. Типы: passport, selfie, proof_of_address.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Заявка на загрузку файла",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Тип файла и исходное имя",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.InitUpload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ссылка на загрузку",
+                        "schema": {
+                            "$ref": "#/definitions/dto.UploadTicket"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректное тело запроса или неизвестный тип файла",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Файлы принадлежат другому пользователю",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/customer/{user_id}/files/required": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Загружены ли подтверждённые файлы обязательных типов (паспорт и селфи). В missing перечислено недостающее.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Комплектность файлов",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Состояние комплекта",
+                        "schema": {
+                            "$ref": "#/definitions/dto.RequiredFiles"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Файлы принадлежат другому пользователю",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/customer/{user_id}/files/{file_id}/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Проверяет залитый файл: размер не больше 10 МБ, тип определяется по содержимому (jpeg, png, pdf), считается sha256. Только после этого файл становится доступен для скачивания. Повторный вызов по подтверждённому файлу ничего не меняет.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Подтверждение загрузки",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "UUID файла из ответа на заявку",
+                        "name": "file_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Файл подтверждён",
+                        "schema": {
+                            "$ref": "#/definitions/dto.File"
+                        }
+                    },
+                    "400": {
+                        "description": "Файл пустой, больше 10 МБ или неподдерживаемого типа",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Файл принадлежит другому пользователю",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Файл не найден",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Файл этого типа уже подтверждён",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/customer/{user_id}/files/{file_id}/url": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает presigned-ссылку со сроком жизни 5 минут. Скачивает по ней клиент сам, gateway файл не отдаёт. Работает только для подтверждённых файлов.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Ссылка на скачивание",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "UUID файла",
+                        "name": "file_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ссылка на скачивание",
+                        "schema": {
+                            "$ref": "#/definitions/dto.DownloadTicket"
+                        }
+                    },
+                    "400": {
+                        "description": "Файл ещё не подтверждён",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Файл принадлежит другому пользователю",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Файл не найден",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/customer/{user_id}/status": {
             "get": {
                 "security": [
@@ -617,11 +928,78 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.DownloadTicket": {
+            "type": "object",
+            "properties": {
+                "expires_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.ErrorResponse": {
             "type": "object",
             "properties": {
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.File": {
+            "type": "object",
+            "properties": {
+                "confirmed_at": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string",
+                    "example": "image/png"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "sha256": {
+                    "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "confirmed"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "passport"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.InitUpload": {
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "type": "string",
+                    "example": "passport.png"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "passport",
+                        "selfie",
+                        "proof_of_address"
+                    ],
+                    "example": "passport"
                 }
             }
         },
@@ -632,6 +1010,17 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/dto.Customer"
+                    }
+                }
+            }
+        },
+        "dto.ListFiles": {
+            "type": "object",
+            "properties": {
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.File"
                     }
                 }
             }
@@ -740,6 +1129,23 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.RequiredFiles": {
+            "type": "object",
+            "properties": {
+                "missing": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "selfie"
+                    ]
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
         "dto.TokenPair": {
             "type": "object",
             "properties": {
@@ -773,6 +1179,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.UploadTicket": {
+            "type": "object",
+            "properties": {
+                "expires_at": {
+                    "type": "string"
+                },
+                "file_id": {
+                    "type": "string"
+                },
+                "upload_url": {
                     "type": "string"
                 }
             }
@@ -839,6 +1259,10 @@ const docTemplate = `{
         {
             "description": "Карточка клиента, профиль и статус",
             "name": "customer"
+        },
+        {
+            "description": "Загрузка и выдача файлов клиента через presigned-ссылки",
+            "name": "files"
         }
     ]
 }`
@@ -850,7 +1274,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Banking Mini Cores API Gateway",
-	Description:      "HTTP-фасад над gRPC-сервисами: аутентификация и работа с клиентами.",
+	Description:      "HTTP-фасад над gRPC-сервисами: аутентификация, работа с клиентами и их файлами.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

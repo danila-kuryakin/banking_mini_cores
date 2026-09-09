@@ -1,0 +1,7 @@
+BEGIN;
+
+DROP TABLE IF EXISTS metadata;
+DROP TYPE IF EXISTS file_status;
+DROP TYPE IF EXISTS file_type;
+
+COMMIT;
