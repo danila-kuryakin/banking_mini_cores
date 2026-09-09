@@ -1,0 +1,33 @@
+name: banking-auth
+
+
+# для удобства отладки создал контейнеры
+services:
+  postgres:
+    image: postgres:16
+    container_name: banking-auth-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-banking_auth}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123}
+      POSTGRES_DB: ${POSTGRES_DB:-banking_auth}
+    ports:
+      # Наружу - нестандартный порт, чтобы не спорить с локальным postgres и с
+      # базами соседних сервисов. Последние две цифры совпадают с портом gRPC.
+      - "${POSTGRES_PORT:-5451}:5432"
+    volumes:
+      - auth-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-banking_auth} -d ${POSTGRES_DB:-banking_auth}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks: [banking-net]
+
+volumes:
+  auth-pgdata:
+
+networks:
+  banking-net:
+    external: true

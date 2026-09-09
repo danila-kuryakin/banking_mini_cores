@@ -34,9 +34,55 @@ definitions:
       status:
         type: string
     type: object
+  dto.DownloadTicket:
+    properties:
+      expires_at:
+        type: string
+      url:
+        type: string
+    type: object
   dto.ErrorResponse:
     properties:
       message:
+        type: string
+    type: object
+  dto.File:
+    properties:
+      confirmed_at:
+        type: string
+      content_type:
+        example: image/png
+        type: string
+      created_at:
+        type: string
+      filename:
+        type: string
+      id:
+        type: string
+      sha256:
+        type: string
+      size_bytes:
+        type: integer
+      status:
+        example: confirmed
+        type: string
+      type:
+        example: passport
+        type: string
+      user_id:
+        type: string
+    type: object
+  dto.InitUpload:
+    properties:
+      filename:
+        example: passport.png
+        type: string
+      type:
+        enum:
+        - passport
+        - selfie
+        - proof_of_address
+        example: passport
         type: string
     type: object
   dto.ListCustomers:
@@ -44,6 +90,13 @@ definitions:
       customers:
         items:
           $ref: '#/definitions/dto.Customer'
+        type: array
+    type: object
+  dto.ListFiles:
+    properties:
+      files:
+        items:
+          $ref: '#/definitions/dto.File'
         type: array
     type: object
   dto.LoginRequest:
@@ -115,6 +168,17 @@ definitions:
       user_id:
         type: string
     type: object
+  dto.RequiredFiles:
+    properties:
+      missing:
+        example:
+        - selfie
+        items:
+          type: string
+        type: array
+      ok:
+        type: boolean
+    type: object
   dto.TokenPair:
     properties:
       access_expires_at:
@@ -137,6 +201,15 @@ definitions:
       last_name:
         type: string
       phone:
+        type: string
+    type: object
+  dto.UploadTicket:
+    properties:
+      expires_at:
+        type: string
+      file_id:
+        type: string
+      upload_url:
         type: string
     type: object
   dto.User:
@@ -172,7 +245,8 @@ info:
   contact:
     name: Danila Kuryakin
     url: https://github.com/danila-kuryakin/banking_mini_cores
-  description: 'HTTP-фасад над gRPC-сервисами: аутентификация и работа с клиентами.'
+  description: 'HTTP-фасад над gRPC-сервисами: аутентификация, работа с клиентами
+    и их файлами.'
   title: Banking Mini Cores API Gateway
   version: "1.0"
 paths:
@@ -504,6 +578,216 @@ paths:
       summary: Обновление профиля клиента
       tags:
       - customer
+  /customer/{user_id}/files:
+    get:
+      description: Постраничный список файлов, отсортированный по дате создания по
+        убыванию. Незавершённые загрузки тоже видны - у них status = uploaded.
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Размер страницы, по умолчанию 20
+        in: query
+        maximum: 100
+        minimum: 0
+        name: limit
+        type: integer
+      - description: Сколько записей пропустить
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Страница списка
+          schema:
+            $ref: '#/definitions/dto.ListFiles'
+        "400":
+          description: Некорректные параметры запроса
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Файлы принадлежат другому пользователю
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Список файлов клиента
+      tags:
+      - files
+    post:
+      consumes:
+      - application/json
+      description: 'Заводит запись о файле и возвращает presigned-ссылку. Файл клиент
+        кладёт сам: PUT по upload_url с телом файла, gateway байты не принимает. После
+        заливки нужно вызвать confirm. Типы: passport, selfie, proof_of_address.'
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Тип файла и исходное имя
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.InitUpload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ссылка на загрузку
+          schema:
+            $ref: '#/definitions/dto.UploadTicket'
+        "400":
+          description: Некорректное тело запроса или неизвестный тип файла
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Файлы принадлежат другому пользователю
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Заявка на загрузку файла
+      tags:
+      - files
+  /customer/{user_id}/files/{file_id}/confirm:
+    post:
+      description: 'Проверяет залитый файл: размер не больше 10 МБ, тип определяется
+        по содержимому (jpeg, png, pdf), считается sha256. Только после этого файл
+        становится доступен для скачивания. Повторный вызов по подтверждённому файлу
+        ничего не меняет.'
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: UUID файла из ответа на заявку
+        in: path
+        name: file_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Файл подтверждён
+          schema:
+            $ref: '#/definitions/dto.File'
+        "400":
+          description: Файл пустой, больше 10 МБ или неподдерживаемого типа
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Файл принадлежит другому пользователю
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Файл не найден
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Файл этого типа уже подтверждён
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Подтверждение загрузки
+      tags:
+      - files
+  /customer/{user_id}/files/{file_id}/url:
+    get:
+      description: Возвращает presigned-ссылку со сроком жизни 5 минут. Скачивает
+        по ней клиент сам, gateway файл не отдаёт. Работает только для подтверждённых
+        файлов.
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: UUID файла
+        in: path
+        name: file_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ссылка на скачивание
+          schema:
+            $ref: '#/definitions/dto.DownloadTicket'
+        "400":
+          description: Файл ещё не подтверждён
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Файл принадлежит другому пользователю
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Файл не найден
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ссылка на скачивание
+      tags:
+      - files
+  /customer/{user_id}/files/required:
+    get:
+      description: Загружены ли подтверждённые файлы обязательных типов (паспорт и
+        селфи). В missing перечислено недостающее.
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Состояние комплекта
+          schema:
+            $ref: '#/definitions/dto.RequiredFiles'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Файлы принадлежат другому пользователю
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Комплектность файлов
+      tags:
+      - files
   /customer/{user_id}/status:
     get:
       description: 'Возвращает текущий статус и момент его последней смены. Возможные
@@ -550,3 +834,5 @@ tags:
   name: auth
 - description: Карточка клиента, профиль и статус
   name: customer
+- description: Загрузка и выдача файлов клиента через presigned-ссылки
+  name: files

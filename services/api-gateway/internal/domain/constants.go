@@ -22,7 +22,15 @@ const (
 	ACTOR_KEY              = "actor"
 
 	USER_ID_PARAM = "user_id"
+	FILE_ID_PARAM = "file_id"
 	SELF_ALIAS    = "me"
+)
+
+// Значения enum'ов filestore.v1 наружу отдаются доменными именами, без
+// префикса: "passport" вместо "FILE_TYPE_PASSPORT".
+const (
+	FILE_TYPE_ENUM_PREFIX   = "FILE_TYPE_"
+	FILE_STATUS_ENUM_PREFIX = "FILE_STATUS_"
 )
 
 const (

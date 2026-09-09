@@ -9,6 +9,7 @@ import (
 
 var (
 	ErrInvalidBirthDate = status.Error(codes.InvalidArgument, "birth_date must be in YYYY-MM-DD format")
+	ErrFileTypeUnknown  = status.Error(codes.InvalidArgument, "type must be one of: passport, selfie, proof_of_address")
 )
 
 var (

@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package filestore.v1;
+
+option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/filestore/v1;filestorev1";
+
+import "google/protobuf/timestamp.proto";
+
+// Сервис хранит файлы: байты - в объектном хранилище, метаданные - в своей базе.
+// Через gRPC файлы не ходят: клиент льёт и качает их напрямую в хранилище по
+// presigned-ссылке, которую здесь получает.
+service FileService {
+  // Заводит метаданные и отдаёт presigned PUT. Файла в хранилище ещё нет.
+  rpc InitUpload(InitUploadRequest) returns (InitUploadResponse);
+  // Проверяет залитый файл (размер, тип по magic bytes, sha256) и фиксирует метаданные.
+  rpc ConfirmUpload(ConfirmUploadRequest) returns (FileMetadata);
+  // Presigned GET на подтверждённый файл.
+  rpc GetDownloadUrl(GetDownloadUrlRequest) returns (GetDownloadUrlResponse);
+  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
+  // Для kyc-service: залиты ли файлы нужных типов.
+  rpc HasRequiredFiles(HasRequiredFilesRequest) returns (HasRequiredFilesResponse);
+}
+
+enum FileType {
+  FILE_TYPE_UNSPECIFIED = 0;
+  FILE_TYPE_PASSPORT = 1;
+  FILE_TYPE_SELFIE = 2;
+  FILE_TYPE_PROOF_OF_ADDRESS = 3;
+}
+
+enum FileStatus {
+  FILE_STATUS_UNSPECIFIED = 0;
+  FILE_STATUS_UPLOADED = 1;
+  FILE_STATUS_CONFIRMED = 2;
+}
+
+message FileMetadata {
+  string id = 1;
+  string user_id = 2;
+  FileType type = 3;
+  FileStatus status = 4;
+  string content_type = 5;
+  int64 size_bytes = 6;
+  string sha256 = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp confirmed_at = 9;
+  string filename = 10;
+}
+
+message InitUploadRequest {
+  string user_id = 1;
+  FileType type = 2;
+  string filename = 3;
+}
+
+message InitUploadResponse {
+  string file_id = 1;
+  string upload_url = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+message ConfirmUploadRequest {
+  string user_id = 1;
+  string file_id = 2;
+}
+
+message GetDownloadUrlRequest {
+  string user_id = 1;
+  string file_id = 2;
+}
+
+message GetDownloadUrlResponse {
+  string url = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message ListFilesRequest {
+  string user_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListFilesResponse {
+  repeated FileMetadata files = 1;
+}
+
+message HasRequiredFilesRequest {
+  string user_id = 1;
+}
+
+message HasRequiredFilesResponse {
+  bool ok = 1;
+  repeated FileType missing = 2;
+}

@@ -30,3 +30,6 @@ deploy/.env
 
 # Ключ подписи JWT: генерируется сервисом при первом запуске
 services/auth-service/configs/jwt_private_key.pem
+
+CLAUDE.md
+*/CLAUDE.md

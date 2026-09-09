@@ -1,0 +1,22 @@
+server:
+  host: localhost
+  port: 50054
+
+database:
+  host: localhost
+  port: 5454
+  user: banking_filestore
+  password: 123
+  dbname: banking_filestore
+  ssl_mode: disable
+
+minio_config:
+  endpoint: localhost:9000
+  access_key: minioadmin
+  secret_key: minioadmin
+  bucket_name: kyc-filestore
+  use_ssl: false
+  connect_timeout: 5s
+  health_check_freq: 15s
+
+request_timeout: 30s
