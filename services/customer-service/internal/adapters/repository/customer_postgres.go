@@ -23,11 +23,18 @@ func NewCustomerRepo(db *pgxpool.Pool) *CustomerRepo {
 	return &CustomerRepo{db: db}
 }
 
+// CreateCustomer заводит карточку и сразу первую запись истории.
 func (r *CustomerRepo) CreateCustomer(ctx context.Context, userID uuid.UUID, status models.Status) (*models.Customer, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("create customer: begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
 	var resp models.Customer
 	var statusRet string
 
-	err := r.db.QueryRow(ctx, CREATE_CUSTOMER_QUERY,
+	err = tx.QueryRow(ctx, CREATE_CUSTOMER_QUERY,
 		userID,
 		status,
 	).Scan(
@@ -50,7 +57,87 @@ func (r *CustomerRepo) CreateCustomer(ctx context.Context, userID uuid.UUID, sta
 
 	resp.Status = models.Status(statusRet)
 
+	_, err = tx.Exec(ctx, INSERT_INITIAL_STATUS_HISTORY_QUERY,
+		userID,
+		resp.Status,
+		resp.StatusChangedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create customer: write status history: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("create customer: commit: %w", err)
+	}
+
 	return &resp, nil
+}
+
+// SetStatus переводит клиента в новый статус и пишет переход в историю транзакций.
+func (r *CustomerRepo) SetStatus(
+	ctx context.Context,
+	userID uuid.UUID,
+	to models.Status,
+	reason string,
+	actorID *uuid.UUID,
+	allowedFrom []models.Status,
+) (*models.StatusChange, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("set status: begin: %w", err)
+	}
+
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var previous string
+	var changedAt time.Time
+
+	err = tx.QueryRow(ctx, LOCK_CUSTOMER_STATUS_QUERY, userID).Scan(&previous, &changedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrCustomerNotFound
+		}
+
+		return nil, fmt.Errorf("set status: lock customer: %w", err)
+	}
+
+	from := models.Status(previous)
+
+	if from == to {
+		return &models.StatusChange{Previous: from, Current: from, ChangedAt: changedAt}, nil
+	}
+
+	err = tx.QueryRow(ctx, SET_CUSTOMER_STATUS_QUERY, userID, to, statusStrings(allowedFrom)).Scan(&changedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrStatusConflict
+		}
+
+		return nil, fmt.Errorf("set status: update customer: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, INSERT_STATUS_HISTORY_QUERY, userID, from, to, reason, actorID, changedAt)
+	if err != nil {
+		return nil, fmt.Errorf("set status: write status history: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("set status: commit: %w", err)
+	}
+
+	return &models.StatusChange{Previous: from, Current: to, ChangedAt: changedAt}, nil
+}
+
+// statusStrings переводит список статусов в срез строк: pgx кодирует его в
+// массив customer_status, а именованный строковый тип для этого не берёт.
+func statusStrings(in []models.Status) []string {
+	out := make([]string, 0, len(in))
+
+	for _, status := range in {
+		out = append(out, string(status))
+	}
+
+	return out
 }
 
 func (r *CustomerRepo) GetCustomer(ctx context.Context, userID uuid.UUID) (*models.Customer, error) {
@@ -104,12 +191,33 @@ func (r *CustomerRepo) GetStatusByUserID(ctx context.Context, userID uuid.UUID) 
 	return &statusRet, &changedAt, nil
 }
 
+// UpdateProfile сохраняет анкету. Статус меняется вместе с ней (new ->
+// profile_filled на полной анкете), поэтому запись анкеты и запись перехода в
+// историю идут одной транзакцией.
 func (r *CustomerRepo) UpdateProfile(ctx context.Context, userID uuid.UUID, profile models.Profile, status models.Status) (*models.Customer, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("update profile: begin: %w", err)
+	}
+
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var previous string
+	var previousChangedAt time.Time
+
+	err = tx.QueryRow(ctx, LOCK_CUSTOMER_STATUS_QUERY, userID).Scan(&previous, &previousChangedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrCustomerNotFound
+		}
+
+		return nil, fmt.Errorf("update profile: lock customer: %w", err)
+	}
 
 	var resp models.Customer
 	var statusResp string
 
-	err := r.db.QueryRow(ctx, UPDATE_PROFILE_QUERY,
+	err = tx.QueryRow(ctx, UPDATE_PROFILE_QUERY,
 		userID,
 		profile.FirstName,
 		profile.LastName,
@@ -131,9 +239,6 @@ func (r *CustomerRepo) UpdateProfile(ctx context.Context, userID uuid.UUID, prof
 		&resp.UpdatedAt,
 	)
 	if err != nil {
-		// Существование клиента сервис проверил перед вызовом, поэтому пустой
-		// результат означает, что между проверкой и обновлением статус успел
-		// уехать из "new" - профиль больше не редактируется.
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrProfileLocked
 		}
@@ -141,6 +246,17 @@ func (r *CustomerRepo) UpdateProfile(ctx context.Context, userID uuid.UUID, prof
 		return nil, fmt.Errorf("update profile: %w", err)
 	}
 	resp.Status = models.Status(statusResp)
+
+	if from := models.Status(previous); from != resp.Status {
+		_, err = tx.Exec(ctx, INSERT_STATUS_HISTORY_QUERY, userID, from, resp.Status, "", nil, resp.StatusChangedAt)
+		if err != nil {
+			return nil, fmt.Errorf("update profile: write status history: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("update profile: commit: %w", err)
+	}
 
 	return &resp, nil
 }

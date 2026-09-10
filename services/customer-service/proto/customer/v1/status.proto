@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package customer.v1;
+
+option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/pb/gen/customer/v1;customerv1";
+
+import "google/protobuf/timestamp.proto";
+import "customer/v1/customer.proto";
+
+service CustomerStatusService {
+  rpc SetStatus(SetStatusRequest) returns (SetStatusResponse);
+}
+
+message SetStatusRequest {
+  string user_id = 1;
+  CustomerStatus status = 2;
+  // Причина перехода, попадает в историю.
+  string reason = 3;
+  // Инициатор перехода: uuid офицера или админа. Пусто - системный переход,
+  // например авто-отказ kyc-service по санкционному списку.
+  string actor_id = 4;
+}
+
+message SetStatusResponse {
+  CustomerStatus status = 1;
+  // Статус до перехода.
+  CustomerStatus previous_status = 2;
+  google.protobuf.Timestamp status_changed_at = 3;
+}

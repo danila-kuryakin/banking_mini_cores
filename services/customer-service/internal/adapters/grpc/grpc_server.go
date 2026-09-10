@@ -14,6 +14,7 @@ import (
 type GRPCServer struct {
 	addr           string
 	customerServer *CustomerServer
+	statusServer   *StatusServer
 	logger         *slog.Logger
 	timeout        time.Duration
 }
@@ -22,6 +23,7 @@ func NewGRPCServer(addr string, service *service.Service, logger *slog.Logger, t
 	return &GRPCServer{
 		addr:           addr,
 		customerServer: NewCustomerServer(service, logger),
+		statusServer:   NewStatusServer(service, logger),
 		logger:         logger,
 		timeout:        timeout,
 	}
@@ -34,6 +36,9 @@ func (s *GRPCServer) Run() error {
 		grpc_server.WithServices(
 			func(r grpc.ServiceRegistrar) {
 				customerv1.RegisterCustomerServiceServer(r, s.customerServer)
+			},
+			func(r grpc.ServiceRegistrar) {
+				customerv1.RegisterCustomerStatusServiceServer(r, s.statusServer)
 			},
 		),
 		grpc_server.WithUnaryInterceptors(

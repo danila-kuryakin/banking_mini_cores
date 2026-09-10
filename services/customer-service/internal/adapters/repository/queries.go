@@ -1,6 +1,9 @@
 package repository
 
-const TABLE_CUSTOMERS = "customers"
+const (
+	TABLE_CUSTOMERS      = "customers"
+	TABLE_STATUS_HISTORY = "customer_status_history"
+)
 
 const CUSTOMER_COLUMNS = `
 		id, user_id, status, status_changed_at,
@@ -44,4 +47,31 @@ const (
 		SELECT status, status_changed_at
 		FROM ` + TABLE_CUSTOMERS + `
 		WHERE user_id = $1::uuid`
+
+	LOCK_CUSTOMER_STATUS_QUERY = `
+		SELECT status, status_changed_at
+		FROM ` + TABLE_CUSTOMERS + `
+		WHERE user_id = $1
+		FOR UPDATE`
+
+	SET_CUSTOMER_STATUS_QUERY = `
+		UPDATE ` + TABLE_CUSTOMERS + ` SET
+			status            = $2::customer_status,
+			status_changed_at = now(),
+			updated_at        = now()
+		WHERE user_id = $1
+		  AND status = ANY($3::customer_status[])
+		RETURNING status_changed_at`
+
+	INSERT_STATUS_HISTORY_QUERY = `
+		INSERT INTO ` + TABLE_STATUS_HISTORY + ` (
+			user_id, from_status, to_status, reason, actor_id, created_at
+		)
+		VALUES ($1, $2::customer_status, $3::customer_status, $4, $5, $6)`
+
+	INSERT_INITIAL_STATUS_HISTORY_QUERY = `
+		INSERT INTO ` + TABLE_STATUS_HISTORY + ` (
+			user_id, from_status, to_status, created_at
+		)
+		VALUES ($1, NULL, $2::customer_status, $3)`
 )

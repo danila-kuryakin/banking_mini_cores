@@ -26,31 +26,36 @@ const (
 type CustomerStatus int32
 
 const (
-	CustomerStatus_NEW            CustomerStatus = 0
-	CustomerStatus_PROFILE_FILLED CustomerStatus = 1
-	CustomerStatus_ON_KYC         CustomerStatus = 2
-	CustomerStatus_ACTIVE         CustomerStatus = 3
-	CustomerStatus_REJECTED       CustomerStatus = 4
-	CustomerStatus_BLOCKED        CustomerStatus = 5
+	// Нулевое значение - "статус не задан". В базе клиента такого статуса нет:
+	// им помечается отсутствие исходного статуса в истории переходов.
+	CustomerStatus_UNSPECIFIED    CustomerStatus = 0
+	CustomerStatus_NEW            CustomerStatus = 1
+	CustomerStatus_PROFILE_FILLED CustomerStatus = 2
+	CustomerStatus_ON_KYC         CustomerStatus = 3
+	CustomerStatus_ACTIVE         CustomerStatus = 4
+	CustomerStatus_REJECTED       CustomerStatus = 5
+	CustomerStatus_BLOCKED        CustomerStatus = 6
 )
 
 // Enum value maps for CustomerStatus.
 var (
 	CustomerStatus_name = map[int32]string{
-		0: "NEW",
-		1: "PROFILE_FILLED",
-		2: "ON_KYC",
-		3: "ACTIVE",
-		4: "REJECTED",
-		5: "BLOCKED",
+		0: "UNSPECIFIED",
+		1: "NEW",
+		2: "PROFILE_FILLED",
+		3: "ON_KYC",
+		4: "ACTIVE",
+		5: "REJECTED",
+		6: "BLOCKED",
 	}
 	CustomerStatus_value = map[string]int32{
-		"NEW":            0,
-		"PROFILE_FILLED": 1,
-		"ON_KYC":         2,
-		"ACTIVE":         3,
-		"REJECTED":       4,
-		"BLOCKED":        5,
+		"UNSPECIFIED":    0,
+		"NEW":            1,
+		"PROFILE_FILLED": 2,
+		"ON_KYC":         3,
+		"ACTIVE":         4,
+		"REJECTED":       5,
+		"BLOCKED":        6,
 	}
 )
 
@@ -218,7 +223,7 @@ func (x *Customer) GetStatus() CustomerStatus {
 	if x != nil {
 		return x.Status
 	}
-	return CustomerStatus_NEW
+	return CustomerStatus_UNSPECIFIED
 }
 
 func (x *Customer) GetStatusChangedAt() *timestamppb.Timestamp {
@@ -353,7 +358,7 @@ func (x *CreateProfileResponse) GetStatus() CustomerStatus {
 	if x != nil {
 		return x.Status
 	}
-	return CustomerStatus_NEW
+	return CustomerStatus_UNSPECIFIED
 }
 
 func (x *CreateProfileResponse) GetStatusChangedAt() *timestamppb.Timestamp {
@@ -559,7 +564,7 @@ func (x *GetCustomerStatusResponse) GetStatus() CustomerStatus {
 	if x != nil {
 		return x.Status
 	}
-	return CustomerStatus_NEW
+	return CustomerStatus_UNSPECIFIED
 }
 
 func (x *GetCustomerStatusResponse) GetStatusChangedAt() *timestamppb.Timestamp {
@@ -713,16 +718,17 @@ const file_customer_v1_customer_proto_rawDesc = "" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
 	"\x06offset\x18\x03 \x01(\x05R\x06offset\"L\n" +
 	"\x15ListCustomersResponse\x123\n" +
-	"\tcustomers\x18\x01 \x03(\v2\x15.customer.v1.CustomerR\tcustomers*`\n" +
-	"\x0eCustomerStatus\x12\a\n" +
-	"\x03NEW\x10\x00\x12\x12\n" +
-	"\x0ePROFILE_FILLED\x10\x01\x12\n" +
+	"\tcustomers\x18\x01 \x03(\v2\x15.customer.v1.CustomerR\tcustomers*q\n" +
+	"\x0eCustomerStatus\x12\x0f\n" +
+	"\vUNSPECIFIED\x10\x00\x12\a\n" +
+	"\x03NEW\x10\x01\x12\x12\n" +
+	"\x0ePROFILE_FILLED\x10\x02\x12\n" +
 	"\n" +
-	"\x06ON_KYC\x10\x02\x12\n" +
+	"\x06ON_KYC\x10\x03\x12\n" +
 	"\n" +
-	"\x06ACTIVE\x10\x03\x12\f\n" +
-	"\bREJECTED\x10\x04\x12\v\n" +
-	"\aBLOCKED\x10\x052\xb7\x03\n" +
+	"\x06ACTIVE\x10\x04\x12\f\n" +
+	"\bREJECTED\x10\x05\x12\v\n" +
+	"\aBLOCKED\x10\x062\xb7\x03\n" +
 	"\x0fCustomerService\x12V\n" +
 	"\rCreateProfile\x12!.customer.v1.CreateProfileRequest\x1a\".customer.v1.CreateProfileResponse\x12E\n" +
 	"\vGetCustomer\x12\x1f.customer.v1.GetCustomerRequest\x1a\x15.customer.v1.Customer\x12b\n" +

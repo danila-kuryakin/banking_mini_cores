@@ -41,7 +41,7 @@ type FileServiceClient interface {
 	// Presigned GET на подтверждённый файл.
 	GetDownloadUrl(ctx context.Context, in *GetDownloadUrlRequest, opts ...grpc.CallOption) (*GetDownloadUrlResponse, error)
 	ListFiles(ctx context.Context, in *ListFilesRequest, opts ...grpc.CallOption) (*ListFilesResponse, error)
-	// Для kyc-service: залиты ли файлы обязательных типов.
+	// Для kyc-service: залиты ли файлы нужных типов.
 	HasRequiredFiles(ctx context.Context, in *HasRequiredFilesRequest, opts ...grpc.CallOption) (*HasRequiredFilesResponse, error)
 }
 
@@ -118,7 +118,7 @@ type FileServiceServer interface {
 	// Presigned GET на подтверждённый файл.
 	GetDownloadUrl(context.Context, *GetDownloadUrlRequest) (*GetDownloadUrlResponse, error)
 	ListFiles(context.Context, *ListFilesRequest) (*ListFilesResponse, error)
-	// Для kyc-service: залиты ли файлы обязательных типов.
+	// Для kyc-service: залиты ли файлы нужных типов.
 	HasRequiredFiles(context.Context, *HasRequiredFilesRequest) (*HasRequiredFilesResponse, error)
 	mustEmbedUnimplementedFileServiceServer()
 }

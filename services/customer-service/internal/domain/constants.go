@@ -14,6 +14,7 @@ const (
 	CITIZENSHIP_MAX_LENGTH = 64
 	PHONE_PATTERN          = `^\+?[0-9]{7,15}$`
 	MAX_CUSTOMER_AGE_YEARS = 120
+	REASON_MAX_LENGTH      = 500
 )
 
 const (

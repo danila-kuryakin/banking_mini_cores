@@ -32,23 +32,41 @@ func profileToProto(profile models.Profile) *customerv1.Profile {
 	}
 }
 
-func statusToProto(status models.Status) customerv1.CustomerStatus {
-	switch status {
-	case models.STATUS_NEW:
-		return customerv1.CustomerStatus_NEW
-	case models.STATUS_PROFILE_FILLED:
-		return customerv1.CustomerStatus_PROFILE_FILLED
-	case models.STATUS_ON_KYC:
-		return customerv1.CustomerStatus_ON_KYC
-	case models.STATUS_ACTIVE:
-		return customerv1.CustomerStatus_ACTIVE
-	case models.STATUS_REJECTED:
-		return customerv1.CustomerStatus_REJECTED
-	case models.STATUS_BLOCKED:
-		return customerv1.CustomerStatus_BLOCKED
-	default:
-		return customerv1.CustomerStatus_NEW
+// statusPairs - соответствие доменного статуса значению enum в контракте.
+var statusPairs = []struct {
+	domain models.Status
+	proto  customerv1.CustomerStatus
+}{
+	{models.STATUS_NEW, customerv1.CustomerStatus_NEW},
+	{models.STATUS_PROFILE_FILLED, customerv1.CustomerStatus_PROFILE_FILLED},
+	{models.STATUS_ON_KYC, customerv1.CustomerStatus_ON_KYC},
+	{models.STATUS_ACTIVE, customerv1.CustomerStatus_ACTIVE},
+	{models.STATUS_REJECTED, customerv1.CustomerStatus_REJECTED},
+	{models.STATUS_BLOCKED, customerv1.CustomerStatus_BLOCKED},
+}
+
+var statusToProtoMap, statusFromProtoMap = buildStatusMaps()
+
+func buildStatusMaps() (map[models.Status]customerv1.CustomerStatus, map[customerv1.CustomerStatus]models.Status) {
+	toProto := make(map[models.Status]customerv1.CustomerStatus, len(statusPairs))
+	fromProto := make(map[customerv1.CustomerStatus]models.Status, len(statusPairs))
+
+	for _, pair := range statusPairs {
+		toProto[pair.domain] = pair.proto
+		fromProto[pair.proto] = pair.domain
 	}
+
+	return toProto, fromProto
+}
+
+// statusToProto переводит статус в контракт.
+func statusToProto(status models.Status) customerv1.CustomerStatus {
+	return statusToProtoMap[status]
+}
+
+// statusFromProto переводит статус из контракта.
+func statusFromProto(status customerv1.CustomerStatus) models.Status {
+	return statusFromProtoMap[status]
 }
 
 func dateToProto(in *time.Time) *date.Date {

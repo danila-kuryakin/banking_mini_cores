@@ -40,6 +40,8 @@ func validate(req any) error {
 		return validateProfile(in.Profile)
 	case *customerv1.GetCustomerStatusRequest:
 		return validateUserID(in.UserId)
+	case *customerv1.SetStatusRequest:
+		return validateSetStatus(in)
 	case *customerv1.ListCustomersRequest:
 		return validatePage(in.Limit, in.Offset)
 	default:
@@ -50,6 +52,28 @@ func validate(req any) error {
 func validateUserID(userID string) error {
 	if _, err := uuid.Parse(userID); err != nil {
 		return domain.ErrUserIDMustBeUUID
+	}
+
+	return nil
+}
+
+func validateSetStatus(in *customerv1.SetStatusRequest) error {
+	if err := validateUserID(in.UserId); err != nil {
+		return err
+	}
+
+	if in.Status == customerv1.CustomerStatus_UNSPECIFIED {
+		return domain.ErrStatusRequired
+	}
+
+	if in.ActorId != "" {
+		if _, err := uuid.Parse(in.ActorId); err != nil {
+			return domain.ErrActorIDMustBeUUID
+		}
+	}
+
+	if utf8.RuneCountInString(in.Reason) > domain.REASON_MAX_LENGTH {
+		return domain.ErrReasonIsTooLong
 	}
 
 	return nil

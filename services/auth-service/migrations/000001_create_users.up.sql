@@ -1,6 +1,5 @@
 BEGIN;
 
--- Значения совпадают с common.v1.Role без префикса ROLE_.
 CREATE TYPE user_role AS ENUM ('client', 'officer', 'admin');
 
 CREATE TABLE users (
@@ -12,7 +11,6 @@ CREATE TABLE users (
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Email — это логин, уникальность без учёта регистра.
 CREATE UNIQUE INDEX users_email_key ON users (lower(email));
 
 

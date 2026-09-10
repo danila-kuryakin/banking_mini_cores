@@ -78,10 +78,8 @@ type FileStatus int32
 
 const (
 	FileStatus_FILE_STATUS_UNSPECIFIED FileStatus = 0
-	// Метаданные заведены на InitUpload, байты в хранилище могут ещё не лежать.
-	FileStatus_FILE_STATUS_UPLOADED FileStatus = 1
-	// Файл проверен на ConfirmUpload.
-	FileStatus_FILE_STATUS_CONFIRMED FileStatus = 2
+	FileStatus_FILE_STATUS_UPLOADED    FileStatus = 1
+	FileStatus_FILE_STATUS_CONFIRMED   FileStatus = 2
 )
 
 // Enum value maps for FileStatus.
@@ -125,8 +123,6 @@ func (FileStatus) EnumDescriptor() ([]byte, []int) {
 	return file_filestore_v1_filestore_proto_rawDescGZIP(), []int{1}
 }
 
-// Ключ объекта наружу не отдаётся: раскладка хранилища - внутреннее дело
-// сервиса, а скачать файл всё равно можно только через GetDownloadUrl.
 type FileMetadata struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -138,7 +134,7 @@ type FileMetadata struct {
 	Sha256        string                 `protobuf:"bytes,7,opt,name=sha256,proto3" json:"sha256,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	ConfirmedAt   *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=confirmed_at,json=confirmedAt,proto3" json:"confirmed_at,omitempty"`
-	Filename      string                 `protobuf:"bytes,10,opt,name=filename,proto3" json:"filename,omitempty"` // исходное имя файла у клиента, из InitUpload
+	Filename      string                 `protobuf:"bytes,10,opt,name=filename,proto3" json:"filename,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -247,7 +243,7 @@ type InitUploadRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Type          FileType               `protobuf:"varint,2,opt,name=type,proto3,enum=filestore.v1.FileType" json:"type,omitempty"`
-	Filename      string                 `protobuf:"bytes,3,opt,name=filename,proto3" json:"filename,omitempty"` // исходное имя, сохраняется в метаданных
+	Filename      string                 `protobuf:"bytes,3,opt,name=filename,proto3" json:"filename,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -363,8 +359,6 @@ func (x *InitUploadResponse) GetExpiresAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// user_id тут не для удобства: без него запрос адресует файл только по id,
-// и клиент может подтвердить или скачать чужой. Проверка идёт по паре.
 type ConfirmUploadRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`

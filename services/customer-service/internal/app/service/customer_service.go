@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/domain/models"
@@ -46,6 +48,47 @@ func nextStatus(profile models.Profile) models.Status {
 	}
 
 	return models.STATUS_NEW
+}
+
+// SetStatus переводит клиента в новый статус.
+func (s *CustomerService) SetStatus(
+	ctx context.Context,
+	userID uuid.UUID,
+	to models.Status,
+	reason string,
+	actorID *uuid.UUID,
+) (*models.StatusChange, error) {
+	if !to.IsValid() {
+		return nil, domain.ErrStatusRequired
+	}
+
+	// TODO: Не забыть исправить в будущем
+	// Блокировать клиента вправе только админ, а проверки роли здесь пока нет.
+	// Таблица переходов blocked из любого статуса разрешает - закрыто именно
+	// умение, а не переход.
+	if to == models.STATUS_BLOCKED {
+		return nil, domain.ErrBlockingNotImplemented
+	}
+
+	// Без причины запись в истории отвечает "когда отказали", но не "за что".
+	if to == models.STATUS_REJECTED && strings.TrimSpace(reason) == "" {
+		return nil, domain.ErrReasonRequired
+	}
+
+	current, changedAt, err := s.repo.Customer.GetStatusByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if *current == to {
+		return &models.StatusChange{Previous: to, Current: to, ChangedAt: *changedAt}, nil
+	}
+
+	if !models.CanTransition(*current, to) {
+		return nil, fmt.Errorf("%w: %s -> %s", domain.ErrStatusTransitionForbidden, *current, to)
+	}
+
+	return s.repo.Customer.SetStatus(ctx, userID, to, reason, actorID, models.AllowedFrom(to))
 }
 
 func (s *CustomerService) GetCustomerStatus(ctx context.Context, userID uuid.UUID) (*models.Status, *time.Time, error) {

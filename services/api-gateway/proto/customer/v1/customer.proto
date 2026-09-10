@@ -16,12 +16,13 @@ service CustomerService {
 }
 
 enum CustomerStatus {
-  NEW = 0;
-  PROFILE_FILLED = 1;
-  ON_KYC = 2;
-  ACTIVE = 3;
-  REJECTED = 4;
-  BLOCKED = 5;
+  UNSPECIFIED = 0;
+  NEW = 1;
+  PROFILE_FILLED = 2;
+  ON_KYC = 3;
+  ACTIVE = 4;
+  REJECTED = 5;
+  BLOCKED = 6;
 }
 
 message Profile {
