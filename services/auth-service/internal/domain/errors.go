@@ -32,8 +32,10 @@ var (
 )
 
 var (
-	ErrPrivateKeyNotPEM = errors.New("jwt private key is not a valid pem block")
-	ErrPrivateKeyNotRSA = errors.New("jwt private key is not an rsa key")
+	ErrPrivateKeyNotPEM   = errors.New("jwt private key is not a valid pem block")
+	ErrPrivateKeyNotRSA   = errors.New("jwt private key is not an rsa key")
+	ErrNoSigningKeys      = errors.New("no jwt signing keys found")
+	ErrSigningKeyNotFound = errors.New("signing key for the token kid is not in the set")
 )
 
 var (

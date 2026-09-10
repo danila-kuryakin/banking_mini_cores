@@ -9,9 +9,9 @@ import (
 )
 
 type JWT struct {
-	PrivateKeyPath string        `mapstructure:"private_key_path"`
-	AccessTTL      time.Duration `mapstructure:"access_ttl"`
-	RefreshTTL     time.Duration `mapstructure:"refresh_ttl"`
+	KeysDir    string        `mapstructure:"keys_dir"`
+	AccessTTL  time.Duration `mapstructure:"access_ttl"`
+	RefreshTTL time.Duration `mapstructure:"refresh_ttl"`
 }
 
 type Admin struct {
@@ -47,6 +47,10 @@ func Load() (*Config, error) {
 	cfg, err := config.Read[Config]("./configs")
 	if err != nil {
 		return nil, err
+	}
+
+	if cfg.JWT.KeysDir == "" {
+		cfg.JWT.KeysDir = domain.DEFAULT_JWT_KEYS_DIR
 	}
 
 	if cfg.JWT.AccessTTL <= 0 {

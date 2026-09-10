@@ -13,7 +13,8 @@ const (
 )
 
 const (
-	DEFAULT_ADMIN_EMAIL = "admin@banking.local"
+	DEFAULT_ADMIN_EMAIL  = "admin@banking.local"
+	DEFAULT_JWT_KEYS_DIR = "./configs/jwt_keys"
 )
 
 const (
@@ -47,6 +48,19 @@ const (
 
 	// PEM_RSA_PRIVATE_KEY - заголовок блока для ключа в формате PKCS#1.
 	PEM_RSA_PRIVATE_KEY = "RSA PRIVATE KEY"
+
+	// JWT_KEY_FILE_EXT - расширение файлов в каталоге ключей, остальные
+	// игнорируются.
+	JWT_KEY_FILE_EXT = ".pem"
+
+	// JWT_KEY_NAME_LAYOUT - метка времени в имени файла нового ключа. Активным
+	// считается последний по имени, поэтому порядок задаёт именно имя: mtime
+	// сбивается при копировании и checkout, а имя переживает всё.
+	JWT_KEY_NAME_LAYOUT = "20060102T150405"
+
+	// JWT_KEYS_EXPECTED - сколько ключей ожидает схема ротации: активный плюс
+	// один выводимый. Больше - повод проверить, не забыли ли убрать старый.
+	JWT_KEYS_EXPECTED = 2
 )
 
 const (

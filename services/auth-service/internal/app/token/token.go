@@ -33,25 +33,67 @@ type accessClaims struct {
 	Role string `json:"role"`
 }
 
+// verifyKey - публичный ключ из набора вместе со своим kid.
+type verifyKey struct {
+	kid    string
+	public *rsa.PublicKey
+}
+
+// Manager подписывает одним ключом, а проверяет любым из набора. Новый ключ
+// становится активным, старый ещё какое-то время остаётся в наборе, пока
+// не истекут подписанные им токены.
 type Manager struct {
-	privateKey *rsa.PrivateKey
-	keyID      string
+	signing    *rsa.PrivateKey
+	signingKID string
+
+	verify []verifyKey
+	byKID  map[string]*rsa.PublicKey
+
 	accessTTL  time.Duration
 	refreshTTL time.Duration
 }
 
-func NewManager(privateKeyPath string, accessTTL, refreshTTL time.Duration, logger *slog.Logger) (*Manager, error) {
-	key, err := privateKey(privateKeyPath, logger)
+func NewManager(keysDir string, accessTTL, refreshTTL time.Duration, logger *slog.Logger) (*Manager, error) {
+	keys, err := loadKeys(keysDir, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Manager{
-		privateKey: key,
-		keyID:      keyID(&key.PublicKey),
+	if len(keys) == 0 {
+		return nil, domain.ErrNoSigningKeys
+	}
+
+	m := &Manager{
+		byKID:      make(map[string]*rsa.PublicKey, len(keys)),
 		accessTTL:  accessTTL,
 		refreshTTL: refreshTTL,
-	}, nil
+	}
+
+	for _, k := range keys {
+		kid := keyID(&k.key.PublicKey)
+
+		m.verify = append(m.verify, verifyKey{kid: kid, public: &k.key.PublicKey})
+		m.byKID[kid] = &k.key.PublicKey
+	}
+
+	active := keys[len(keys)-1]
+	m.signing = active.key
+	m.signingKID = keyID(&active.key.PublicKey)
+
+	logger.Info("jwt signing keys loaded",
+		"count", len(keys),
+		"active_file", active.name,
+		"active_kid", m.signingKID,
+	)
+
+	if len(keys) > domain.JWT_KEYS_EXPECTED {
+		logger.Warn("more jwt keys than the rotation scheme expects, check for leftovers",
+			"count", len(keys),
+			"expected", domain.JWT_KEYS_EXPECTED,
+		)
+	}
+
+	return m, nil
 }
 
 func (m *Manager) NewPair(user *models.User) (*Pair, error) {
@@ -68,9 +110,9 @@ func (m *Manager) NewPair(user *models.User) (*Pair, error) {
 	}
 
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	accessToken.Header[domain.JWK_KEY_ID_HEADER] = m.keyID
+	accessToken.Header[domain.JWK_KEY_ID_HEADER] = m.signingKID
 
-	access, err := accessToken.SignedString(m.privateKey)
+	access, err := accessToken.SignedString(m.signing)
 	if err != nil {
 		return nil, fmt.Errorf("sign access token: %w", err)
 	}
@@ -91,8 +133,15 @@ func (m *Manager) NewPair(user *models.User) (*Pair, error) {
 func (m *Manager) ParseAccess(raw string) (*Claims, error) {
 	var claims accessClaims
 
-	_, err := jwt.ParseWithClaims(raw, &claims, func(*jwt.Token) (any, error) {
-		return &m.privateKey.PublicKey, nil
+	_, err := jwt.ParseWithClaims(raw, &claims, func(t *jwt.Token) (any, error) {
+		kid, _ := t.Header[domain.JWK_KEY_ID_HEADER].(string)
+
+		public, ok := m.byKID[kid]
+		if !ok {
+			return nil, domain.ErrSigningKeyNotFound
+		}
+
+		return public, nil
 	}, jwt.WithValidMethods([]string{domain.JWK_ALGORITHM}))
 	if err != nil {
 		return nil, domain.ErrInvalidToken
