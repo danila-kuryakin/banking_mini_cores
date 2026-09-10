@@ -7,6 +7,7 @@ import (
 
 	conn "github.com/danila-kuryakin/banking_mini_cores/platform/connection"
 	"github.com/danila-kuryakin/banking_mini_cores/platform/migrator"
+	grpcclient "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters/grpc/client"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters/repository"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters/server"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/service"
@@ -36,22 +37,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	tokenManager, err := token.NewManager(cfg.JWT.PrivateKeyPath, cfg.JWT.AccessTTL, cfg.JWT.RefreshTTL, logger)
+	tokenManager, err := token.NewManager(cfg.JWT.KeysDir, cfg.JWT.AccessTTL, cfg.JWT.RefreshTTL, logger)
 	if err != nil {
 		logger.Error("failed to prepare jwt private key", "error", err)
 		os.Exit(1)
 	}
 
+	clients, err := grpcclient.NewClients(cfg)
+	if err != nil {
+		logger.Error("failed to create grpc clients", "error", err)
+		os.Exit(1)
+	}
+	defer clients.Close()
+
 	repo := repository.NewRepository(dbPool)
-	serv := service.NewService(repo, tokenManager)
+	serv := service.NewService(repo, tokenManager, clients.Customer)
 
 	ensureAdmin(context.Background(), serv, cfg.Admin, logger)
 
-	srv, err := server.NewServer(cfg, serv, tokenManager.JWKS(), logger)
-	if err != nil {
-		logger.Error("failed to create server", "error", err)
-		os.Exit(1)
-	}
+	srv := server.NewServer(cfg, serv, tokenManager.JWKS, logger)
 
 	if err := srv.Run(); err != nil {
 		logger.Error("server stopped", "error", err)

@@ -11,6 +11,10 @@ import (
 var (
 	ErrEmailTaken           = errors.New("email already taken")
 	ErrUserNotFound         = errors.New("user not found")
+	ErrProfileAlreadyExists = errors.New("customer profile already exists")
+	// ErrProfileNotCreated - маркер для хендлера: регистрация сорвалась именно на
+	// заведении карточки клиента, а не на почте или пароле.
+	ErrProfileNotCreated    = errors.New("customer profile was not created")
 	ErrRefreshTokenNotFound = errors.New("refresh token not found")
 )
 
@@ -28,17 +32,20 @@ var (
 )
 
 var (
-	ErrPrivateKeyNotPEM = errors.New("jwt private key is not a valid pem block")
-	ErrPrivateKeyNotRSA = errors.New("jwt private key is not an rsa key")
+	ErrPrivateKeyNotPEM   = errors.New("jwt private key is not a valid pem block")
+	ErrPrivateKeyNotRSA   = errors.New("jwt private key is not an rsa key")
+	ErrNoSigningKeys      = errors.New("no jwt signing keys found")
+	ErrSigningKeyNotFound = errors.New("signing key for the token kid is not in the set")
 )
 
 var (
-	ErrIDMustBeUUID       = status.Error(codes.InvalidArgument, "id must be a uuid")
-	ErrEmailAlreadyExists = status.Error(codes.AlreadyExists, "email already registered")
-	ErrRefreshFailed      = status.Error(codes.Internal, "failed to refresh tokens")
-	ErrLogoutFailed       = status.Error(codes.Internal, "failed to logout")
-	ErrValidateFailed     = status.Error(codes.Internal, "failed to validate token")
-	ErrDeleteUserFailed   = status.Error(codes.Internal, "failed to delete user")
+	ErrIDMustBeUUID          = status.Error(codes.InvalidArgument, "id must be a uuid")
+	ErrEmailAlreadyExists    = status.Error(codes.AlreadyExists, "email already registered")
+	ErrProfileCreationFailed = status.Error(codes.Internal, "failed to create customer profile")
+	ErrRefreshFailed         = status.Error(codes.Internal, "failed to refresh tokens")
+	ErrLogoutFailed          = status.Error(codes.Internal, "failed to logout")
+	ErrValidateFailed        = status.Error(codes.Internal, "failed to validate token")
+	ErrDeleteUserFailed      = status.Error(codes.Internal, "failed to delete user")
 )
 
 var (

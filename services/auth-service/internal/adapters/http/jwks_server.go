@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/token"
@@ -15,14 +16,18 @@ type JWKSServer struct {
 	server *http.Server
 }
 
-func NewJWKSServer(addr string, set token.Set) (*JWKSServer, error) {
-	body, err := json.Marshal(set)
-	if err != nil {
-		return nil, fmt.Errorf("marshal jwks: %w", err)
-	}
-
+// NewJWKSServer для ротации ключей по стандартам RFC 7517 и OpenID Connect Discovery
+func NewJWKSServer(addr string, jwks func() token.Set, logger *slog.Logger) *JWKSServer {
 	mux := http.NewServeMux()
 	mux.HandleFunc(domain.JWKS_PATH, func(w http.ResponseWriter, _ *http.Request) {
+		body, err := json.Marshal(jwks())
+		if err != nil {
+			logger.Error("failed to marshal jwks", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
+
 		w.Header().Set(domain.CONTENT_TYPE_HEADER, domain.JWKS_CONTENT_TYPE)
 		_, _ = w.Write(body)
 	})
@@ -33,7 +38,7 @@ func NewJWKSServer(addr string, set token.Set) (*JWKSServer, error) {
 			Handler:           mux,
 			ReadHeaderTimeout: domain.DEFAULT_READ_HEADER_TIMEOUT,
 		},
-	}, nil
+	}
 }
 
 func (s *JWKSServer) Run() error {

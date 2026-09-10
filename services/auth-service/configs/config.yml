@@ -18,8 +18,13 @@ admin:
   email: admin@banking.local
   password: "admin123"
 
+upstreams:
+  customer: localhost:50052
+
 jwt:
-  private_key_path: ./configs/jwt_private_key.pem
+  # Каталог ключей подписи. Активный - последний по имени файла, остальные
+  # остаются в JWKS и продолжают проверять уже выданные токены.
+  keys_dir: ./configs/jwt_keys
   access_ttl: 15m
   refresh_ttl: 720h
 

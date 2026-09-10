@@ -1,10 +1,10 @@
-package grpc
+package server
 
 import (
 	"log/slog"
 	"time"
 
-	"github.com/danila-kuryakin/banking_mini_cores/platform/grpc_server"
+	platform_grpc "github.com/danila-kuryakin/banking_mini_cores/platform/grpc_server"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/interceptors"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/service"
 	authv1 "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/pb/gen/auth/v1"
@@ -28,18 +28,18 @@ func NewGRPCServer(addr string, service *service.Service, logger *slog.Logger, t
 }
 
 func (s *GRPCServer) Run() error {
-	return grpc_server.NewServer(
+	return platform_grpc.NewServer(
 		s.addr,
 		s.logger,
-		grpc_server.WithServices(
+		platform_grpc.WithServices(
 			func(r grpc.ServiceRegistrar) {
 				authv1.RegisterAuthServiceServer(r, s.authServer)
 			},
 		),
-		grpc_server.WithUnaryInterceptors(
+		platform_grpc.WithUnaryInterceptors(
 			interceptors.Validate(),
 		),
-		grpc_server.WithHandlerTimeout(s.timeout),
+		platform_grpc.WithHandlerTimeout(s.timeout),
 	)
 }
 

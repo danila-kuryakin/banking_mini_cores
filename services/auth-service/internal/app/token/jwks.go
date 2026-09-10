@@ -23,23 +23,28 @@ type Set struct {
 	Keys []JWK `json:"keys"`
 }
 
+// JWKS отдаёт весь набор: и активный ключ, и выводимые. Выводимый обязан
+// оставаться опубликованным, пока не истёк последний подписанный им токен -
+// иначе потребитель не сможет проверить подпись и вернёт 401.
 func (m *Manager) JWKS() Set {
-	public := &m.privateKey.PublicKey
+	keys := make([]JWK, 0, len(m.verify))
 
-	return Set{
-		Keys: []JWK{
-			{
-				KeyType:   domain.JWK_KEY_TYPE,
-				Use:       domain.JWK_KEY_USE,
-				Algorithm: domain.JWK_ALGORITHM,
-				KeyID:     m.keyID,
-				Modulus:   base64.RawURLEncoding.EncodeToString(public.N.Bytes()),
-				Exponent:  base64.RawURLEncoding.EncodeToString(big.NewInt(int64(public.E)).Bytes()),
-			},
-		},
+	for _, v := range m.verify {
+		keys = append(keys, JWK{
+			KeyType:   domain.JWK_KEY_TYPE,
+			Use:       domain.JWK_KEY_USE,
+			Algorithm: domain.JWK_ALGORITHM,
+			KeyID:     v.kid,
+			Modulus:   base64.RawURLEncoding.EncodeToString(v.public.N.Bytes()),
+			Exponent:  base64.RawURLEncoding.EncodeToString(big.NewInt(int64(v.public.E)).Bytes()),
+		})
 	}
+
+	return Set{Keys: keys}
 }
 
+// keyID считается от самого ключа, поэтому имена файлов и kid не связаны: один
+// и тот же ключ всегда даёт один kid, а два разных не столкнутся.
 func keyID(public *rsa.PublicKey) string {
 	der, err := x509.MarshalPKIXPublicKey(public)
 	if err != nil {

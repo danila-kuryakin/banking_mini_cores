@@ -15,7 +15,7 @@ type Service struct {
 
 func NewService(client *grpc.GRPCClients, verifier *auth.Verifier, timeout time.Duration) *Service {
 	return &Service{
-		Auth:      NewAuthService(client.Auth, client.Customer, verifier, timeout),
+		Auth:      NewAuthService(client.Auth, verifier, timeout),
 		Customer:  NewCustomerService(client.Customer, timeout),
 		Filestore: NewFilestoreService(client.Filestore, timeout),
 	}

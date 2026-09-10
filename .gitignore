@@ -28,7 +28,9 @@ deploy/.env
 # Local logs
 *.log
 
-# Ключ подписи JWT: генерируется сервисом при первом запуске
+# Ключи подписи JWT: генерируются сервисом при первом запуске и добавляются
+# при ротации. В репозиторий не попадают ни при каких обстоятельствах.
+services/auth-service/configs/jwt_keys/
 services/auth-service/configs/jwt_private_key.pem
 
 CLAUDE.md

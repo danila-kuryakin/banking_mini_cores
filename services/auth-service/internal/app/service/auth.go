@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/domain"
+	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/domain/interfaces"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/domain/models"
 	"github.com/google/uuid"
 
@@ -17,19 +18,40 @@ import (
 )
 
 type AuthService struct {
-	repo   *repository.Repository
-	tokens *token.Manager
+	repo      *repository.Repository
+	tokens    *token.Manager
+	customers interfaces.CustomerProfiles
 }
 
-func NewAuthService(repo *repository.Repository, tokens *token.Manager) *AuthService {
+func NewAuthService(
+	repo *repository.Repository,
+	tokens *token.Manager,
+	customers interfaces.CustomerProfiles,
+) *AuthService {
 	return &AuthService{
-		repo:   repo,
-		tokens: tokens,
+		repo:      repo,
+		tokens:    tokens,
+		customers: customers,
 	}
 }
 
+// Register заводит учётную запись и сразу карточку клиента в customer-service.
 func (s *AuthService) Register(ctx context.Context, email, plainPassword string) (*models.User, error) {
-	return s.createUser(ctx, email, plainPassword, domain.ROLE_CLIENT)
+	user, err := s.createUser(ctx, email, plainPassword, domain.ROLE_CLIENT)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.customers.CreateProfile(ctx, user.ID)
+	if err != nil && !errors.Is(err, domain.ErrProfileAlreadyExists) {
+		if delErr := s.repo.Auth.DeleteUser(ctx, user.ID); delErr != nil {
+			return nil, fmt.Errorf("%w: %w", domain.ErrProfileNotCreated, errors.Join(err, delErr))
+		}
+
+		return nil, fmt.Errorf("%w: %w", domain.ErrProfileNotCreated, err)
+	}
+
+	return user, nil
 }
 
 func (s *AuthService) CreateOfficer(ctx context.Context, email, plainPassword string) (*models.User, error) {

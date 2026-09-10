@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	grpcSrv "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters/grpc"
+	grpcSrv "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters/grpc/server"
 	httpSrv "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters/http"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/service"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/token"
@@ -19,19 +19,16 @@ type Server struct {
 	logger *slog.Logger
 }
 
-func NewServer(cfg *config.Config, service *service.Service, keys token.Set, logger *slog.Logger) (*Server, error) {
+func NewServer(cfg *config.Config, service *service.Service, jwks func() token.Set, logger *slog.Logger) *Server {
 	grpcServer := grpcSrv.NewGRPCServer(cfg.Server.GetAddr(), service, logger, cfg.RequestTimeout)
 
-	jwksServer, err := httpSrv.NewJWKSServer(cfg.JWKS.GetAddr(), keys)
-	if err != nil {
-		return nil, err
-	}
+	jwksServer := httpSrv.NewJWKSServer(cfg.JWKS.GetAddr(), jwks, logger)
 
 	return &Server{
 		grpc:   grpcServer,
 		jwks:   jwksServer,
 		logger: logger,
-	}, nil
+	}
 }
 
 func (s *Server) Run() error {
