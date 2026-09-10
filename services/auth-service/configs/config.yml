@@ -18,6 +18,9 @@ admin:
   email: admin@banking.local
   password: "admin123"
 
+upstreams:
+  customer: localhost:50052
+
 jwt:
   private_key_path: ./configs/jwt_private_key.pem
   access_ttl: 15m

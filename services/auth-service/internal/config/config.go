@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"time"
 
 	"github.com/danila-kuryakin/banking_mini_cores/platform/config"
@@ -18,13 +19,28 @@ type Admin struct {
 	Password string `mapstructure:"password"`
 }
 
+type Upstreams struct {
+	Customer string `mapstructure:"customer"`
+}
+
 type Config struct {
 	Server         config.Server         `mapstructure:"server"`
 	JWKS           config.Server         `mapstructure:"jwks"`
 	Postgres       config.DataBaseConfig `mapstructure:"database"`
 	JWT            JWT                   `mapstructure:"jwt"`
 	Admin          Admin                 `mapstructure:"admin"`
+	Upstreams      Upstreams             `mapstructure:"upstreams"`
 	RequestTimeout time.Duration         `mapstructure:"request_timeout"`
+}
+
+// Validate вызывает config.Read сам, до подстановки умолчаний в Load. Поэтому
+// проверяем здесь только то, у чего умолчания быть не может.
+func (c *Config) Validate() error {
+	if c.Upstreams.Customer == "" {
+		return errors.New("upstream address for customer-service is empty")
+	}
+
+	return nil
 }
 
 func Load() (*Config, error) {

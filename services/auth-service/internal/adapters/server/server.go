@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	grpcSrv "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters/grpc"
+	grpcSrv "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters/grpc/server"
 	httpSrv "github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters/http"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/service"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/token"

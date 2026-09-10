@@ -5,6 +5,7 @@ inputs:
     paths:
       - proto/auth
       - proto/common
+      - proto/customer
 
 plugins:
   - local: protoc-gen-go

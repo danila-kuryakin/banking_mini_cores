@@ -1,4 +1,4 @@
-package grpc
+package server
 
 import (
 	"context"
@@ -38,6 +38,12 @@ func (s *AuthServer) Register(ctx context.Context, in *authv1.RegisterRequest) (
 
 	user, err := s.service.Auth.Register(ctx, in.Email, in.Password)
 	if err != nil {
+		if errors.Is(err, domain.ErrProfileNotCreated) {
+			s.log.Error("failed to create customer profile on registration", "email", in.Email, "error", err)
+
+			return nil, domain.ErrProfileCreationFailed
+		}
+
 		return nil, s.credentialsError(err, "failed to register user")
 	}
 	return &authv1.User{

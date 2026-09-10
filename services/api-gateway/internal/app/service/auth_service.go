@@ -9,28 +9,24 @@ import (
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/domain"
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/domain/models"
 	authv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/auth/v1"
-	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/customer/v1"
 )
 
 // По идее это и сервис и grpc клиент. Запихнул код в сервис ради папочки app.
 type AuthService struct {
-	authClient     authv1.AuthServiceClient
-	customerClient customerv1.CustomerServiceClient
-	verifier       *auth.Verifier
-	timeout        time.Duration
+	authClient authv1.AuthServiceClient
+	verifier   *auth.Verifier
+	timeout    time.Duration
 }
 
 func NewAuthService(
 	authCli authv1.AuthServiceClient,
-	customerCli customerv1.CustomerServiceClient,
 	verifier *auth.Verifier,
 	timeout time.Duration,
 ) *AuthService {
 	return &AuthService{
-		authClient:     authCli,
-		customerClient: customerCli,
-		verifier:       verifier,
-		timeout:        timeout,
+		authClient: authCli,
+		verifier:   verifier,
+		timeout:    timeout,
 	}
 }
 
@@ -41,20 +37,6 @@ func (s AuthService) Register(ctx context.Context, in *authv1.RegisterRequest) (
 	user, err := s.authClient.Register(ctx, in)
 	if err != nil {
 		return nil, err
-	}
-
-	customer, err := s.customerClient.CreateProfile(ctx, &customerv1.CreateProfileRequest{
-		UserId: user.Id,
-	})
-	if err != nil {
-		if _, deleteErr := s.authClient.DeleteUser(ctx, &authv1.DeleteUserRequest{Id: user.Id}); deleteErr != nil {
-			return nil, errors.Join(err, deleteErr)
-		}
-		return nil, err
-	}
-
-	if customer.UserId != user.Id {
-		return nil, errors.New("customer user id does not match")
 	}
 
 	return user, nil
