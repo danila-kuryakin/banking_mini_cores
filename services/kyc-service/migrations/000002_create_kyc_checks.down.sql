@@ -1,0 +1,7 @@
+BEGIN;
+
+DROP TABLE IF EXISTS kyc_checks;
+DROP TYPE IF EXISTS check_result;
+DROP TYPE IF EXISTS check_type;
+
+COMMIT;

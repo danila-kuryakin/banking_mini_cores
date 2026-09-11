@@ -1,0 +1,129 @@
+syntax = "proto3";
+
+package kyc.v1;
+
+option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/pb/gen/kyc/v1;kycv1";
+
+import "google/protobuf/timestamp.proto";
+
+service KycService {
+  rpc SubmitApplication(SubmitApplicationRequest) returns (Application);
+  rpc GetApplication(GetApplicationRequest) returns (Application);
+  rpc ListApplications(ListApplicationsRequest) returns (ListApplicationsResponse);
+  rpc ClaimApplication(ClaimApplicationRequest) returns (Application);
+  rpc ApproveApplication(ApproveApplicationRequest) returns (Application);
+  rpc RejectApplication(RejectApplicationRequest) returns (Application);
+  rpc RequestMoreDocuments(RequestMoreDocumentsRequest) returns (Application);
+}
+
+enum ApplicationStatus {
+  APPLICATION_STATUS_UNSPECIFIED = 0;
+  APPLICATION_STATUS_SUBMITTED = 1;
+  APPLICATION_STATUS_AUTO_CHECKS = 2;
+  APPLICATION_STATUS_AUTO_REJECTED = 3;
+  APPLICATION_STATUS_IN_REVIEW = 4;
+  APPLICATION_STATUS_DOCS_REQUESTED = 5;
+  APPLICATION_STATUS_APPROVED = 6;
+  APPLICATION_STATUS_REJECTED = 7;
+}
+
+enum DocumentType {
+  DOCUMENT_TYPE_UNSPECIFIED = 0;
+  DOCUMENT_TYPE_PASSPORT = 1;
+  DOCUMENT_TYPE_SELFIE = 2;
+  DOCUMENT_TYPE_PROOF_OF_ADDRESS = 3;
+}
+
+enum CheckType {
+  CHECK_TYPE_UNSPECIFIED = 0;
+  CHECK_TYPE_SANCTIONS = 1;
+  CHECK_TYPE_AGE = 2;
+}
+
+enum CheckResult {
+  CHECK_RESULT_UNSPECIFIED = 0;
+  CHECK_RESULT_PASSED = 1;
+  CHECK_RESULT_FAILED = 2;
+}
+
+message Application {
+  string id = 1;
+  string user_id = 2;
+  ApplicationStatus status = 3;
+  // Офицер, взявший заявку в работу. Пусто - заявку никто не взял.
+  string reviewer_id = 4;
+  // Причина отказа или комментарий к запросу документов.
+  string reason = 5;
+  // Типы, которые попросили догрузить. Непусто только в DOCS_REQUESTED.
+  repeated DocumentType requested_types = 6;
+  google.protobuf.Timestamp submitted_at = 7;
+  google.protobuf.Timestamp decided_at = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  // Результаты авто-проверок и история переходов.
+  repeated KycCheck checks = 11;
+  repeated KycEvent events = 12;
+}
+
+message KycCheck {
+  string id = 1;
+  CheckType type = 2;
+  CheckResult result = 3;
+  string details = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message KycEvent {
+  string id = 1;
+  ApplicationStatus from_status = 2;
+  ApplicationStatus to_status = 3;
+  string actor_id = 4;
+  string comment = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message SubmitApplicationRequest {
+  string user_id = 1;
+}
+
+message GetApplicationRequest {
+  oneof target {
+    string application_id = 1;
+    string user_id = 2;
+  }
+}
+
+message ListApplicationsRequest {
+  repeated ApplicationStatus statuses = 1;
+  string reviewer_id = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListApplicationsResponse {
+  repeated Application applications = 1;
+}
+
+message ClaimApplicationRequest {
+  string application_id = 1;
+  string officer_id = 2;
+}
+
+message ApproveApplicationRequest {
+  string application_id = 1;
+  string officer_id = 2;
+  string comment = 3;
+}
+
+message RejectApplicationRequest {
+  string application_id = 1;
+  string officer_id = 2;
+  string reason = 3;
+}
+
+message RequestMoreDocumentsRequest {
+  string application_id = 1;
+  string officer_id = 2;
+  repeated DocumentType types = 3;
+  string comment = 4;
+}

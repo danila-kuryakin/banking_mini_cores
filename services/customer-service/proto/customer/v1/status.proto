@@ -23,7 +23,6 @@ message SetStatusRequest {
 
 message SetStatusResponse {
   CustomerStatus status = 1;
-  // Статус до перехода.
   CustomerStatus previous_status = 2;
   google.protobuf.Timestamp status_changed_at = 3;
 }

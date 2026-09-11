@@ -6,18 +6,11 @@ option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/file
 
 import "google/protobuf/timestamp.proto";
 
-// Сервис хранит файлы: байты - в объектном хранилище, метаданные - в своей базе.
-// Через gRPC файлы не ходят: клиент льёт и качает их напрямую в хранилище по
-// presigned-ссылке, которую здесь получает.
 service FileService {
-  // Заводит метаданные и отдаёт presigned PUT. Файла в хранилище ещё нет.
   rpc InitUpload(InitUploadRequest) returns (InitUploadResponse);
-  // Проверяет залитый файл (размер, тип по magic bytes, sha256) и фиксирует метаданные.
   rpc ConfirmUpload(ConfirmUploadRequest) returns (FileMetadata);
-  // Presigned GET на подтверждённый файл.
   rpc GetDownloadUrl(GetDownloadUrlRequest) returns (GetDownloadUrlResponse);
   rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
-  // Для kyc-service: залиты ли файлы нужных типов.
   rpc HasRequiredFiles(HasRequiredFilesRequest) returns (HasRequiredFilesResponse);
 }
 

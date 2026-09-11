@@ -1,0 +1,19 @@
+server:
+  host: localhost
+  port: 50053
+
+database:
+  host: localhost
+  port: 5453
+  user: banking_kyc
+  password: 123
+  dbname: banking_kyc
+  ssl_mode: disable
+
+# Сервисы, к которым ходит kyc: проверить анкету и комплектность документов,
+# подвинуть статус клиента по итогу заявки.
+upstreams:
+  customer: localhost:50052
+  filestore: localhost:50054
+
+request_timeout: 30s
