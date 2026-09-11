@@ -35,10 +35,11 @@ type statusRule struct {
 var statusTransitions = map[Status]statusRule{
 	STATUS_NEW: {From: nil},
 
-	STATUS_PROFILE_FILLED: {From: []Status{STATUS_NEW}},
-	STATUS_ON_KYC:         {From: []Status{STATUS_PROFILE_FILLED}},
-	STATUS_ACTIVE:         {From: []Status{STATUS_ON_KYC}},
-	STATUS_REJECTED:       {From: []Status{STATUS_ON_KYC}},
+	STATUS_PROFILE_FILLED: {From: []Status{STATUS_NEW, STATUS_ON_KYC}},
+
+	STATUS_ON_KYC:   {From: []Status{STATUS_PROFILE_FILLED}},
+	STATUS_ACTIVE:   {From: []Status{STATUS_ON_KYC}},
+	STATUS_REJECTED: {From: []Status{STATUS_ON_KYC}},
 
 	STATUS_BLOCKED: {FromAny: true},
 }
@@ -49,6 +50,22 @@ type StatusChange struct {
 	Previous  Status
 	Current   Status
 	ChangedAt time.Time
+}
+
+// editableStatuses - статусы, в которых анкету ещё можно править.
+var editableStatuses = []Status{
+	STATUS_NEW,
+	STATUS_PROFILE_FILLED,
+}
+
+// EditableStatuses отдаёт копию перечня статусов, в которых анкета правится.
+func EditableStatuses() []Status {
+	return slices.Clone(editableStatuses)
+}
+
+// IsEditable сообщает, можно ли в этом статусе править анкету.
+func (s Status) IsEditable() bool {
+	return slices.Contains(editableStatuses, s)
 }
 
 // AllStatuses отдаёт копию перечня реальных статусов - без STATUS_UNSPECIFIED.

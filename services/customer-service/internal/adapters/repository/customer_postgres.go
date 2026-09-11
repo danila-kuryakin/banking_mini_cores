@@ -191,10 +191,14 @@ func (r *CustomerRepo) GetStatusByUserID(ctx context.Context, userID uuid.UUID) 
 	return &statusRet, &changedAt, nil
 }
 
-// UpdateProfile сохраняет анкету. Статус меняется вместе с ней (new ->
-// profile_filled на полной анкете), поэтому запись анкеты и запись перехода в
-// историю идут одной транзакцией.
-func (r *CustomerRepo) UpdateProfile(ctx context.Context, userID uuid.UUID, profile models.Profile, status models.Status) (*models.Customer, error) {
+// UpdateProfile сохраняет анкету.
+func (r *CustomerRepo) UpdateProfile(
+	ctx context.Context,
+	userID uuid.UUID,
+	profile models.Profile,
+	status models.Status,
+	editable []models.Status,
+) (*models.Customer, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("update profile: begin: %w", err)
@@ -225,6 +229,7 @@ func (r *CustomerRepo) UpdateProfile(ctx context.Context, userID uuid.UUID, prof
 		profile.Citizenship,
 		profile.Phone,
 		status,
+		statusStrings(editable),
 	).Scan(
 		&resp.ID,
 		&resp.UserID,

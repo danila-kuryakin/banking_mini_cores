@@ -35,11 +35,15 @@ func (s *CustomerService) UpdateProfile(ctx context.Context, userID uuid.UUID, p
 		return nil, err
 	}
 
-	if *status != models.STATUS_NEW { // что бы можно было заполнять только профиль со статусом NEW как в т.з.
+	if !status.IsEditable() {
 		return nil, domain.ErrProfileLocked
 	}
 
-	return s.repo.Customer.UpdateProfile(ctx, userID, profile, nextStatus(profile))
+	if *status == models.STATUS_PROFILE_FILLED && !profile.IsComplete() {
+		return nil, domain.ErrProfileIncomplete
+	}
+
+	return s.repo.Customer.UpdateProfile(ctx, userID, profile, nextStatus(profile), models.EditableStatuses())
 }
 
 func nextStatus(profile models.Profile) models.Status {
