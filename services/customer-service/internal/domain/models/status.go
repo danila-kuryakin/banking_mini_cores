@@ -32,6 +32,10 @@ type statusRule struct {
 }
 
 // statusTransitions - таблица переходов.
+//
+//	new -> profile_filled -> on_kyc -> active
+//								|-> rejected
+//								|-> profile_filled   (возврат после авто-отказа kyc)
 var statusTransitions = map[Status]statusRule{
 	STATUS_NEW: {From: nil},
 

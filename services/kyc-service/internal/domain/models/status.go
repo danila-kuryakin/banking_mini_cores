@@ -51,11 +51,10 @@ type statusRule struct {
 
 // statusTransitions - таблица переходов заявки:
 //
-//	draft -> submitted -> auto_checks -> in_review -> docs_requested -> submitted
+//	submitted -> auto_checks -> in_review -> docs_requested -> submitted
 //	                 |              |-> rejected
 //	                 |              |-> approved
 //	                 |-> auto_rejected
-
 var statusTransitions = map[ApplicationStatus]statusRule{
 
 	STATUS_SUBMITTED:   {From: []ApplicationStatus{STATUS_DOCS_REQUESTED}},
@@ -69,24 +68,12 @@ var statusTransitions = map[ApplicationStatus]statusRule{
 	STATUS_REJECTED:       {From: []ApplicationStatus{STATUS_IN_REVIEW}},
 }
 
-func AllStatuses() []ApplicationStatus {
-	return slices.Clone(allStatuses)
-}
-
-func ActiveStatuses() []ApplicationStatus {
-	return slices.Clone(activeStatuses)
-}
-
 func (s ApplicationStatus) IsValid() bool {
 	return slices.Contains(allStatuses, s)
 }
 
 func (s ApplicationStatus) IsActive() bool {
 	return slices.Contains(activeStatuses, s)
-}
-
-func (s ApplicationStatus) IsFinal() bool {
-	return s.IsValid() && len(AllowedTo(s)) == 0
 }
 
 // CanTransition проверяет переход по таблице.

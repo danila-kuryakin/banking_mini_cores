@@ -36,19 +36,11 @@ const (
 // FileServiceClient is the client API for FileService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-//
-// Сервис хранит файлы: байты - в объектном хранилище, метаданные - в своей базе.
-// Через gRPC файлы не ходят: клиент льёт и качает их напрямую в хранилище по
-// presigned-ссылке, которую здесь получает.
 type FileServiceClient interface {
-	// Заводит метаданные и отдаёт presigned PUT. Файла в хранилище ещё нет.
 	InitUpload(ctx context.Context, in *InitUploadRequest, opts ...grpc.CallOption) (*InitUploadResponse, error)
-	// Проверяет залитый файл (размер, тип по magic bytes, sha256) и фиксирует метаданные.
 	ConfirmUpload(ctx context.Context, in *ConfirmUploadRequest, opts ...grpc.CallOption) (*FileMetadata, error)
-	// Presigned GET на подтверждённый файл.
 	GetDownloadUrl(ctx context.Context, in *GetDownloadUrlRequest, opts ...grpc.CallOption) (*GetDownloadUrlResponse, error)
 	ListFiles(ctx context.Context, in *ListFilesRequest, opts ...grpc.CallOption) (*ListFilesResponse, error)
-	// Для kyc-service: залиты ли файлы нужных типов.
 	HasRequiredFiles(ctx context.Context, in *HasRequiredFilesRequest, opts ...grpc.CallOption) (*HasRequiredFilesResponse, error)
 }
 
@@ -113,19 +105,11 @@ func (c *fileServiceClient) HasRequiredFiles(ctx context.Context, in *HasRequire
 // FileServiceServer is the server API for FileService service.
 // All implementations must embed UnimplementedFileServiceServer
 // for forward compatibility.
-//
-// Сервис хранит файлы: байты - в объектном хранилище, метаданные - в своей базе.
-// Через gRPC файлы не ходят: клиент льёт и качает их напрямую в хранилище по
-// presigned-ссылке, которую здесь получает.
 type FileServiceServer interface {
-	// Заводит метаданные и отдаёт presigned PUT. Файла в хранилище ещё нет.
 	InitUpload(context.Context, *InitUploadRequest) (*InitUploadResponse, error)
-	// Проверяет залитый файл (размер, тип по magic bytes, sha256) и фиксирует метаданные.
 	ConfirmUpload(context.Context, *ConfirmUploadRequest) (*FileMetadata, error)
-	// Presigned GET на подтверждённый файл.
 	GetDownloadUrl(context.Context, *GetDownloadUrlRequest) (*GetDownloadUrlResponse, error)
 	ListFiles(context.Context, *ListFilesRequest) (*ListFilesResponse, error)
-	// Для kyc-service: залиты ли файлы нужных типов.
 	HasRequiredFiles(context.Context, *HasRequiredFilesRequest) (*HasRequiredFilesResponse, error)
 	mustEmbedUnimplementedFileServiceServer()
 }

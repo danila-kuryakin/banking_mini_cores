@@ -10,12 +10,14 @@ import (
 	authv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/auth/v1"
 	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/customer/v1"
 	filestorev1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/filestore/v1"
+	kycv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/kyc/v1"
 )
 
 type GRPCClients struct {
 	Auth      authv1.AuthServiceClient
 	Customer  customerv1.CustomerServiceClient
 	Filestore filestorev1.FileServiceClient
+	Kyc       kycv1.KycServiceClient
 
 	conns []*grpc.ClientConn // Для удобного закрытия коннектов клиентов
 }
@@ -40,6 +42,12 @@ func NewGRPCClients(cfg *config.Config) (*GRPCClients, error) {
 		return nil, c.closeOnError(err)
 	}
 	c.Filestore = filestorev1.NewFileServiceClient(filestoreConn)
+
+	kycConn, err := c.dial(cfg.Upstreams.KYC)
+	if err != nil {
+		return nil, c.closeOnError(err)
+	}
+	c.Kyc = kycv1.NewKycServiceClient(kycConn)
 
 	return c, nil
 }

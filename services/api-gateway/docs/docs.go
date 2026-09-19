@@ -823,6 +823,114 @@ const docTemplate = `{
                 }
             }
         },
+        "/customer/{user_id}/kyc": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Отдаёт последнюю заявку вместе с результатами авто-проверок и историей переходов.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "kyc"
+                ],
+                "summary": "Последняя заявка клиента",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Заявка",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Application"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Заявка принадлежит другому пользователю",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Заявок у клиента нет",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Требует заполненной анкеты и подтверждённых документов (паспорт и селфи). Если по заявке запрашивали документы, в очередь возвращается та же заявка. Проверки идут в фоне, ответ приходит сразу.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "kyc"
+                ],
+                "summary": "Подать заявку на верификацию",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Заявка подана",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Application"
+                        }
+                    },
+                    "400": {
+                        "description": "Анкета не заполнена или не хватает документов",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Заявка принадлежит другому пользователю",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "У клиента уже есть активная заявка",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/customer/{user_id}/status": {
             "get": {
                 "security": [
@@ -874,9 +982,508 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/kyc/applications": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Очередь для сотрудника: фильтры по статусу и по офицеру, взявшему заявку в работу. Результаты проверок и история в листинге не отдаются.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "kyc"
+                ],
+                "summary": "Очередь заявок",
+                "parameters": [
+                    {
+                        "enum": [
+                            "submitted",
+                            "auto_checks",
+                            "auto_rejected",
+                            "in_review",
+                            "docs_requested",
+                            "approved",
+                            "rejected"
+                        ],
+                        "type": "string",
+                        "description": "Фильтр по статусу",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "UUID офицера",
+                        "name": "reviewer_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Смещение",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Заявки",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListApplications"
+                        }
+                    },
+                    "400": {
+                        "description": "Неизвестный статус в фильтре",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/kyc/applications/{application_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Заявка вместе с результатами авто-проверок и историей переходов. Для сотрудников.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "kyc"
+                ],
+                "summary": "Заявка по идентификатору",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID заявки",
+                        "name": "application_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Заявка",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Application"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Заявка не найдена",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/kyc/applications/{application_id}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Одобряет заявку и переводит клиента в active.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "kyc"
+                ],
+                "summary": "Одобрить заявку",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID заявки",
+                        "name": "application_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Комментарий",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ApproveApplication"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Заявка одобрена",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Application"
+                        }
+                    },
+                    "400": {
+                        "description": "Заявка не в том статусе",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Заявка не найдена",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/kyc/applications/{application_id}/claim": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Закрепляет заявку за текущим сотрудником. Занятую заявку второй раз взять нельзя.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "kyc"
+                ],
+                "summary": "Взять заявку в работу",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID заявки",
+                        "name": "application_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Заявка закреплена",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Application"
+                        }
+                    },
+                    "400": {
+                        "description": "Заявка уже взята или не в том статусе",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Заявка не найдена",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/kyc/applications/{application_id}/documents": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает заявку клиенту с просьбой догрузить документы указанных типов. Клиент остаётся на проверке; после загрузки он подаёт ту же заявку снова.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "kyc"
+                ],
+                "summary": "Запросить документы",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID заявки",
+                        "name": "application_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Типы документов и комментарий",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.RequestDocuments"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Заявка возвращена клиенту",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Application"
+                        }
+                    },
+                    "400": {
+                        "description": "Неизвестный тип документа или заявка не в том статусе",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Заявка не найдена",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/kyc/applications/{application_id}/reject": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Отказ с обязательной причиной. Клиент уходит в rejected окончательно - в отличие от авто-отказа, который возвращает его в profile_filled.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "kyc"
+                ],
+                "summary": "Отказать по заявке",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID заявки",
+                        "name": "application_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Причина отказа",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.RejectApplication"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Отказ зафиксирован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Application"
+                        }
+                    },
+                    "400": {
+                        "description": "Причина не указана или заявка не в том статусе",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Заявка не найдена",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "dto.Application": {
+            "type": "object",
+            "properties": {
+                "checks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.Check"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "decided_at": {
+                    "type": "string"
+                },
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.Event"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "requested_types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "proof_of_address"
+                    ]
+                },
+                "reviewer_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "submitted",
+                        "auto_checks",
+                        "auto_rejected",
+                        "in_review",
+                        "docs_requested",
+                        "approved",
+                        "rejected"
+                    ],
+                    "example": "in_review"
+                },
+                "submitted_at": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ApproveApplication": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "example": "всё сходится"
+                }
+            }
+        },
+        "dto.Check": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "details": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "result": {
+                    "type": "string",
+                    "enum": [
+                        "passed",
+                        "failed"
+                    ],
+                    "example": "passed"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "sanctions",
+                        "age"
+                    ],
+                    "example": "sanctions"
+                }
+            }
+        },
         "dto.CreateOfficerRequest": {
             "type": "object",
             "required": [
@@ -947,6 +1554,29 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.Event": {
+            "type": "object",
+            "properties": {
+                "actor_id": {
+                    "type": "string"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "from_status": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "to_status": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.File": {
             "type": "object",
             "properties": {
@@ -1000,6 +1630,17 @@ const docTemplate = `{
                         "proof_of_address"
                     ],
                     "example": "passport"
+                }
+            }
+        },
+        "dto.ListApplications": {
+            "type": "object",
+            "properties": {
+                "applications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.Application"
+                    }
                 }
             }
         },
@@ -1126,6 +1767,38 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.RejectApplication": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "example": "документы не совпадают с анкетой"
+                }
+            }
+        },
+        "dto.RequestDocuments": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "example": "нужна справка о месте жительства"
+                },
+                "types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "passport",
+                            "selfie",
+                            "proof_of_address"
+                        ]
+                    },
+                    "example": [
+                        "proof_of_address"
+                    ]
                 }
             }
         },

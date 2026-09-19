@@ -3,7 +3,8 @@ package server
 import (
 	"log/slog"
 
-	grpcSrv "github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/adapters/grpc"
+	grpcSrv "github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/adapters/grpc/server"
+	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/app/service"
 	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/config"
 )
 
@@ -12,8 +13,8 @@ type Server struct {
 	logger *slog.Logger
 }
 
-func NewServer(cfg *config.Config, logger *slog.Logger) (*Server, error) {
-	grpcServer := grpcSrv.NewGRPCServer(cfg.Server.GetAddr(), logger, cfg.RequestTimeout)
+func NewServer(cfg *config.Config, service *service.Service, logger *slog.Logger) (*Server, error) {
+	grpcServer := grpcSrv.NewGRPCServer(cfg.Server.GetAddr(), service, logger, cfg.RequestTimeout)
 
 	return &Server{
 		grpc:   grpcServer,

@@ -8,7 +8,8 @@ import "google/protobuf/timestamp.proto";
 
 service KycService {
   rpc SubmitApplication(SubmitApplicationRequest) returns (Application);
-  rpc GetApplication(GetApplicationRequest) returns (Application);
+  rpc GetApplicationByID(GetApplicationByIDRequest) returns (Application);
+  rpc GetApplicationByUserID(GetApplicationByUserIDRequest) returns (Application);
   rpc ListApplications(ListApplicationsRequest) returns (ListApplicationsResponse);
   rpc ClaimApplication(ClaimApplicationRequest) returns (Application);
   rpc ApproveApplication(ApproveApplicationRequest) returns (Application);
@@ -86,11 +87,12 @@ message SubmitApplicationRequest {
   string user_id = 1;
 }
 
-message GetApplicationRequest {
-  oneof target {
-    string application_id = 1;
-    string user_id = 2;
-  }
+message GetApplicationByIDRequest {
+  string application_id = 1;
+}
+
+message GetApplicationByUserIDRequest {
+  string user_id = 1;
 }
 
 message ListApplicationsRequest {

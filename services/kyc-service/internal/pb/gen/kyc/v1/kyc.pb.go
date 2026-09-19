@@ -576,31 +576,27 @@ func (x *SubmitApplicationRequest) GetUserId() string {
 	return ""
 }
 
-type GetApplicationRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Types that are valid to be assigned to Target:
-	//
-	//	*GetApplicationRequest_ApplicationId
-	//	*GetApplicationRequest_UserId
-	Target        isGetApplicationRequest_Target `protobuf_oneof:"target"`
+type GetApplicationByIDRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ApplicationId string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetApplicationRequest) Reset() {
-	*x = GetApplicationRequest{}
+func (x *GetApplicationByIDRequest) Reset() {
+	*x = GetApplicationByIDRequest{}
 	mi := &file_kyc_v1_kyc_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetApplicationRequest) String() string {
+func (x *GetApplicationByIDRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetApplicationRequest) ProtoMessage() {}
+func (*GetApplicationByIDRequest) ProtoMessage() {}
 
-func (x *GetApplicationRequest) ProtoReflect() protoreflect.Message {
+func (x *GetApplicationByIDRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_kyc_v1_kyc_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -612,51 +608,61 @@ func (x *GetApplicationRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetApplicationRequest.ProtoReflect.Descriptor instead.
-func (*GetApplicationRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetApplicationByIDRequest.ProtoReflect.Descriptor instead.
+func (*GetApplicationByIDRequest) Descriptor() ([]byte, []int) {
 	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *GetApplicationRequest) GetTarget() isGetApplicationRequest_Target {
+func (x *GetApplicationByIDRequest) GetApplicationId() string {
 	if x != nil {
-		return x.Target
-	}
-	return nil
-}
-
-func (x *GetApplicationRequest) GetApplicationId() string {
-	if x != nil {
-		if x, ok := x.Target.(*GetApplicationRequest_ApplicationId); ok {
-			return x.ApplicationId
-		}
+		return x.ApplicationId
 	}
 	return ""
 }
 
-func (x *GetApplicationRequest) GetUserId() string {
+type GetApplicationByUserIDRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetApplicationByUserIDRequest) Reset() {
+	*x = GetApplicationByUserIDRequest{}
+	mi := &file_kyc_v1_kyc_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetApplicationByUserIDRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetApplicationByUserIDRequest) ProtoMessage() {}
+
+func (x *GetApplicationByUserIDRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_kyc_v1_kyc_proto_msgTypes[5]
 	if x != nil {
-		if x, ok := x.Target.(*GetApplicationRequest_UserId); ok {
-			return x.UserId
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
 		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetApplicationByUserIDRequest.ProtoReflect.Descriptor instead.
+func (*GetApplicationByUserIDRequest) Descriptor() ([]byte, []int) {
+	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetApplicationByUserIDRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
 	}
 	return ""
 }
-
-type isGetApplicationRequest_Target interface {
-	isGetApplicationRequest_Target()
-}
-
-type GetApplicationRequest_ApplicationId struct {
-	ApplicationId string `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3,oneof"`
-}
-
-type GetApplicationRequest_UserId struct {
-	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3,oneof"`
-}
-
-func (*GetApplicationRequest_ApplicationId) isGetApplicationRequest_Target() {}
-
-func (*GetApplicationRequest_UserId) isGetApplicationRequest_Target() {}
 
 type ListApplicationsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -670,7 +676,7 @@ type ListApplicationsRequest struct {
 
 func (x *ListApplicationsRequest) Reset() {
 	*x = ListApplicationsRequest{}
-	mi := &file_kyc_v1_kyc_proto_msgTypes[5]
+	mi := &file_kyc_v1_kyc_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -682,7 +688,7 @@ func (x *ListApplicationsRequest) String() string {
 func (*ListApplicationsRequest) ProtoMessage() {}
 
 func (x *ListApplicationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kyc_v1_kyc_proto_msgTypes[5]
+	mi := &file_kyc_v1_kyc_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -695,7 +701,7 @@ func (x *ListApplicationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListApplicationsRequest.ProtoReflect.Descriptor instead.
 func (*ListApplicationsRequest) Descriptor() ([]byte, []int) {
-	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{5}
+	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListApplicationsRequest) GetStatuses() []ApplicationStatus {
@@ -735,7 +741,7 @@ type ListApplicationsResponse struct {
 
 func (x *ListApplicationsResponse) Reset() {
 	*x = ListApplicationsResponse{}
-	mi := &file_kyc_v1_kyc_proto_msgTypes[6]
+	mi := &file_kyc_v1_kyc_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -747,7 +753,7 @@ func (x *ListApplicationsResponse) String() string {
 func (*ListApplicationsResponse) ProtoMessage() {}
 
 func (x *ListApplicationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_kyc_v1_kyc_proto_msgTypes[6]
+	mi := &file_kyc_v1_kyc_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -760,7 +766,7 @@ func (x *ListApplicationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListApplicationsResponse.ProtoReflect.Descriptor instead.
 func (*ListApplicationsResponse) Descriptor() ([]byte, []int) {
-	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{6}
+	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListApplicationsResponse) GetApplications() []*Application {
@@ -780,7 +786,7 @@ type ClaimApplicationRequest struct {
 
 func (x *ClaimApplicationRequest) Reset() {
 	*x = ClaimApplicationRequest{}
-	mi := &file_kyc_v1_kyc_proto_msgTypes[7]
+	mi := &file_kyc_v1_kyc_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -792,7 +798,7 @@ func (x *ClaimApplicationRequest) String() string {
 func (*ClaimApplicationRequest) ProtoMessage() {}
 
 func (x *ClaimApplicationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kyc_v1_kyc_proto_msgTypes[7]
+	mi := &file_kyc_v1_kyc_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -805,7 +811,7 @@ func (x *ClaimApplicationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimApplicationRequest.ProtoReflect.Descriptor instead.
 func (*ClaimApplicationRequest) Descriptor() ([]byte, []int) {
-	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{7}
+	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ClaimApplicationRequest) GetApplicationId() string {
@@ -833,7 +839,7 @@ type ApproveApplicationRequest struct {
 
 func (x *ApproveApplicationRequest) Reset() {
 	*x = ApproveApplicationRequest{}
-	mi := &file_kyc_v1_kyc_proto_msgTypes[8]
+	mi := &file_kyc_v1_kyc_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -845,7 +851,7 @@ func (x *ApproveApplicationRequest) String() string {
 func (*ApproveApplicationRequest) ProtoMessage() {}
 
 func (x *ApproveApplicationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kyc_v1_kyc_proto_msgTypes[8]
+	mi := &file_kyc_v1_kyc_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -858,7 +864,7 @@ func (x *ApproveApplicationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveApplicationRequest.ProtoReflect.Descriptor instead.
 func (*ApproveApplicationRequest) Descriptor() ([]byte, []int) {
-	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{8}
+	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ApproveApplicationRequest) GetApplicationId() string {
@@ -893,7 +899,7 @@ type RejectApplicationRequest struct {
 
 func (x *RejectApplicationRequest) Reset() {
 	*x = RejectApplicationRequest{}
-	mi := &file_kyc_v1_kyc_proto_msgTypes[9]
+	mi := &file_kyc_v1_kyc_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -905,7 +911,7 @@ func (x *RejectApplicationRequest) String() string {
 func (*RejectApplicationRequest) ProtoMessage() {}
 
 func (x *RejectApplicationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kyc_v1_kyc_proto_msgTypes[9]
+	mi := &file_kyc_v1_kyc_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -918,7 +924,7 @@ func (x *RejectApplicationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RejectApplicationRequest.ProtoReflect.Descriptor instead.
 func (*RejectApplicationRequest) Descriptor() ([]byte, []int) {
-	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{9}
+	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RejectApplicationRequest) GetApplicationId() string {
@@ -954,7 +960,7 @@ type RequestMoreDocumentsRequest struct {
 
 func (x *RequestMoreDocumentsRequest) Reset() {
 	*x = RequestMoreDocumentsRequest{}
-	mi := &file_kyc_v1_kyc_proto_msgTypes[10]
+	mi := &file_kyc_v1_kyc_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -966,7 +972,7 @@ func (x *RequestMoreDocumentsRequest) String() string {
 func (*RequestMoreDocumentsRequest) ProtoMessage() {}
 
 func (x *RequestMoreDocumentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kyc_v1_kyc_proto_msgTypes[10]
+	mi := &file_kyc_v1_kyc_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -979,7 +985,7 @@ func (x *RequestMoreDocumentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestMoreDocumentsRequest.ProtoReflect.Descriptor instead.
 func (*RequestMoreDocumentsRequest) Descriptor() ([]byte, []int) {
-	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{10}
+	return file_kyc_v1_kyc_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *RequestMoreDocumentsRequest) GetApplicationId() string {
@@ -1050,11 +1056,11 @@ const file_kyc_v1_kyc_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"3\n" +
 	"\x18SubmitApplicationRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"e\n" +
-	"\x15GetApplicationRequest\x12'\n" +
-	"\x0eapplication_id\x18\x01 \x01(\tH\x00R\rapplicationId\x12\x19\n" +
-	"\auser_id\x18\x02 \x01(\tH\x00R\x06userIdB\b\n" +
-	"\x06target\"\x9f\x01\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"B\n" +
+	"\x19GetApplicationByIDRequest\x12%\n" +
+	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\"8\n" +
+	"\x1dGetApplicationByUserIDRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x9f\x01\n" +
 	"\x17ListApplicationsRequest\x125\n" +
 	"\bstatuses\x18\x01 \x03(\x0e2\x19.kyc.v1.ApplicationStatusR\bstatuses\x12\x1f\n" +
 	"\vreviewer_id\x18\x02 \x01(\tR\n" +
@@ -1104,11 +1110,12 @@ const file_kyc_v1_kyc_proto_rawDesc = "" +
 	"\vCheckResult\x12\x1c\n" +
 	"\x18CHECK_RESULT_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13CHECK_RESULT_PASSED\x10\x01\x12\x17\n" +
-	"\x13CHECK_RESULT_FAILED\x10\x022\xab\x04\n" +
+	"\x13CHECK_RESULT_FAILED\x10\x022\x89\x05\n" +
 	"\n" +
 	"KycService\x12J\n" +
-	"\x11SubmitApplication\x12 .kyc.v1.SubmitApplicationRequest\x1a\x13.kyc.v1.Application\x12D\n" +
-	"\x0eGetApplication\x12\x1d.kyc.v1.GetApplicationRequest\x1a\x13.kyc.v1.Application\x12U\n" +
+	"\x11SubmitApplication\x12 .kyc.v1.SubmitApplicationRequest\x1a\x13.kyc.v1.Application\x12L\n" +
+	"\x12GetApplicationByID\x12!.kyc.v1.GetApplicationByIDRequest\x1a\x13.kyc.v1.Application\x12T\n" +
+	"\x16GetApplicationByUserID\x12%.kyc.v1.GetApplicationByUserIDRequest\x1a\x13.kyc.v1.Application\x12U\n" +
 	"\x10ListApplications\x12\x1f.kyc.v1.ListApplicationsRequest\x1a .kyc.v1.ListApplicationsResponse\x12H\n" +
 	"\x10ClaimApplication\x12\x1f.kyc.v1.ClaimApplicationRequest\x1a\x13.kyc.v1.Application\x12L\n" +
 	"\x12ApproveApplication\x12!.kyc.v1.ApproveApplicationRequest\x1a\x13.kyc.v1.Application\x12J\n" +
@@ -1128,59 +1135,62 @@ func file_kyc_v1_kyc_proto_rawDescGZIP() []byte {
 }
 
 var file_kyc_v1_kyc_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_kyc_v1_kyc_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_kyc_v1_kyc_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_kyc_v1_kyc_proto_goTypes = []any{
-	(ApplicationStatus)(0),              // 0: kyc.v1.ApplicationStatus
-	(DocumentType)(0),                   // 1: kyc.v1.DocumentType
-	(CheckType)(0),                      // 2: kyc.v1.CheckType
-	(CheckResult)(0),                    // 3: kyc.v1.CheckResult
-	(*Application)(nil),                 // 4: kyc.v1.Application
-	(*KycCheck)(nil),                    // 5: kyc.v1.KycCheck
-	(*KycEvent)(nil),                    // 6: kyc.v1.KycEvent
-	(*SubmitApplicationRequest)(nil),    // 7: kyc.v1.SubmitApplicationRequest
-	(*GetApplicationRequest)(nil),       // 8: kyc.v1.GetApplicationRequest
-	(*ListApplicationsRequest)(nil),     // 9: kyc.v1.ListApplicationsRequest
-	(*ListApplicationsResponse)(nil),    // 10: kyc.v1.ListApplicationsResponse
-	(*ClaimApplicationRequest)(nil),     // 11: kyc.v1.ClaimApplicationRequest
-	(*ApproveApplicationRequest)(nil),   // 12: kyc.v1.ApproveApplicationRequest
-	(*RejectApplicationRequest)(nil),    // 13: kyc.v1.RejectApplicationRequest
-	(*RequestMoreDocumentsRequest)(nil), // 14: kyc.v1.RequestMoreDocumentsRequest
-	(*timestamppb.Timestamp)(nil),       // 15: google.protobuf.Timestamp
+	(ApplicationStatus)(0),                // 0: kyc.v1.ApplicationStatus
+	(DocumentType)(0),                     // 1: kyc.v1.DocumentType
+	(CheckType)(0),                        // 2: kyc.v1.CheckType
+	(CheckResult)(0),                      // 3: kyc.v1.CheckResult
+	(*Application)(nil),                   // 4: kyc.v1.Application
+	(*KycCheck)(nil),                      // 5: kyc.v1.KycCheck
+	(*KycEvent)(nil),                      // 6: kyc.v1.KycEvent
+	(*SubmitApplicationRequest)(nil),      // 7: kyc.v1.SubmitApplicationRequest
+	(*GetApplicationByIDRequest)(nil),     // 8: kyc.v1.GetApplicationByIDRequest
+	(*GetApplicationByUserIDRequest)(nil), // 9: kyc.v1.GetApplicationByUserIDRequest
+	(*ListApplicationsRequest)(nil),       // 10: kyc.v1.ListApplicationsRequest
+	(*ListApplicationsResponse)(nil),      // 11: kyc.v1.ListApplicationsResponse
+	(*ClaimApplicationRequest)(nil),       // 12: kyc.v1.ClaimApplicationRequest
+	(*ApproveApplicationRequest)(nil),     // 13: kyc.v1.ApproveApplicationRequest
+	(*RejectApplicationRequest)(nil),      // 14: kyc.v1.RejectApplicationRequest
+	(*RequestMoreDocumentsRequest)(nil),   // 15: kyc.v1.RequestMoreDocumentsRequest
+	(*timestamppb.Timestamp)(nil),         // 16: google.protobuf.Timestamp
 }
 var file_kyc_v1_kyc_proto_depIdxs = []int32{
 	0,  // 0: kyc.v1.Application.status:type_name -> kyc.v1.ApplicationStatus
 	1,  // 1: kyc.v1.Application.requested_types:type_name -> kyc.v1.DocumentType
-	15, // 2: kyc.v1.Application.submitted_at:type_name -> google.protobuf.Timestamp
-	15, // 3: kyc.v1.Application.decided_at:type_name -> google.protobuf.Timestamp
-	15, // 4: kyc.v1.Application.created_at:type_name -> google.protobuf.Timestamp
-	15, // 5: kyc.v1.Application.updated_at:type_name -> google.protobuf.Timestamp
+	16, // 2: kyc.v1.Application.submitted_at:type_name -> google.protobuf.Timestamp
+	16, // 3: kyc.v1.Application.decided_at:type_name -> google.protobuf.Timestamp
+	16, // 4: kyc.v1.Application.created_at:type_name -> google.protobuf.Timestamp
+	16, // 5: kyc.v1.Application.updated_at:type_name -> google.protobuf.Timestamp
 	5,  // 6: kyc.v1.Application.checks:type_name -> kyc.v1.KycCheck
 	6,  // 7: kyc.v1.Application.events:type_name -> kyc.v1.KycEvent
 	2,  // 8: kyc.v1.KycCheck.type:type_name -> kyc.v1.CheckType
 	3,  // 9: kyc.v1.KycCheck.result:type_name -> kyc.v1.CheckResult
-	15, // 10: kyc.v1.KycCheck.created_at:type_name -> google.protobuf.Timestamp
+	16, // 10: kyc.v1.KycCheck.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 11: kyc.v1.KycEvent.from_status:type_name -> kyc.v1.ApplicationStatus
 	0,  // 12: kyc.v1.KycEvent.to_status:type_name -> kyc.v1.ApplicationStatus
-	15, // 13: kyc.v1.KycEvent.created_at:type_name -> google.protobuf.Timestamp
+	16, // 13: kyc.v1.KycEvent.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 14: kyc.v1.ListApplicationsRequest.statuses:type_name -> kyc.v1.ApplicationStatus
 	4,  // 15: kyc.v1.ListApplicationsResponse.applications:type_name -> kyc.v1.Application
 	1,  // 16: kyc.v1.RequestMoreDocumentsRequest.types:type_name -> kyc.v1.DocumentType
 	7,  // 17: kyc.v1.KycService.SubmitApplication:input_type -> kyc.v1.SubmitApplicationRequest
-	8,  // 18: kyc.v1.KycService.GetApplication:input_type -> kyc.v1.GetApplicationRequest
-	9,  // 19: kyc.v1.KycService.ListApplications:input_type -> kyc.v1.ListApplicationsRequest
-	11, // 20: kyc.v1.KycService.ClaimApplication:input_type -> kyc.v1.ClaimApplicationRequest
-	12, // 21: kyc.v1.KycService.ApproveApplication:input_type -> kyc.v1.ApproveApplicationRequest
-	13, // 22: kyc.v1.KycService.RejectApplication:input_type -> kyc.v1.RejectApplicationRequest
-	14, // 23: kyc.v1.KycService.RequestMoreDocuments:input_type -> kyc.v1.RequestMoreDocumentsRequest
-	4,  // 24: kyc.v1.KycService.SubmitApplication:output_type -> kyc.v1.Application
-	4,  // 25: kyc.v1.KycService.GetApplication:output_type -> kyc.v1.Application
-	10, // 26: kyc.v1.KycService.ListApplications:output_type -> kyc.v1.ListApplicationsResponse
-	4,  // 27: kyc.v1.KycService.ClaimApplication:output_type -> kyc.v1.Application
-	4,  // 28: kyc.v1.KycService.ApproveApplication:output_type -> kyc.v1.Application
-	4,  // 29: kyc.v1.KycService.RejectApplication:output_type -> kyc.v1.Application
-	4,  // 30: kyc.v1.KycService.RequestMoreDocuments:output_type -> kyc.v1.Application
-	24, // [24:31] is the sub-list for method output_type
-	17, // [17:24] is the sub-list for method input_type
+	8,  // 18: kyc.v1.KycService.GetApplicationByID:input_type -> kyc.v1.GetApplicationByIDRequest
+	9,  // 19: kyc.v1.KycService.GetApplicationByUserID:input_type -> kyc.v1.GetApplicationByUserIDRequest
+	10, // 20: kyc.v1.KycService.ListApplications:input_type -> kyc.v1.ListApplicationsRequest
+	12, // 21: kyc.v1.KycService.ClaimApplication:input_type -> kyc.v1.ClaimApplicationRequest
+	13, // 22: kyc.v1.KycService.ApproveApplication:input_type -> kyc.v1.ApproveApplicationRequest
+	14, // 23: kyc.v1.KycService.RejectApplication:input_type -> kyc.v1.RejectApplicationRequest
+	15, // 24: kyc.v1.KycService.RequestMoreDocuments:input_type -> kyc.v1.RequestMoreDocumentsRequest
+	4,  // 25: kyc.v1.KycService.SubmitApplication:output_type -> kyc.v1.Application
+	4,  // 26: kyc.v1.KycService.GetApplicationByID:output_type -> kyc.v1.Application
+	4,  // 27: kyc.v1.KycService.GetApplicationByUserID:output_type -> kyc.v1.Application
+	11, // 28: kyc.v1.KycService.ListApplications:output_type -> kyc.v1.ListApplicationsResponse
+	4,  // 29: kyc.v1.KycService.ClaimApplication:output_type -> kyc.v1.Application
+	4,  // 30: kyc.v1.KycService.ApproveApplication:output_type -> kyc.v1.Application
+	4,  // 31: kyc.v1.KycService.RejectApplication:output_type -> kyc.v1.Application
+	4,  // 32: kyc.v1.KycService.RequestMoreDocuments:output_type -> kyc.v1.Application
+	25, // [25:33] is the sub-list for method output_type
+	17, // [17:25] is the sub-list for method input_type
 	17, // [17:17] is the sub-list for extension type_name
 	17, // [17:17] is the sub-list for extension extendee
 	0,  // [0:17] is the sub-list for field type_name
@@ -1191,17 +1201,13 @@ func file_kyc_v1_kyc_proto_init() {
 	if File_kyc_v1_kyc_proto != nil {
 		return
 	}
-	file_kyc_v1_kyc_proto_msgTypes[4].OneofWrappers = []any{
-		(*GetApplicationRequest_ApplicationId)(nil),
-		(*GetApplicationRequest_UserId)(nil),
-	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_kyc_v1_kyc_proto_rawDesc), len(file_kyc_v1_kyc_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   11,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

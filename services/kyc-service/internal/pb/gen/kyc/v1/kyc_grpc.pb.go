@@ -19,32 +19,27 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	KycService_SubmitApplication_FullMethodName    = "/kyc.v1.KycService/SubmitApplication"
-	KycService_GetApplication_FullMethodName       = "/kyc.v1.KycService/GetApplication"
-	KycService_ListApplications_FullMethodName     = "/kyc.v1.KycService/ListApplications"
-	KycService_ClaimApplication_FullMethodName     = "/kyc.v1.KycService/ClaimApplication"
-	KycService_ApproveApplication_FullMethodName   = "/kyc.v1.KycService/ApproveApplication"
-	KycService_RejectApplication_FullMethodName    = "/kyc.v1.KycService/RejectApplication"
-	KycService_RequestMoreDocuments_FullMethodName = "/kyc.v1.KycService/RequestMoreDocuments"
+	KycService_SubmitApplication_FullMethodName      = "/kyc.v1.KycService/SubmitApplication"
+	KycService_GetApplicationByID_FullMethodName     = "/kyc.v1.KycService/GetApplicationByID"
+	KycService_GetApplicationByUserID_FullMethodName = "/kyc.v1.KycService/GetApplicationByUserID"
+	KycService_ListApplications_FullMethodName       = "/kyc.v1.KycService/ListApplications"
+	KycService_ClaimApplication_FullMethodName       = "/kyc.v1.KycService/ClaimApplication"
+	KycService_ApproveApplication_FullMethodName     = "/kyc.v1.KycService/ApproveApplication"
+	KycService_RejectApplication_FullMethodName      = "/kyc.v1.KycService/RejectApplication"
+	KycService_RequestMoreDocuments_FullMethodName   = "/kyc.v1.KycService/RequestMoreDocuments"
 )
 
 // KycServiceClient is the client API for KycService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type KycServiceClient interface {
-	// Подаёт заявку. Требует заполненной анкеты в customer-service и
-	// подтверждённых документов обязательных типов в filestore-service.
 	SubmitApplication(ctx context.Context, in *SubmitApplicationRequest, opts ...grpc.CallOption) (*Application, error)
-	// Отдаёт заявку по её id либо последнюю заявку клиента.
-	GetApplication(ctx context.Context, in *GetApplicationRequest, opts ...grpc.CallOption) (*Application, error)
-	// Очередь офицера: фильтры по статусу и по тому, кто взял заявку в работу.
+	GetApplicationByID(ctx context.Context, in *GetApplicationByIDRequest, opts ...grpc.CallOption) (*Application, error)
+	GetApplicationByUserID(ctx context.Context, in *GetApplicationByUserIDRequest, opts ...grpc.CallOption) (*Application, error)
 	ListApplications(ctx context.Context, in *ListApplicationsRequest, opts ...grpc.CallOption) (*ListApplicationsResponse, error)
-	// Офицер берёт заявку в работу. Взять уже взятую нельзя.
 	ClaimApplication(ctx context.Context, in *ClaimApplicationRequest, opts ...grpc.CallOption) (*Application, error)
 	ApproveApplication(ctx context.Context, in *ApproveApplicationRequest, opts ...grpc.CallOption) (*Application, error)
-	// Отказ с обязательной причиной.
 	RejectApplication(ctx context.Context, in *RejectApplicationRequest, opts ...grpc.CallOption) (*Application, error)
-	// Возвращает заявку клиенту с просьбой догрузить документы.
 	RequestMoreDocuments(ctx context.Context, in *RequestMoreDocumentsRequest, opts ...grpc.CallOption) (*Application, error)
 }
 
@@ -66,10 +61,20 @@ func (c *kycServiceClient) SubmitApplication(ctx context.Context, in *SubmitAppl
 	return out, nil
 }
 
-func (c *kycServiceClient) GetApplication(ctx context.Context, in *GetApplicationRequest, opts ...grpc.CallOption) (*Application, error) {
+func (c *kycServiceClient) GetApplicationByID(ctx context.Context, in *GetApplicationByIDRequest, opts ...grpc.CallOption) (*Application, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Application)
-	err := c.cc.Invoke(ctx, KycService_GetApplication_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, KycService_GetApplicationByID_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *kycServiceClient) GetApplicationByUserID(ctx context.Context, in *GetApplicationByUserIDRequest, opts ...grpc.CallOption) (*Application, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Application)
+	err := c.cc.Invoke(ctx, KycService_GetApplicationByUserID_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -130,19 +135,13 @@ func (c *kycServiceClient) RequestMoreDocuments(ctx context.Context, in *Request
 // All implementations must embed UnimplementedKycServiceServer
 // for forward compatibility.
 type KycServiceServer interface {
-	// Подаёт заявку. Требует заполненной анкеты в customer-service и
-	// подтверждённых документов обязательных типов в filestore-service.
 	SubmitApplication(context.Context, *SubmitApplicationRequest) (*Application, error)
-	// Отдаёт заявку по её id либо последнюю заявку клиента.
-	GetApplication(context.Context, *GetApplicationRequest) (*Application, error)
-	// Очередь офицера: фильтры по статусу и по тому, кто взял заявку в работу.
+	GetApplicationByID(context.Context, *GetApplicationByIDRequest) (*Application, error)
+	GetApplicationByUserID(context.Context, *GetApplicationByUserIDRequest) (*Application, error)
 	ListApplications(context.Context, *ListApplicationsRequest) (*ListApplicationsResponse, error)
-	// Офицер берёт заявку в работу. Взять уже взятую нельзя.
 	ClaimApplication(context.Context, *ClaimApplicationRequest) (*Application, error)
 	ApproveApplication(context.Context, *ApproveApplicationRequest) (*Application, error)
-	// Отказ с обязательной причиной.
 	RejectApplication(context.Context, *RejectApplicationRequest) (*Application, error)
-	// Возвращает заявку клиенту с просьбой догрузить документы.
 	RequestMoreDocuments(context.Context, *RequestMoreDocumentsRequest) (*Application, error)
 	mustEmbedUnimplementedKycServiceServer()
 }
@@ -157,8 +156,11 @@ type UnimplementedKycServiceServer struct{}
 func (UnimplementedKycServiceServer) SubmitApplication(context.Context, *SubmitApplicationRequest) (*Application, error) {
 	return nil, status.Error(codes.Unimplemented, "method SubmitApplication not implemented")
 }
-func (UnimplementedKycServiceServer) GetApplication(context.Context, *GetApplicationRequest) (*Application, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetApplication not implemented")
+func (UnimplementedKycServiceServer) GetApplicationByID(context.Context, *GetApplicationByIDRequest) (*Application, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetApplicationByID not implemented")
+}
+func (UnimplementedKycServiceServer) GetApplicationByUserID(context.Context, *GetApplicationByUserIDRequest) (*Application, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetApplicationByUserID not implemented")
 }
 func (UnimplementedKycServiceServer) ListApplications(context.Context, *ListApplicationsRequest) (*ListApplicationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListApplications not implemented")
@@ -214,20 +216,38 @@ func _KycService_SubmitApplication_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _KycService_GetApplication_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetApplicationRequest)
+func _KycService_GetApplicationByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetApplicationByIDRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(KycServiceServer).GetApplication(ctx, in)
+		return srv.(KycServiceServer).GetApplicationByID(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: KycService_GetApplication_FullMethodName,
+		FullMethod: KycService_GetApplicationByID_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KycServiceServer).GetApplication(ctx, req.(*GetApplicationRequest))
+		return srv.(KycServiceServer).GetApplicationByID(ctx, req.(*GetApplicationByIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KycService_GetApplicationByUserID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetApplicationByUserIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KycServiceServer).GetApplicationByUserID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KycService_GetApplicationByUserID_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KycServiceServer).GetApplicationByUserID(ctx, req.(*GetApplicationByUserIDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -334,8 +354,12 @@ var KycService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _KycService_SubmitApplication_Handler,
 		},
 		{
-			MethodName: "GetApplication",
-			Handler:    _KycService_GetApplication_Handler,
+			MethodName: "GetApplicationByID",
+			Handler:    _KycService_GetApplicationByID_Handler,
+		},
+		{
+			MethodName: "GetApplicationByUserID",
+			Handler:    _KycService_GetApplicationByUserID_Handler,
 		},
 		{
 			MethodName: "ListApplications",

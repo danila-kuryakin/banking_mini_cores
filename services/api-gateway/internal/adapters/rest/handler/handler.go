@@ -8,6 +8,7 @@ type Handler struct {
 	Auth       *AuthHandler
 	Customer   *CustomerHandler
 	Filestore  *FilestoreHandler
+	Kyc        *KycHandler
 	Middleware *Middleware
 }
 
@@ -16,6 +17,7 @@ func NewHandler(service *service.Service) *Handler {
 		Auth:       NewAuthHandler(service),
 		Customer:   NewCustomerHandler(service),
 		Filestore:  NewFilestoreHandler(service),
+		Kyc:        NewKycHandler(service),
 		Middleware: NewMiddleware(service),
 	}
 }

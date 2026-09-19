@@ -1,5 +1,76 @@
 basePath: /api/v1
 definitions:
+  dto.Application:
+    properties:
+      checks:
+        items:
+          $ref: '#/definitions/dto.Check'
+        type: array
+      created_at:
+        type: string
+      decided_at:
+        type: string
+      events:
+        items:
+          $ref: '#/definitions/dto.Event'
+        type: array
+      id:
+        type: string
+      reason:
+        type: string
+      requested_types:
+        example:
+        - proof_of_address
+        items:
+          type: string
+        type: array
+      reviewer_id:
+        type: string
+      status:
+        enum:
+        - submitted
+        - auto_checks
+        - auto_rejected
+        - in_review
+        - docs_requested
+        - approved
+        - rejected
+        example: in_review
+        type: string
+      submitted_at:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  dto.ApproveApplication:
+    properties:
+      comment:
+        example: всё сходится
+        type: string
+    type: object
+  dto.Check:
+    properties:
+      created_at:
+        type: string
+      details:
+        type: string
+      id:
+        type: string
+      result:
+        enum:
+        - passed
+        - failed
+        example: passed
+        type: string
+      type:
+        enum:
+        - sanctions
+        - age
+        example: sanctions
+        type: string
+    type: object
   dto.CreateOfficerRequest:
     properties:
       email:
@@ -46,6 +117,21 @@ definitions:
       message:
         type: string
     type: object
+  dto.Event:
+    properties:
+      actor_id:
+        type: string
+      comment:
+        type: string
+      created_at:
+        type: string
+      from_status:
+        type: string
+      id:
+        type: string
+      to_status:
+        type: string
+    type: object
   dto.File:
     properties:
       confirmed_at:
@@ -84,6 +170,13 @@ definitions:
         - proof_of_address
         example: passport
         type: string
+    type: object
+  dto.ListApplications:
+    properties:
+      applications:
+        items:
+          $ref: '#/definitions/dto.Application'
+        type: array
     type: object
   dto.ListCustomers:
     properties:
@@ -167,6 +260,28 @@ definitions:
         type: string
       user_id:
         type: string
+    type: object
+  dto.RejectApplication:
+    properties:
+      reason:
+        example: документы не совпадают с анкетой
+        type: string
+    type: object
+  dto.RequestDocuments:
+    properties:
+      comment:
+        example: нужна справка о месте жительства
+        type: string
+      types:
+        example:
+        - proof_of_address
+        items:
+          enum:
+          - passport
+          - selfie
+          - proof_of_address
+          type: string
+        type: array
     type: object
   dto.RequiredFiles:
     properties:
@@ -788,6 +903,78 @@ paths:
       summary: Комплектность файлов
       tags:
       - files
+  /customer/{user_id}/kyc:
+    get:
+      description: Отдаёт последнюю заявку вместе с результатами авто-проверок и историей
+        переходов.
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заявка
+          schema:
+            $ref: '#/definitions/dto.Application'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Заявка принадлежит другому пользователю
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Заявок у клиента нет
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Последняя заявка клиента
+      tags:
+      - kyc
+    post:
+      description: Требует заполненной анкеты и подтверждённых документов (паспорт
+        и селфи). Если по заявке запрашивали документы, в очередь возвращается та
+        же заявка. Проверки идут в фоне, ответ приходит сразу.
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заявка подана
+          schema:
+            $ref: '#/definitions/dto.Application'
+        "400":
+          description: Анкета не заполнена или не хватает документов
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Заявка принадлежит другому пользователю
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: У клиента уже есть активная заявка
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Подать заявку на верификацию
+      tags:
+      - kyc
   /customer/{user_id}/status:
     get:
       description: 'Возвращает текущий статус и момент его последней смены. Возможные
@@ -822,6 +1009,268 @@ paths:
       summary: Статус клиента
       tags:
       - customer
+  /kyc/applications:
+    get:
+      description: 'Очередь для сотрудника: фильтры по статусу и по офицеру, взявшему
+        заявку в работу. Результаты проверок и история в листинге не отдаются.'
+      parameters:
+      - description: Фильтр по статусу
+        enum:
+        - submitted
+        - auto_checks
+        - auto_rejected
+        - in_review
+        - docs_requested
+        - approved
+        - rejected
+        in: query
+        name: status
+        type: string
+      - description: UUID офицера
+        in: query
+        name: reviewer_id
+        type: string
+      - description: Размер страницы
+        in: query
+        name: limit
+        type: integer
+      - description: Смещение
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заявки
+          schema:
+            $ref: '#/definitions/dto.ListApplications'
+        "400":
+          description: Неизвестный статус в фильтре
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Очередь заявок
+      tags:
+      - kyc
+  /kyc/applications/{application_id}:
+    get:
+      description: Заявка вместе с результатами авто-проверок и историей переходов.
+        Для сотрудников.
+      parameters:
+      - description: UUID заявки
+        in: path
+        name: application_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заявка
+          schema:
+            $ref: '#/definitions/dto.Application'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Заявка не найдена
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Заявка по идентификатору
+      tags:
+      - kyc
+  /kyc/applications/{application_id}/approve:
+    post:
+      consumes:
+      - application/json
+      description: Одобряет заявку и переводит клиента в active.
+      parameters:
+      - description: UUID заявки
+        in: path
+        name: application_id
+        required: true
+        type: string
+      - description: Комментарий
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/dto.ApproveApplication'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заявка одобрена
+          schema:
+            $ref: '#/definitions/dto.Application'
+        "400":
+          description: Заявка не в том статусе
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Заявка не найдена
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Одобрить заявку
+      tags:
+      - kyc
+  /kyc/applications/{application_id}/claim:
+    post:
+      description: Закрепляет заявку за текущим сотрудником. Занятую заявку второй
+        раз взять нельзя.
+      parameters:
+      - description: UUID заявки
+        in: path
+        name: application_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заявка закреплена
+          schema:
+            $ref: '#/definitions/dto.Application'
+        "400":
+          description: Заявка уже взята или не в том статусе
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Заявка не найдена
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Взять заявку в работу
+      tags:
+      - kyc
+  /kyc/applications/{application_id}/documents:
+    post:
+      consumes:
+      - application/json
+      description: Возвращает заявку клиенту с просьбой догрузить документы указанных
+        типов. Клиент остаётся на проверке; после загрузки он подаёт ту же заявку
+        снова.
+      parameters:
+      - description: UUID заявки
+        in: path
+        name: application_id
+        required: true
+        type: string
+      - description: Типы документов и комментарий
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RequestDocuments'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заявка возвращена клиенту
+          schema:
+            $ref: '#/definitions/dto.Application'
+        "400":
+          description: Неизвестный тип документа или заявка не в том статусе
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Заявка не найдена
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Запросить документы
+      tags:
+      - kyc
+  /kyc/applications/{application_id}/reject:
+    post:
+      consumes:
+      - application/json
+      description: Отказ с обязательной причиной. Клиент уходит в rejected окончательно
+        - в отличие от авто-отказа, который возвращает его в profile_filled.
+      parameters:
+      - description: UUID заявки
+        in: path
+        name: application_id
+        required: true
+        type: string
+      - description: Причина отказа
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RejectApplication'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Отказ зафиксирован
+          schema:
+            $ref: '#/definitions/dto.Application'
+        "400":
+          description: Причина не указана или заявка не в том статусе
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Заявка не найдена
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Отказать по заявке
+      tags:
+      - kyc
 securityDefinitions:
   BearerAuth:
     description: Access-токен из POST /auth/login в формате "Bearer <token>".

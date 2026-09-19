@@ -24,6 +24,7 @@ func (r *Router) Init(g *gin.Engine) {
 	r.initAuthRoutes(api)
 	r.initCustomerRoutes(api)
 	r.initFileRoutes(api)
+	r.initKycRoutes(api)
 
 	g.GET(domain.SWAGGER_ROUTE, ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
@@ -54,6 +55,35 @@ func (r *Router) initCustomerRoutes(api *gin.RouterGroup) {
 		}
 
 		customers.GET("", r.handler.Middleware.RequireRole(domain.ROLE_OFFICER, domain.ROLE_ADMIN), r.handler.Customer.ListCustomers)
+	}
+}
+
+// Заявка клиента висит под тем же /customer/:user_id, что и анкета с файлами:
+// проверка владения и подстановка "me" достаются от общей группы. Очередь
+// офицера - отдельная ветка /kyc, она не про конкретного клиента.
+func (r *Router) initKycRoutes(api *gin.RouterGroup) {
+	own := api.Group("/customer/:user_id/kyc",
+		r.handler.Middleware.RequireAuth(),
+		r.handler.Middleware.RequireSelfOrRole(domain.USER_ID_PARAM, domain.ROLE_OFFICER, domain.ROLE_ADMIN))
+	{
+		own.POST("", r.handler.Kyc.SubmitApplication)
+		own.GET("", r.handler.Kyc.GetApplication)
+	}
+
+	queue := api.Group("/kyc/applications",
+		r.handler.Middleware.RequireAuth(),
+		r.handler.Middleware.RequireRole(domain.ROLE_OFFICER, domain.ROLE_ADMIN))
+	{
+		queue.GET("", r.handler.Kyc.ListApplications)
+
+		application := queue.Group("/:application_id")
+		{
+			application.GET("", r.handler.Kyc.GetApplicationByID)
+			application.POST("/claim", r.handler.Kyc.ClaimApplication)
+			application.POST("/approve", r.handler.Kyc.ApproveApplication)
+			application.POST("/reject", r.handler.Kyc.RejectApplication)
+			application.POST("/documents", r.handler.Kyc.RequestDocuments)
+		}
 	}
 }
 

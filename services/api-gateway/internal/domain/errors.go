@@ -24,3 +24,8 @@ var (
 	ErrSigningKeyNotFound  = errors.New("signing key is not published by the auth endpoint")
 	ErrSigningKeyMalformed = errors.New("signing key from the auth endpoint is malformed")
 )
+
+var (
+	ErrApplicationStatusUnknown = errors.New("unknown application status")
+	ErrDocumentTypeUnknown      = errors.New("unknown document type")
+)

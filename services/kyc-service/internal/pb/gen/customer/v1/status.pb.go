@@ -101,9 +101,8 @@ func (x *SetStatusRequest) GetActorId() string {
 }
 
 type SetStatusResponse struct {
-	state  protoimpl.MessageState `protogen:"open.v1"`
-	Status CustomerStatus         `protobuf:"varint,1,opt,name=status,proto3,enum=customer.v1.CustomerStatus" json:"status,omitempty"`
-	// Статус до перехода.
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Status          CustomerStatus         `protobuf:"varint,1,opt,name=status,proto3,enum=customer.v1.CustomerStatus" json:"status,omitempty"`
 	PreviousStatus  CustomerStatus         `protobuf:"varint,2,opt,name=previous_status,json=previousStatus,proto3,enum=customer.v1.CustomerStatus" json:"previous_status,omitempty"`
 	StatusChangedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=status_changed_at,json=statusChangedAt,proto3" json:"status_changed_at,omitempty"`
 	unknownFields   protoimpl.UnknownFields

@@ -8,8 +8,8 @@ inputs:
       - proto/auth
       - proto/common
       - proto/customer
+      - proto/kyc
       - proto/filestore
-#      - proto/kyc
 #      - proto/ledger
 #      - proto/notification
 

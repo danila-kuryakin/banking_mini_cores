@@ -1,3 +1,10 @@
+// Копия контракта из services/customer-service/proto/customer/v1/customer.proto.
+// Отличается только go_package: генерация должна лечь в дерево kyc-service.
+//
+// ВАЖНО: копия синхронизируется руками. Меняете контракт в customer-service -
+// переносите изменение сюда и перегенерируйте обе стороны, иначе kyc-service
+// будет собран под старую схему.
+
 syntax = "proto3";
 
 package customer.v1;

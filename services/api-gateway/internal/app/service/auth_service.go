@@ -11,7 +11,6 @@ import (
 	authv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/auth/v1"
 )
 
-// По идее это и сервис и grpc клиент. Запихнул код в сервис ради папочки app.
 type AuthService struct {
 	authClient authv1.AuthServiceClient
 	verifier   *auth.Verifier
