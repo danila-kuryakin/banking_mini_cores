@@ -41,10 +41,11 @@ type Event struct {
 }
 
 type ListApplicationsQuery struct {
-	Status   string `form:"status" example:"in_review"`
-	Reviewer string `form:"reviewer_id"`
-	Limit    int32  `form:"limit"`
-	Offset   int32  `form:"offset"`
+	Statuses   []string `form:"status" example:"in_review"`
+	Reviewer   string   `form:"reviewer_id"`
+	Unassigned bool     `form:"unassigned"`
+	Limit      int32    `form:"limit"`
+	Offset     int32    `form:"offset"`
 }
 
 type ListApplications struct {
@@ -62,4 +63,28 @@ type ApproveApplication struct {
 type RequestDocuments struct {
 	Types   []string `json:"types" example:"proof_of_address" enums:"passport,selfie,proof_of_address"`
 	Comment string   `json:"comment" example:"нужна справка о месте жительства"`
+}
+
+type AddSanctionEntry struct {
+	FirstName string `json:"first_name" example:"Ivan"`
+	LastName  string `json:"last_name" example:"Petrov"`
+	BirthDate string `json:"birth_date" example:"1980-01-15"`
+	Source    string `json:"source" example:"OFAC SDN"`
+}
+
+type SanctionEntry struct {
+	ID        string `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	BirthDate string `json:"birth_date" example:"1980-01-15"`
+	Source    string `json:"source"`
+}
+
+type ListSanctionsQuery struct {
+	Limit  int32 `form:"limit"`
+	Offset int32 `form:"offset"`
+}
+
+type ListSanctions struct {
+	Entries []SanctionEntry `json:"entries"`
 }

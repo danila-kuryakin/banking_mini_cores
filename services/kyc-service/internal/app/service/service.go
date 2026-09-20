@@ -7,10 +7,12 @@ import (
 
 type Service struct {
 	Application *ApplicationService
+	Sanctions   *SanctionsService
 }
 
 func NewService(repo *repository.Repository, clients *client.Clients) *Service {
 	return &Service{
 		Application: NewApplicationService(repo, clients),
+		Sanctions:   NewSanctionsService(repo),
 	}
 }

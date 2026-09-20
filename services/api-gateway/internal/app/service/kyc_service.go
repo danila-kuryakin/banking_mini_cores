@@ -100,3 +100,22 @@ func (s KycService) RequestDocuments(
 		Comment:       comment,
 	})
 }
+
+func (s KycService) AddSanctionEntry(ctx context.Context, in *kycv1.AddSanctionEntryRequest) (*kycv1.SanctionEntry, error) {
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+
+	return s.kycClient.AddSanctionEntry(ctx, in)
+}
+
+func (s KycService) ListSanctions(ctx context.Context, limit, offset int32) ([]*kycv1.SanctionEntry, error) {
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+
+	listed, err := s.kycClient.ListSanctions(ctx, &kycv1.ListSanctionsRequest{Limit: limit, Offset: offset})
+	if err != nil {
+		return nil, err
+	}
+
+	return listed.Entries, nil
+}

@@ -121,6 +121,7 @@ func (r *ApplicationRepo) List(ctx context.Context, filter models.ApplicationFil
 		filter.ReviewerID,
 		filter.Limit,
 		filter.Offset,
+		filter.Unassigned,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list applications: %w", err)

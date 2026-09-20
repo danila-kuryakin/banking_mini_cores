@@ -49,7 +49,7 @@ func (c Check) Passed() bool {
 	return c.Result == CHECK_RESULT_PASSED
 }
 
-// SanctionEntry - совпадение в санкционном списке.
+// SanctionEntry - запись санкционного списка.
 type SanctionEntry struct {
 	ID        uuid.UUID
 	FirstName string

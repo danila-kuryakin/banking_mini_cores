@@ -27,6 +27,8 @@ const (
 	KycService_ApproveApplication_FullMethodName     = "/kyc.v1.KycService/ApproveApplication"
 	KycService_RejectApplication_FullMethodName      = "/kyc.v1.KycService/RejectApplication"
 	KycService_RequestMoreDocuments_FullMethodName   = "/kyc.v1.KycService/RequestMoreDocuments"
+	KycService_AddSanctionEntry_FullMethodName       = "/kyc.v1.KycService/AddSanctionEntry"
+	KycService_ListSanctions_FullMethodName          = "/kyc.v1.KycService/ListSanctions"
 )
 
 // KycServiceClient is the client API for KycService service.
@@ -41,6 +43,8 @@ type KycServiceClient interface {
 	ApproveApplication(ctx context.Context, in *ApproveApplicationRequest, opts ...grpc.CallOption) (*Application, error)
 	RejectApplication(ctx context.Context, in *RejectApplicationRequest, opts ...grpc.CallOption) (*Application, error)
 	RequestMoreDocuments(ctx context.Context, in *RequestMoreDocumentsRequest, opts ...grpc.CallOption) (*Application, error)
+	AddSanctionEntry(ctx context.Context, in *AddSanctionEntryRequest, opts ...grpc.CallOption) (*SanctionEntry, error)
+	ListSanctions(ctx context.Context, in *ListSanctionsRequest, opts ...grpc.CallOption) (*ListSanctionsResponse, error)
 }
 
 type kycServiceClient struct {
@@ -131,6 +135,26 @@ func (c *kycServiceClient) RequestMoreDocuments(ctx context.Context, in *Request
 	return out, nil
 }
 
+func (c *kycServiceClient) AddSanctionEntry(ctx context.Context, in *AddSanctionEntryRequest, opts ...grpc.CallOption) (*SanctionEntry, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SanctionEntry)
+	err := c.cc.Invoke(ctx, KycService_AddSanctionEntry_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *kycServiceClient) ListSanctions(ctx context.Context, in *ListSanctionsRequest, opts ...grpc.CallOption) (*ListSanctionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSanctionsResponse)
+	err := c.cc.Invoke(ctx, KycService_ListSanctions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // KycServiceServer is the server API for KycService service.
 // All implementations must embed UnimplementedKycServiceServer
 // for forward compatibility.
@@ -143,6 +167,8 @@ type KycServiceServer interface {
 	ApproveApplication(context.Context, *ApproveApplicationRequest) (*Application, error)
 	RejectApplication(context.Context, *RejectApplicationRequest) (*Application, error)
 	RequestMoreDocuments(context.Context, *RequestMoreDocumentsRequest) (*Application, error)
+	AddSanctionEntry(context.Context, *AddSanctionEntryRequest) (*SanctionEntry, error)
+	ListSanctions(context.Context, *ListSanctionsRequest) (*ListSanctionsResponse, error)
 	mustEmbedUnimplementedKycServiceServer()
 }
 
@@ -176,6 +202,12 @@ func (UnimplementedKycServiceServer) RejectApplication(context.Context, *RejectA
 }
 func (UnimplementedKycServiceServer) RequestMoreDocuments(context.Context, *RequestMoreDocumentsRequest) (*Application, error) {
 	return nil, status.Error(codes.Unimplemented, "method RequestMoreDocuments not implemented")
+}
+func (UnimplementedKycServiceServer) AddSanctionEntry(context.Context, *AddSanctionEntryRequest) (*SanctionEntry, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddSanctionEntry not implemented")
+}
+func (UnimplementedKycServiceServer) ListSanctions(context.Context, *ListSanctionsRequest) (*ListSanctionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSanctions not implemented")
 }
 func (UnimplementedKycServiceServer) mustEmbedUnimplementedKycServiceServer() {}
 func (UnimplementedKycServiceServer) testEmbeddedByValue()                    {}
@@ -342,6 +374,42 @@ func _KycService_RequestMoreDocuments_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _KycService_AddSanctionEntry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddSanctionEntryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KycServiceServer).AddSanctionEntry(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KycService_AddSanctionEntry_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KycServiceServer).AddSanctionEntry(ctx, req.(*AddSanctionEntryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KycService_ListSanctions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSanctionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KycServiceServer).ListSanctions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KycService_ListSanctions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KycServiceServer).ListSanctions(ctx, req.(*ListSanctionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // KycService_ServiceDesc is the grpc.ServiceDesc for KycService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -380,6 +448,14 @@ var KycService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RequestMoreDocuments",
 			Handler:    _KycService_RequestMoreDocuments_Handler,
+		},
+		{
+			MethodName: "AddSanctionEntry",
+			Handler:    _KycService_AddSanctionEntry_Handler,
+		},
+		{
+			MethodName: "ListSanctions",
+			Handler:    _KycService_ListSanctions_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

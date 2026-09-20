@@ -990,7 +990,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Очередь для сотрудника: фильтры по статусу и по офицеру, взявшему заявку в работу. Результаты проверок и история в листинге не отдаются.",
+                "description": "Очередь для сотрудника. Без фильтров - все заявки. Свободные для взятия в работу: status=in_review\u0026unassigned=true. Свои: reviewer_id=me. Результаты проверок и история в листинге не отдаются.",
                 "produces": [
                     "application/json"
                 ],
@@ -1000,24 +1000,34 @@ const docTemplate = `{
                 "summary": "Очередь заявок",
                 "parameters": [
                     {
-                        "enum": [
-                            "submitted",
-                            "auto_checks",
-                            "auto_rejected",
-                            "in_review",
-                            "docs_requested",
-                            "approved",
-                            "rejected"
-                        ],
-                        "type": "string",
-                        "description": "Фильтр по статусу",
+                        "type": "array",
+                        "items": {
+                            "enum": [
+                                "submitted",
+                                "auto_checks",
+                                "auto_rejected",
+                                "in_review",
+                                "docs_requested",
+                                "approved",
+                                "rejected"
+                            ],
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "Фильтр по статусам, параметр можно повторять",
                         "name": "status",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "UUID офицера",
+                        "description": "UUID офицера или me - текущий сотрудник",
                         "name": "reviewer_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Только заявки, которые никто не взял в работу; нельзя вместе с reviewer_id",
+                        "name": "unassigned",
                         "in": "query"
                     },
                     {
@@ -1041,7 +1051,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Неизвестный статус в фильтре",
+                        "description": "Неизвестный статус или unassigned вместе с reviewer_id",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -1379,9 +1389,148 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/kyc/sanctions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Все люди в санкционном списке, по алфавиту. Записи из этого списка сверяются с анкетой при авто-проверке заявки.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "kyc"
+                ],
+                "summary": "Санкционный список",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Смещение",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Санкционный список",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListSanctions"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректная пагинация",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Запись участвует в авто-проверке новых заявок: совпадение имени, фамилии и даты рождения без учёта регистра даёт авто-отказ. Уже разобранные заявки заново не проверяются.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "kyc"
+                ],
+                "summary": "Добавить человека в санкционный список",
+                "parameters": [
+                    {
+                        "description": "Человек",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AddSanctionEntry"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Запись добавлена",
+                        "schema": {
+                            "$ref": "#/definitions/dto.SanctionEntry"
+                        }
+                    },
+                    "400": {
+                        "description": "Не заполнены или некорректны имя, фамилия, дата рождения",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Человек уже есть в списке",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "dto.AddSanctionEntry": {
+            "type": "object",
+            "properties": {
+                "birth_date": {
+                    "type": "string",
+                    "example": "1980-01-15"
+                },
+                "first_name": {
+                    "type": "string",
+                    "example": "Ivan"
+                },
+                "last_name": {
+                    "type": "string",
+                    "example": "Petrov"
+                },
+                "source": {
+                    "type": "string",
+                    "example": "OFAC SDN"
+                }
+            }
+        },
         "dto.Application": {
             "type": "object",
             "properties": {
@@ -1666,6 +1815,17 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ListSanctions": {
+            "type": "object",
+            "properties": {
+                "entries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.SanctionEntry"
+                    }
+                }
+            }
+        },
         "dto.LoginRequest": {
             "type": "object",
             "required": [
@@ -1816,6 +1976,27 @@ const docTemplate = `{
                 },
                 "ok": {
                     "type": "boolean"
+                }
+            }
+        },
+        "dto.SanctionEntry": {
+            "type": "object",
+            "properties": {
+                "birth_date": {
+                    "type": "string",
+                    "example": "1980-01-15"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
                 }
             }
         },

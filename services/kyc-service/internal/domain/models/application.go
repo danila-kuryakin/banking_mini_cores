@@ -7,10 +7,6 @@ import (
 )
 
 // Application - заявка на верификацию.
-//
-// FirstName, LastName и BirthDate - снимок анкеты на момент подачи: анкета
-// живёт в customer-service и может измениться, а решение по заявке принималось
-// по этим данным.
 type Application struct {
 	ID       uuid.UUID
 	UserID   uuid.UUID
@@ -35,23 +31,20 @@ type Application struct {
 }
 
 // Transition - смена статуса заявки с комментариями почему изменен статус.
-//
-// Reason и RequestedTypes перезаписываются на каждом переходе: повторная
-// подача после docs_requested обязана очистить и причину, и список типов.
 type Transition struct {
 	To             ApplicationStatus
 	ActorID        *uuid.UUID
 	Comment        string
 	Reason         string
 	RequestedTypes []DocumentType
-	// Decided проставляет decided_at: переход стал решением по заявке.
-	Decided bool
+	Decided        bool
 }
 
 // ApplicationFilter - фильтры очереди офицера. Пустой Statuses - все статусы.
 type ApplicationFilter struct {
 	Statuses   []ApplicationStatus
 	ReviewerID *uuid.UUID
+	Unassigned bool
 	Limit      int
 	Offset     int
 }

@@ -72,16 +72,17 @@ func (h KycHandler) GetApplication(c *gin.Context) {
 // ListApplications godoc
 //
 //	@Summary		Очередь заявок
-//	@Description	Очередь для сотрудника: фильтры по статусу и по офицеру, взявшему заявку в работу. Результаты проверок и история в листинге не отдаются.
+//	@Description	Очередь для сотрудника. Без фильтров - все заявки. Свободные для взятия в работу: status=in_review&unassigned=true. Свои: reviewer_id=me. Результаты проверок и история в листинге не отдаются.
 //	@Tags			kyc
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			status			query		string					false	"Фильтр по статусу"	Enums(submitted, auto_checks, auto_rejected, in_review, docs_requested, approved, rejected)
-//	@Param			reviewer_id		query		string					false	"UUID офицера"
+//	@Param			status			query		[]string				false	"Фильтр по статусам, параметр можно повторять"	collectionFormat(multi)	Enums(submitted, auto_checks, auto_rejected, in_review, docs_requested, approved, rejected)
+//	@Param			reviewer_id		query		string					false	"UUID офицера или me - текущий сотрудник"
+//	@Param			unassigned		query		bool					false	"Только заявки, которые никто не взял в работу; нельзя вместе с reviewer_id"
 //	@Param			limit			query		int						false	"Размер страницы"
 //	@Param			offset			query		int						false	"Смещение"
 //	@Success		200				{object}	dto.ListApplications	"Заявки"
-//	@Failure		400				{object}	dto.ErrorResponse		"Неизвестный статус в фильтре"
+//	@Failure		400				{object}	dto.ErrorResponse		"Неизвестный статус или unassigned вместе с reviewer_id"
 //	@Failure		401				{object}	dto.ErrorResponse		"Отсутствует или недействителен access-токен"
 //	@Failure		403				{object}	dto.ErrorResponse		"Недостаточно прав"
 //	@Router			/kyc/applications [get]
@@ -96,19 +97,25 @@ func (h KycHandler) ListApplications(c *gin.Context) {
 
 	req := &kycv1.ListApplicationsRequest{
 		ReviewerId: query.Reviewer,
+		Unassigned: query.Unassigned,
 		Limit:      query.Limit,
 		Offset:     query.Offset,
 	}
 
-	if query.Status != "" {
-		appStatus, err := applicationStatusFromName(query.Status)
+	// "me" в reviewer_id - текущий сотрудник, как и в путях /customer/:user_id.
+	if query.Reviewer == domain.SELF_ALIAS {
+		req.ReviewerId = actorID(c)
+	}
+
+	for _, raw := range query.Statuses {
+		appStatus, err := applicationStatusFromName(raw)
 		if err != nil {
 			writeBindError(c, err)
 
 			return
 		}
 
-		req.Statuses = []kycv1.ApplicationStatus{appStatus}
+		req.Statuses = append(req.Statuses, appStatus)
 	}
 
 	apps, err := h.service.Kyc.ListApplications(c.Request.Context(), req)
@@ -412,4 +419,98 @@ func actorID(c *gin.Context) string {
 	}
 
 	return actor.ID
+}
+
+// AddSanctionEntry godoc
+//
+//	@Summary		Добавить человека в санкционный список
+//	@Description	Запись участвует в авто-проверке новых заявок: совпадение имени, фамилии и даты рождения без учёта регистра даёт авто-отказ. Уже разобранные заявки заново не проверяются.
+//	@Tags			kyc
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		dto.AddSanctionEntry	true	"Человек"
+//	@Success		201		{object}	dto.SanctionEntry		"Запись добавлена"
+//	@Failure		400		{object}	dto.ErrorResponse		"Не заполнены или некорректны имя, фамилия, дата рождения"
+//	@Failure		401		{object}	dto.ErrorResponse		"Отсутствует или недействителен access-токен"
+//	@Failure		403		{object}	dto.ErrorResponse		"Недостаточно прав"
+//	@Failure		409		{object}	dto.ErrorResponse		"Человек уже есть в списке"
+//	@Router			/kyc/sanctions [post]
+func (h KycHandler) AddSanctionEntry(c *gin.Context) {
+	var req dto.AddSanctionEntry
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeBindError(c, err)
+
+		return
+	}
+
+	birthDate, err := parseBirthDate(req.BirthDate)
+	if err != nil {
+		writeError(c, err)
+
+		return
+	}
+
+	entry, err := h.service.Kyc.AddSanctionEntry(c.Request.Context(), &kycv1.AddSanctionEntryRequest{
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		BirthDate: birthDate,
+		Source:    req.Source,
+	})
+	if err != nil {
+		writeError(c, err)
+
+		return
+	}
+
+	c.JSON(http.StatusCreated, sanctionEntryResponse(entry))
+}
+
+// ListSanctions godoc
+//
+//	@Summary		Санкционный список
+//	@Description	Все люди в санкционном списке, по алфавиту. Записи из этого списка сверяются с анкетой при авто-проверке заявки.
+//	@Tags			kyc
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			limit	query		int					false	"Размер страницы"
+//	@Param			offset	query		int					false	"Смещение"
+//	@Success		200		{object}	dto.ListSanctions	"Санкционный список"
+//	@Failure		400		{object}	dto.ErrorResponse	"Некорректная пагинация"
+//	@Failure		401		{object}	dto.ErrorResponse	"Отсутствует или недействителен access-токен"
+//	@Failure		403		{object}	dto.ErrorResponse	"Недостаточно прав"
+//	@Router			/kyc/sanctions [get]
+func (h KycHandler) ListSanctions(c *gin.Context) {
+	var query dto.ListSanctionsQuery
+
+	if err := c.ShouldBindQuery(&query); err != nil {
+		writeBindError(c, err)
+
+		return
+	}
+
+	entries, err := h.service.Kyc.ListSanctions(c.Request.Context(), query.Limit, query.Offset)
+	if err != nil {
+		writeError(c, err)
+
+		return
+	}
+
+	items := make([]dto.SanctionEntry, 0, len(entries))
+	for _, entry := range entries {
+		items = append(items, sanctionEntryResponse(entry))
+	}
+
+	c.JSON(http.StatusOK, dto.ListSanctions{Entries: items})
+}
+
+func sanctionEntryResponse(entry *kycv1.SanctionEntry) dto.SanctionEntry {
+	return dto.SanctionEntry{
+		ID:        entry.Id,
+		FirstName: entry.FirstName,
+		LastName:  entry.LastName,
+		BirthDate: formatBirthDate(entry.BirthDate),
+		Source:    entry.Source,
+	}
 }

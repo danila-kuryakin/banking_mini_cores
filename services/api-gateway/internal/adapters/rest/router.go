@@ -85,6 +85,14 @@ func (r *Router) initKycRoutes(api *gin.RouterGroup) {
 			application.POST("/documents", r.handler.Kyc.RequestDocuments)
 		}
 	}
+
+	sanctions := api.Group("/kyc/sanctions",
+		r.handler.Middleware.RequireAuth(),
+		r.handler.Middleware.RequireRole(domain.ROLE_OFFICER, domain.ROLE_ADMIN))
+	{
+		sanctions.GET("", r.handler.Kyc.ListSanctions)
+		sanctions.POST("", r.handler.Kyc.AddSanctionEntry)
+	}
 }
 
 // Файлы висят под тем же /customer/:user_id, поэтому проверка владения и

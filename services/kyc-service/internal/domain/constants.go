@@ -36,3 +36,9 @@ const (
 const REASON_AUTO_REJECTED = "kyc auto check failed"
 
 const COMMENT_MAX_LENGTH = 500
+
+// Ограничения записи санкционного списка.
+const (
+	NAME_MAX_LENGTH   = 100
+	SOURCE_MAX_LENGTH = 200
+)

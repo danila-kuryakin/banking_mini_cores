@@ -5,6 +5,7 @@ package kyc.v1;
 option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/kyc/v1;kycv1";
 
 import "google/protobuf/timestamp.proto";
+import "google/type/date.proto";
 
 service KycService {
   rpc SubmitApplication(SubmitApplicationRequest) returns (Application);
@@ -15,6 +16,8 @@ service KycService {
   rpc ApproveApplication(ApproveApplicationRequest) returns (Application);
   rpc RejectApplication(RejectApplicationRequest) returns (Application);
   rpc RequestMoreDocuments(RequestMoreDocumentsRequest) returns (Application);
+  rpc AddSanctionEntry(AddSanctionEntryRequest) returns (SanctionEntry);
+  rpc ListSanctions(ListSanctionsRequest) returns (ListSanctionsResponse);
 }
 
 enum ApplicationStatus {
@@ -100,6 +103,7 @@ message ListApplicationsRequest {
   string reviewer_id = 2;
   int32 limit = 3;
   int32 offset = 4;
+  bool unassigned = 5;
 }
 
 message ListApplicationsResponse {
@@ -128,4 +132,28 @@ message RequestMoreDocumentsRequest {
   string officer_id = 2;
   repeated DocumentType types = 3;
   string comment = 4;
+}
+
+message SanctionEntry {
+  string id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  google.type.Date birth_date = 4;
+  string source = 5;
+}
+
+message AddSanctionEntryRequest {
+  string first_name = 1;
+  string last_name = 2;
+  google.type.Date birth_date = 3;
+  string source = 4;
+}
+
+message ListSanctionsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message ListSanctionsResponse {
+  repeated SanctionEntry entries = 1;
 }

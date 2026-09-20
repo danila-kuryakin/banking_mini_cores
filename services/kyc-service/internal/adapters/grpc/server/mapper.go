@@ -1,6 +1,9 @@
 package server
 
 import (
+	"time"
+
+	"google.golang.org/genproto/googleapis/type/date"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/domain/models"
@@ -186,6 +189,35 @@ func statusesFromProto(statuses []kycv1.ApplicationStatus) []models.ApplicationS
 		if domainStatus, ok := statusFromProtoMap[protoStatus]; ok {
 			out = append(out, domainStatus)
 		}
+	}
+
+	return out
+}
+
+func sanctionEntryToProto(entry *models.SanctionEntry) *kycv1.SanctionEntry {
+	return &kycv1.SanctionEntry{
+		Id:        entry.ID.String(),
+		FirstName: entry.FirstName,
+		LastName:  entry.LastName,
+		BirthDate: &date.Date{
+			Year:  int32(entry.BirthDate.Year()),
+			Month: int32(entry.BirthDate.Month()),
+			Day:   int32(entry.BirthDate.Day()),
+		},
+		Source: entry.Source,
+	}
+}
+
+// dateFromProto ждёт уже проверенную интерцептором дату.
+func dateFromProto(in *date.Date) time.Time {
+	return time.Date(int(in.Year), time.Month(in.Month), int(in.Day), 0, 0, 0, 0, time.UTC)
+}
+
+func sanctionEntriesToProto(entries []models.SanctionEntry) []*kycv1.SanctionEntry {
+	out := make([]*kycv1.SanctionEntry, 0, len(entries))
+
+	for i := range entries {
+		out = append(out, sanctionEntryToProto(&entries[i]))
 	}
 
 	return out

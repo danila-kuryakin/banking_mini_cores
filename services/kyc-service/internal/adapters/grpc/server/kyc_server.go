@@ -69,9 +69,10 @@ func (s *KycServer) GetApplicationByUserID(ctx context.Context, in *kycv1.GetApp
 
 func (s *KycServer) ListApplications(ctx context.Context, in *kycv1.ListApplicationsRequest) (*kycv1.ListApplicationsResponse, error) {
 	filter := models.ApplicationFilter{
-		Statuses: statusesFromProto(in.Statuses),
-		Limit:    int(in.Limit),
-		Offset:   int(in.Offset),
+		Statuses:   statusesFromProto(in.Statuses),
+		Unassigned: in.Unassigned,
+		Limit:      int(in.Limit),
+		Offset:     int(in.Offset),
 	}
 
 	if in.ReviewerId != "" {
@@ -154,6 +155,29 @@ func (s *KycServer) RequestMoreDocuments(ctx context.Context, in *kycv1.RequestM
 
 // fail переводит доменную ошибку в статус наружу. Всё, что не разобрано,
 // уходит как fallback, а причина остаётся в логе.
+func (s *KycServer) AddSanctionEntry(ctx context.Context, in *kycv1.AddSanctionEntryRequest) (*kycv1.SanctionEntry, error) {
+	entry, err := s.service.Sanctions.Add(ctx, models.SanctionEntry{
+		FirstName: in.FirstName,
+		LastName:  in.LastName,
+		BirthDate: dateFromProto(in.BirthDate),
+		Source:    in.Source,
+	})
+	if err != nil {
+		return nil, s.fail("failed to add sanction entry", err, domain.ErrAddSanctionFailed)
+	}
+
+	return sanctionEntryToProto(entry), nil
+}
+
+func (s *KycServer) ListSanctions(ctx context.Context, in *kycv1.ListSanctionsRequest) (*kycv1.ListSanctionsResponse, error) {
+	entries, err := s.service.Sanctions.List(ctx, int(in.Limit), int(in.Offset))
+	if err != nil {
+		return nil, s.fail("failed to list sanction entries", err, domain.ErrListSanctionsFailed)
+	}
+
+	return &kycv1.ListSanctionsResponse{Entries: sanctionEntriesToProto(entries)}, nil
+}
+
 func (s *KycServer) fail(msg string, err error, fallback error, logArgs ...any) error {
 	switch {
 	case errors.Is(err, domain.ErrApplicationNotFound):
@@ -174,6 +198,8 @@ func (s *KycServer) fail(msg string, err error, fallback error, logArgs ...any) 
 		return domain.ErrReasonIsRequired
 	case errors.Is(err, domain.ErrDocumentTypesRequired):
 		return domain.ErrTypesRequired
+	case errors.Is(err, domain.ErrSanctionEntryExists):
+		return domain.ErrSanctionExists
 	}
 
 	if _, isStatus := status.FromError(err); isStatus {

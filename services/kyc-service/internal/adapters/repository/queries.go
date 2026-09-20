@@ -36,12 +36,13 @@ const (
 		ORDER BY created_at DESC, id DESC
 		LIMIT 1`
 
-	// Возвращает очередь для офицера; пустой массив статусов и NULL в reviewer_id означают "без фильтра".
+	// Возвращает очередь для офицера; пустые статусы и NULL в reviewer_id - без фильтра, $5 - только ничьи заявки.
 	LIST_APPLICATIONS_QUERY = `
 		SELECT ` + APPLICATION_COLUMNS + `
 		FROM ` + TABLE_APPLICATIONS + `
 		WHERE (cardinality($1::application_status[]) = 0 OR status = ANY($1::application_status[]))
 		  AND ($2::uuid IS NULL OR reviewer_id = $2::uuid)
+		  AND (NOT $5::boolean OR reviewer_id IS NULL)
 		ORDER BY created_at DESC, id DESC
 		LIMIT $3 OFFSET $4`
 
@@ -146,3 +147,18 @@ const FIND_SANCTION_QUERY = `
 		  AND lower(first_name) = lower($2)
 		  AND birth_date = $3
 		LIMIT 1`
+
+// Добавляет человека в санкционный список; дубль падает на уникальном индексе без учёта регистра.
+const INSERT_SANCTION_QUERY = `
+		INSERT INTO ` + TABLE_SANCTIONS + ` (
+			first_name, last_name, birth_date, source
+		)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, first_name, last_name, birth_date, source`
+
+// Отдаёт санкционный список по алфавиту; сортировка без учёта регистра, как и сверка.
+const LIST_SANCTIONS_QUERY = `
+		SELECT id, first_name, last_name, birth_date, source
+		FROM ` + TABLE_SANCTIONS + `
+		ORDER BY lower(last_name), lower(first_name), birth_date
+		LIMIT $1 OFFSET $2`

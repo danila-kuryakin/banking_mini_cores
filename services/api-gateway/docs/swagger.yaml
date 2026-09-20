@@ -1,5 +1,20 @@
 basePath: /api/v1
 definitions:
+  dto.AddSanctionEntry:
+    properties:
+      birth_date:
+        example: "1980-01-15"
+        type: string
+      first_name:
+        example: Ivan
+        type: string
+      last_name:
+        example: Petrov
+        type: string
+      source:
+        example: OFAC SDN
+        type: string
+    type: object
   dto.Application:
     properties:
       checks:
@@ -192,6 +207,13 @@ definitions:
           $ref: '#/definitions/dto.File'
         type: array
     type: object
+  dto.ListSanctions:
+    properties:
+      entries:
+        items:
+          $ref: '#/definitions/dto.SanctionEntry'
+        type: array
+    type: object
   dto.LoginRequest:
     properties:
       email:
@@ -293,6 +315,20 @@ definitions:
         type: array
       ok:
         type: boolean
+    type: object
+  dto.SanctionEntry:
+    properties:
+      birth_date:
+        example: "1980-01-15"
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      last_name:
+        type: string
+      source:
+        type: string
     type: object
   dto.TokenPair:
     properties:
@@ -1011,25 +1047,34 @@ paths:
       - customer
   /kyc/applications:
     get:
-      description: 'Очередь для сотрудника: фильтры по статусу и по офицеру, взявшему
-        заявку в работу. Результаты проверок и история в листинге не отдаются.'
+      description: 'Очередь для сотрудника. Без фильтров - все заявки. Свободные для
+        взятия в работу: status=in_review&unassigned=true. Свои: reviewer_id=me. Результаты
+        проверок и история в листинге не отдаются.'
       parameters:
-      - description: Фильтр по статусу
-        enum:
-        - submitted
-        - auto_checks
-        - auto_rejected
-        - in_review
-        - docs_requested
-        - approved
-        - rejected
+      - collectionFormat: multi
+        description: Фильтр по статусам, параметр можно повторять
         in: query
+        items:
+          enum:
+          - submitted
+          - auto_checks
+          - auto_rejected
+          - in_review
+          - docs_requested
+          - approved
+          - rejected
+          type: string
         name: status
-        type: string
-      - description: UUID офицера
+        type: array
+      - description: UUID офицера или me - текущий сотрудник
         in: query
         name: reviewer_id
         type: string
+      - description: Только заявки, которые никто не взял в работу; нельзя вместе
+          с reviewer_id
+        in: query
+        name: unassigned
+        type: boolean
       - description: Размер страницы
         in: query
         name: limit
@@ -1046,7 +1091,7 @@ paths:
           schema:
             $ref: '#/definitions/dto.ListApplications'
         "400":
-          description: Неизвестный статус в фильтре
+          description: Неизвестный статус или unassigned вместе с reviewer_id
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
         "401":
@@ -1269,6 +1314,84 @@ paths:
       security:
       - BearerAuth: []
       summary: Отказать по заявке
+      tags:
+      - kyc
+  /kyc/sanctions:
+    get:
+      description: Все люди в санкционном списке, по алфавиту. Записи из этого списка
+        сверяются с анкетой при авто-проверке заявки.
+      parameters:
+      - description: Размер страницы
+        in: query
+        name: limit
+        type: integer
+      - description: Смещение
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Санкционный список
+          schema:
+            $ref: '#/definitions/dto.ListSanctions'
+        "400":
+          description: Некорректная пагинация
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Санкционный список
+      tags:
+      - kyc
+    post:
+      consumes:
+      - application/json
+      description: 'Запись участвует в авто-проверке новых заявок: совпадение имени,
+        фамилии и даты рождения без учёта регистра даёт авто-отказ. Уже разобранные
+        заявки заново не проверяются.'
+      parameters:
+      - description: Человек
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddSanctionEntry'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Запись добавлена
+          schema:
+            $ref: '#/definitions/dto.SanctionEntry'
+        "400":
+          description: Не заполнены или некорректны имя, фамилия, дата рождения
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Человек уже есть в списке
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Добавить человека в санкционный список
       tags:
       - kyc
 securityDefinitions:
