@@ -27,7 +27,7 @@ func NewConnectionDB(cfg config.DataBaseConfig) (*pgxpool.Pool, error) {
 	// Парсим и разбираем структуру конфига
 	poolcfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		return nil, fmt.Errorf("Не удалось прочесть конфиг дб: %w", err)
+		return nil, fmt.Errorf("parse db config: %w", err)
 	}
 
 	// Настройка пула: что задано в конфиге - берём оттуда, остальное по умолчанию.
@@ -48,7 +48,7 @@ func NewConnectionDB(cfg config.DataBaseConfig) (*pgxpool.Pool, error) {
 	// Создаем Pool
 	pool, err := pgxpool.NewWithConfig(context.Background(), poolcfg)
 	if err != nil {
-		return nil, fmt.Errorf("Не удалось создать Pool: %w", err)
+		return nil, fmt.Errorf("create db pool: %w", err)
 	}
 
 	// Пингуем дб, проверить жива она или нет
@@ -56,7 +56,7 @@ func NewConnectionDB(cfg config.DataBaseConfig) (*pgxpool.Pool, error) {
 	defer cancel()
 
 	if err := pool.Ping(ctx); err != nil {
-		return nil, fmt.Errorf("Связь с дб не установлена: %w", err)
+		return nil, fmt.Errorf("db is unreachable: %w", err)
 	}
 
 	log.Printf("Подключение к db успешно (пул: min %d, max %d)", poolcfg.MinConns, poolcfg.MaxConns)

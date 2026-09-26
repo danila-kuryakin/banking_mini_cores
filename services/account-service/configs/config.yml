@@ -1,0 +1,26 @@
+server:
+  host: localhost
+  port: 50055
+
+database:
+  host: localhost
+  port: 5455
+  user: banking_account
+  password: 123
+  dbname: banking_account
+  ssl_mode: disable
+
+# Валюты, в которых открываются счета; счёт в другой валюте не откроется.
+currencies: [RUB, USD, EUR]
+# Валюта счёта, если клиент её не указал.
+default_currency: RUB
+
+# Номер счёта: balance_prefix + код валюты + контрольный ключ + серийник.
+account_number:
+  balance_prefix: "40817"
+
+upstreams:
+  customer: localhost:50052
+  ledger: localhost:50056
+
+request_timeout: 30s

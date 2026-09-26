@@ -119,36 +119,36 @@ func AllowedTo(from ApplicationStatus) []ApplicationStatus {
 func ValidateStatusTransitions() error {
 	for _, status := range allStatuses {
 		if _, ok := statusTransitions[status]; !ok {
-			return fmt.Errorf("статус %q не описан в таблице переходов", status)
+			return fmt.Errorf("status %q is missing from the transition table", status)
 		}
 	}
 
 	for status, rule := range statusTransitions {
 		if !status.IsValid() {
-			return fmt.Errorf("таблица переходов содержит неизвестный статус %q", status)
+			return fmt.Errorf("transition table contains unknown status %q", status)
 		}
 
 		for _, from := range rule.From {
 			if !from.IsValid() {
-				return fmt.Errorf("статус %q: неизвестный источник перехода %q", status, from)
+				return fmt.Errorf("status %q: unknown transition source %q", status, from)
 			}
 
 			if from == status {
-				return fmt.Errorf("статус %q указан источником самого себя", status)
+				return fmt.Errorf("status %q is listed as its own source", status)
 			}
 		}
 	}
 
 	for _, status := range activeStatuses {
 		if !status.IsValid() {
-			return fmt.Errorf("список активных статусов содержит неизвестный статус %q", status)
+			return fmt.Errorf("active status list contains unknown status %q", status)
 		}
 	}
 
 	for _, status := range allStatuses {
 		if hasExit := len(AllowedTo(status)) > 0; hasExit != status.IsActive() {
 			return fmt.Errorf(
-				"статус %q: активность (%v) разошлась с наличием переходов (%v)",
+				"status %q: active flag (%v) does not match having exits (%v)",
 				status, status.IsActive(), hasExit,
 			)
 		}

@@ -12,6 +12,8 @@ type Service struct {
 	Customer  *CustomerService
 	Filestore *FilestoreService
 	Kyc       *KycService
+	Account   *AccountService
+	Ledger    *LedgerService
 }
 
 func NewService(client *grpc.GRPCClients, verifier *auth.Verifier, timeout time.Duration) *Service {
@@ -20,5 +22,7 @@ func NewService(client *grpc.GRPCClients, verifier *auth.Verifier, timeout time.
 		Customer:  NewCustomerService(client.Customer, timeout),
 		Filestore: NewFilestoreService(client.Filestore, timeout),
 		Kyc:       NewKycService(client.Kyc, timeout),
+		Account:   NewAccountService(client.Account, timeout),
+		Ledger:    NewLedgerService(client.Ledger, timeout),
 	}
 }

@@ -107,10 +107,7 @@ func (m *Middleware) RequireRole(roles ...string) gin.HandlerFunc {
 	}
 }
 
-// RequireSelfOrRole пропускает владельца ресурса и перечисленные роли. Без неё
-// любой авторизованный клиент читал бы и перезаписывал чужой профиль, просто
-// подставив чужой идентификатор в путь: ниже по стеку владение никто не
-// проверяет.
+// RequireSelfOrRole пропускает к ресурсу только перечисленные роли.
 func (m *Middleware) RequireSelfOrRole(param string, roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		actor, ok := ActorFrom(c)
@@ -159,10 +156,6 @@ func bearerToken(c *gin.Context) (string, bool) {
 	return accessToken, accessToken != ""
 }
 
-// normalizeRole приводит claim "role" из access-токена к доменному имени роли.
-// Auth-service кладёт туда значение в нижнем регистре ("client"), но имена
-// значений enum'а common.v1.Role выглядят как "ROLE_CLIENT" - принимаем обе
-// формы, чтобы смена формата claim'а не ломала авторизацию молча.
 func normalizeRole(raw string) (string, error) {
 	name := strings.ToLower(strings.TrimSpace(raw))
 	name = strings.TrimPrefix(name, strings.ToLower(domain.ROLE_ENUM_PREFIX))

@@ -33,6 +33,10 @@ import (
 //	@tag.description			Карточка клиента, профиль и статус
 //	@tag.name					files
 //	@tag.description			Загрузка и выдача файлов клиента через presigned-ссылки
+//	@tag.name					accounts
+//	@tag.description			Счета клиента: открытие, блокировка, закрытие, баланс
+//	@tag.name					ledger
+//	@tag.description			Переводы, пополнения и выписки; суммы в минорных единицах валюты
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))

@@ -89,11 +89,11 @@ func NewKafkaReader(cfg config.KafkaConfig, topic string) (*kafka.Reader, error)
 	}
 
 	if topic == "" {
-		return nil, fmt.Errorf("kafka: не задан топик для чтения")
+		return nil, fmt.Errorf("kafka: topic to read is not set")
 	}
 
 	if cfg.GroupID == "" {
-		return nil, fmt.Errorf("kafka: не задан group_id, читать топик %q некому", topic)
+		return nil, fmt.Errorf("kafka: group_id is not set, nobody would read topic %q", topic)
 	}
 
 	if err := PingKafka(cfg); err != nil {
@@ -167,7 +167,7 @@ func PingKafka(cfg config.KafkaConfig) error {
 		return nil
 	}
 
-	return fmt.Errorf("Связь с kafka не установлена (брокеры %v): %w", brokers, lastErr)
+	return fmt.Errorf("kafka is unreachable (brokers %v): %w", brokers, lastErr)
 }
 
 // requiredAcks переводит настройку конфига в константу клиента. Значения уже

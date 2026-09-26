@@ -28,7 +28,7 @@ func Up(cfg config.DataBaseConfig, fsys fs.FS, dir string) (err error) {
 	defer func() { err = errors.Join(err, closeMigrate(m)) }()
 
 	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return fmt.Errorf("не удалось накатить миграции: %w", err)
+		return fmt.Errorf("apply migrations: %w", err)
 	}
 	return nil
 }
@@ -42,7 +42,7 @@ func Down(cfg config.DataBaseConfig, fsys fs.FS, dir string) (err error) {
 	defer func() { err = errors.Join(err, closeMigrate(m)) }()
 
 	if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return fmt.Errorf("не удалось откатить миграции: %w", err)
+		return fmt.Errorf("roll back migrations: %w", err)
 	}
 	return nil
 }
@@ -50,7 +50,7 @@ func Down(cfg config.DataBaseConfig, fsys fs.FS, dir string) (err error) {
 // Steps двигает схему на n шагов: n > 0 — вверх, n < 0 — вниз.
 func Steps(cfg config.DataBaseConfig, fsys fs.FS, dir string, n int) (err error) {
 	if n == 0 {
-		return errors.New("миграции: шаг не может быть нулевым")
+		return errors.New("migrations: step must not be zero")
 	}
 
 	m, err := newMigrate(cfg, fsys, dir)
@@ -60,7 +60,7 @@ func Steps(cfg config.DataBaseConfig, fsys fs.FS, dir string, n int) (err error)
 	defer func() { err = errors.Join(err, closeMigrate(m)) }()
 
 	if err := m.Steps(n); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return fmt.Errorf("не удалось сдвинуть схему на %d шагов: %w", n, err)
+		return fmt.Errorf("move schema by %d steps: %w", n, err)
 	}
 	return nil
 }
@@ -82,7 +82,7 @@ func Version(cfg config.DataBaseConfig, fsys fs.FS, dir string) (version uint, d
 		return 0, false, false, nil
 	}
 	if err != nil {
-		return 0, false, false, fmt.Errorf("не удалось прочитать версию схемы: %w", err)
+		return 0, false, false, fmt.Errorf("read schema version: %w", err)
 	}
 	return version, dirty, true, nil
 }
@@ -97,7 +97,7 @@ func Force(cfg config.DataBaseConfig, fsys fs.FS, dir string, version int) (err 
 	defer func() { err = errors.Join(err, closeMigrate(m)) }()
 
 	if err := m.Force(version); err != nil {
-		return fmt.Errorf("не удалось выставить версию %d: %w", version, err)
+		return fmt.Errorf("force schema version %d: %w", version, err)
 	}
 	return nil
 }
@@ -106,14 +106,14 @@ func Force(cfg config.DataBaseConfig, fsys fs.FS, dir string, version int) (err 
 func newMigrate(cfg config.DataBaseConfig, fsys fs.FS, dir string) (*migrate.Migrate, error) {
 	src, err := iofs.New(fsys, dir)
 	if err != nil {
-		return nil, fmt.Errorf("не удалось прочитать миграции из %q: %w", dir, err)
+		return nil, fmt.Errorf("read migrations from %q: %w", dir, err)
 	}
 
 	// GetDSN отдаёт строку вида "host=... port=... ...", а не URL. pgx её
 	// принимает, поэтому URL-форма pgx5:// здесь не нужна.
 	db, err := sql.Open("pgx", cfg.GetDSN())
 	if err != nil {
-		return nil, fmt.Errorf("не удалось открыть соединение с БД: %w", err)
+		return nil, fmt.Errorf("open db connection: %w", err)
 	}
 
 	// Пустого конфига достаточно: драйвер сам добирает имя базы и схему
@@ -121,14 +121,14 @@ func newMigrate(cfg config.DataBaseConfig, fsys fs.FS, dir string) (*migrate.Mig
 	drv, err := pgxdb.WithInstance(db, &pgxdb.Config{})
 	if err != nil {
 		return nil, errors.Join(
-			fmt.Errorf("не удалось создать драйвер миграций: %w", err),
+			fmt.Errorf("create migration driver: %w", err),
 			db.Close(),
 		)
 	}
 
 	m, err := migrate.NewWithInstance("iofs", src, "pgx5", drv)
 	if err != nil {
-		return nil, fmt.Errorf("не удалось создать мигратор: %w", err)
+		return nil, fmt.Errorf("create migrator: %w", err)
 	}
 	return m, nil
 }
@@ -138,10 +138,10 @@ func newMigrate(cfg config.DataBaseConfig, fsys fs.FS, dir string) (*migrate.Mig
 func closeMigrate(m *migrate.Migrate) error {
 	srcErr, dbErr := m.Close()
 	if srcErr != nil {
-		srcErr = fmt.Errorf("не удалось закрыть источник миграций: %w", srcErr)
+		srcErr = fmt.Errorf("close migration source: %w", srcErr)
 	}
 	if dbErr != nil {
-		dbErr = fmt.Errorf("не удалось закрыть соединение с БД: %w", dbErr)
+		dbErr = fmt.Errorf("close db connection: %w", dbErr)
 	}
 	return errors.Join(srcErr, dbErr)
 }

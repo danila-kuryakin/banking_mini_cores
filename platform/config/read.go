@@ -43,7 +43,7 @@ func Read[T any](path string, opts ...Option) (*T, error) {
 	// 1. .env -> окружение процесса. Уже установленные переменные
 	// не перезатираются: реальный ENV приоритетнее файла.
 	if err := godotenv.Load(o.envFile); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, fmt.Errorf("чтение %s: %w", o.envFile, err)
+		return nil, fmt.Errorf("read %s: %w", o.envFile, err)
 	}
 
 	v := viper.New()
@@ -63,7 +63,7 @@ func Read[T any](path string, opts ...Option) (*T, error) {
 	var cfg T
 	t := reflect.TypeOf(cfg)
 	if t.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("config: T должен быть структурой, получено %s", t.Kind())
+		return nil, fmt.Errorf("config: T must be a struct, got %s", t.Kind())
 	}
 	for _, key := range structKeys(t, "") {
 		if err := v.BindEnv(key); err != nil {
@@ -75,17 +75,17 @@ func Read[T any](path string, opts ...Option) (*T, error) {
 	if err := v.ReadInConfig(); err != nil {
 		var notFound viper.ConfigFileNotFoundError
 		if !errors.As(err, &notFound) || !o.optional {
-			return nil, fmt.Errorf("чтение конфига: %w", err)
+			return nil, fmt.Errorf("read config: %w", err)
 		}
 	}
 
 	if err := v.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("разбор конфига: %w", err)
+		return nil, fmt.Errorf("parse config: %w", err)
 	}
 
 	if val, ok := any(&cfg).(Validator); ok {
 		if err := val.Validate(); err != nil {
-			return nil, fmt.Errorf("валидация конфига: %w", err)
+			return nil, fmt.Errorf("validate config: %w", err)
 		}
 	}
 	return &cfg, nil

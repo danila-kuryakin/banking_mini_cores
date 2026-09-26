@@ -3,14 +3,14 @@ version: v2
 inputs:
   - directory: .
     paths:
-#      - proto/account
+      - proto/account
 #      - proto/antifraud
       - proto/auth
       - proto/common
       - proto/customer
       - proto/kyc
       - proto/filestore
-#      - proto/ledger
+      - proto/ledger
 #      - proto/notification
 
 plugins:

@@ -25,6 +25,8 @@ func (r *Router) Init(g *gin.Engine) {
 	r.initCustomerRoutes(api)
 	r.initFileRoutes(api)
 	r.initKycRoutes(api)
+	r.initAccountRoutes(api)
+	r.initLedgerRoutes(api)
 
 	g.GET(domain.SWAGGER_ROUTE, ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
@@ -93,6 +95,48 @@ func (r *Router) initKycRoutes(api *gin.RouterGroup) {
 		sanctions.GET("", r.handler.Kyc.ListSanctions)
 		sanctions.POST("", r.handler.Kyc.AddSanctionEntry)
 	}
+}
+
+// Счета клиента висят под /customer/:user_id ради проверки владения; блокировка - отдельная ветка офицера.
+func (r *Router) initAccountRoutes(api *gin.RouterGroup) {
+	own := api.Group("/customer/:user_id/accounts",
+		r.handler.Middleware.RequireAuth(),
+		r.handler.Middleware.RequireSelfOrRole(domain.USER_ID_PARAM, domain.ROLE_OFFICER, domain.ROLE_ADMIN))
+	{
+		own.POST("", r.handler.Account.OpenAccount)
+		own.GET("", r.handler.Account.ListAccounts)
+
+		account := own.Group("/:account_id")
+		{
+			account.GET("", r.handler.Account.GetAccount)
+			account.GET("/balance", r.handler.Account.GetBalance)
+			account.GET("/transactions", r.handler.Ledger.ListTransactions)
+			account.POST("/close", r.handler.Account.CloseAccount)
+		}
+	}
+
+	officer := api.Group("/accounts/:account_id",
+		r.handler.Middleware.RequireAuth(),
+		r.handler.Middleware.RequireRole(domain.ROLE_OFFICER, domain.ROLE_ADMIN))
+	{
+		officer.POST("/block", r.handler.Account.BlockAccount)
+		officer.POST("/unblock", r.handler.Account.UnblockAccount)
+		officer.POST("/deposit", r.handler.Ledger.Deposit)
+		officer.GET("/history", r.handler.Account.ListStatusHistory)
+	}
+}
+
+// Перевод идёт от имени владельца счёта-источника, id инициатора берётся из пути после проверки владения.
+func (r *Router) initLedgerRoutes(api *gin.RouterGroup) {
+	api.POST("/customer/:user_id/transfers",
+		r.handler.Middleware.RequireAuth(),
+		r.handler.Middleware.RequireSelfOrRole(domain.USER_ID_PARAM, domain.ROLE_OFFICER, domain.ROLE_ADMIN),
+		r.handler.Ledger.Transfer)
+
+	api.GET("/transactions/:transaction_id",
+		r.handler.Middleware.RequireAuth(),
+		r.handler.Middleware.RequireRole(domain.ROLE_OFFICER, domain.ROLE_ADMIN),
+		r.handler.Ledger.GetTransaction)
 }
 
 // Файлы висят под тем же /customer/:user_id, поэтому проверка владения и

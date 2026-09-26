@@ -1,0 +1,104 @@
+// Копия services/ledger-service/proto/ledger/v1/ledger.proto, отличается только go_package - меняете контракт, синхронизируйте все копии.
+
+syntax = "proto3";
+
+package ledger.v1;
+
+option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/account-service/internal/pb/gen/ledger/v1;ledgerv1";
+
+import "google/protobuf/timestamp.proto";
+
+service LedgerService {
+  rpc Transfer(TransferRequest) returns (Transaction);
+  rpc Deposit(DepositRequest) returns (Transaction);
+  rpc GetTransaction(GetTransactionRequest) returns (Transaction);
+  rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse);
+  rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse);
+}
+
+enum TransactionType {
+  TRANSACTION_TYPE_UNSPECIFIED = 0;
+  TRANSACTION_TYPE_TRANSFER = 1;
+  TRANSACTION_TYPE_DEPOSIT = 2;
+}
+
+enum TransactionStatus {
+  TRANSACTION_STATUS_UNSPECIFIED = 0;
+  TRANSACTION_STATUS_COMPLETED = 1;
+  TRANSACTION_STATUS_DECLINED = 2;
+}
+
+enum EntryDirection {
+  ENTRY_DIRECTION_UNSPECIFIED = 0;
+  ENTRY_DIRECTION_DEBIT = 1;
+  ENTRY_DIRECTION_CREDIT = 2;
+}
+
+message Entry {
+  string id = 1;
+  string account_id = 2;
+  EntryDirection direction = 3;
+  int64 amount = 4;
+  string currency = 5;
+}
+
+message Transaction {
+  string id = 1;
+  TransactionType type = 2;
+  TransactionStatus status = 3;
+  // У пополнения источник - кассовый счёт леджера.
+  string from_account_id = 4;
+  string to_account_id = 5;
+  // Сумма в минорных единицах валюты.
+  int64 amount = 6;
+  string currency = 7;
+  // Клиент-отправитель перевода или офицер, сделавший пополнение.
+  string initiator_id = 8;
+  // Причина отказа. Непусто только в DECLINED.
+  string decline_reason = 9;
+  google.protobuf.Timestamp created_at = 10;
+  // Проводки. У отклонённой транзакции их нет.
+  repeated Entry entries = 11;
+}
+
+message TransferRequest {
+  // Владелец счёта-источника, гейтвей берёт его из пути после проверки владения.
+  string initiator_id = 1;
+  string from_account_id = 2;
+  string to_account_id = 3;
+  int64 amount = 4;
+  string currency = 5;
+}
+
+message DepositRequest {
+  string account_id = 1;
+  int64 amount = 2;
+  string currency = 3;
+  string officer_id = 4;
+}
+
+message GetTransactionRequest {
+  string transaction_id = 1;
+}
+
+message ListTransactionsRequest {
+  // Непусто - счёт должен принадлежать этому пользователю, иначе NOT_FOUND.
+  string user_id = 1;
+  string account_id = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListTransactionsResponse {
+  repeated Transaction transactions = 1;
+}
+
+message GetBalanceRequest {
+  string account_id = 1;
+}
+
+message GetBalanceResponse {
+  string account_id = 1;
+  int64 amount = 2;
+  string currency = 3;
+}
