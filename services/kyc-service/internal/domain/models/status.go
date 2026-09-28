@@ -1,7 +1,6 @@
 package models
 
 import (
-	"fmt"
 	"slices"
 )
 
@@ -11,7 +10,7 @@ import (
 type ApplicationStatus string
 
 const (
-	STATUS_UNSPECIFIED ApplicationStatus = ""
+	//STATUS_UNSPECIFIED ApplicationStatus = ""
 
 	STATUS_SUBMITTED      ApplicationStatus = "submitted"
 	STATUS_AUTO_CHECKS    ApplicationStatus = "auto_checks"
@@ -76,20 +75,6 @@ func (s ApplicationStatus) IsActive() bool {
 	return slices.Contains(activeStatuses, s)
 }
 
-// CanTransition проверяет переход по таблице.
-func CanTransition(from, to ApplicationStatus) bool {
-	if !from.IsValid() || !to.IsValid() || from == to {
-		return false
-	}
-
-	rule, ok := statusTransitions[to]
-	if !ok {
-		return false
-	}
-
-	return slices.Contains(rule.From, from)
-}
-
 // AllowedFrom отдаёт статусы, из которых можно перейти в to.
 func AllowedFrom(to ApplicationStatus) []ApplicationStatus {
 	rule, ok := statusTransitions[to]
@@ -98,61 +83,4 @@ func AllowedFrom(to ApplicationStatus) []ApplicationStatus {
 	}
 
 	return slices.Clone(rule.From)
-}
-
-// AllowedTo отдаёт статусы, в которые можно уйти из from. Нужен для внятного
-// текста ошибки: "из in_review доступны docs_requested, approved, rejected".
-func AllowedTo(from ApplicationStatus) []ApplicationStatus {
-	targets := make([]ApplicationStatus, 0, len(allStatuses))
-
-	for _, to := range allStatuses {
-		if CanTransition(from, to) {
-			targets = append(targets, to)
-		}
-	}
-
-	return targets
-}
-
-// ValidateStatusTransitions проверяет, что таблица переходов не разошлась со
-// списком статусов. Зовётся из main на старте.
-func ValidateStatusTransitions() error {
-	for _, status := range allStatuses {
-		if _, ok := statusTransitions[status]; !ok {
-			return fmt.Errorf("status %q is missing from the transition table", status)
-		}
-	}
-
-	for status, rule := range statusTransitions {
-		if !status.IsValid() {
-			return fmt.Errorf("transition table contains unknown status %q", status)
-		}
-
-		for _, from := range rule.From {
-			if !from.IsValid() {
-				return fmt.Errorf("status %q: unknown transition source %q", status, from)
-			}
-
-			if from == status {
-				return fmt.Errorf("status %q is listed as its own source", status)
-			}
-		}
-	}
-
-	for _, status := range activeStatuses {
-		if !status.IsValid() {
-			return fmt.Errorf("active status list contains unknown status %q", status)
-		}
-	}
-
-	for _, status := range allStatuses {
-		if hasExit := len(AllowedTo(status)) > 0; hasExit != status.IsActive() {
-			return fmt.Errorf(
-				"status %q: active flag (%v) does not match having exits (%v)",
-				status, status.IsActive(), hasExit,
-			)
-		}
-	}
-
-	return nil
 }

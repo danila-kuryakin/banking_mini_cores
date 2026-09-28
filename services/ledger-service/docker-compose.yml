@@ -1,0 +1,31 @@
+name: banking-ledger
+
+
+# для удобства отладки создал контейнеры
+services:
+  postgres:
+    image: postgres:16
+    container_name: banking-ledger-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-banking_ledger}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123}
+      POSTGRES_DB: ${POSTGRES_DB:-banking_ledger}
+    ports:
+      - "${POSTGRES_PORT:-5456}:5432"
+    volumes:
+      - ledger-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-banking_ledger} -d ${POSTGRES_DB:-banking_ledger}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks: [banking-net]
+
+volumes:
+  ledger-pgdata:
+
+networks:
+  banking-net:
+    external: true

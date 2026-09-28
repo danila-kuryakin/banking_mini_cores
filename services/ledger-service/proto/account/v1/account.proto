@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package account.v1;
+
+option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/ledger-service/internal/pb/gen/account/v1;accountv1";
+
+import "google/protobuf/timestamp.proto";
+
+service AccountService {
+  rpc OpenAccount(OpenAccountRequest) returns (Account);
+  rpc GetAccount(GetAccountRequest) returns (Account);
+  rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+  rpc BlockAccount(BlockAccountRequest) returns (Account);
+  rpc UnblockAccount(UnblockAccountRequest) returns (Account);
+  rpc CloseAccount(CloseAccountRequest) returns (Account);
+  rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse);
+  rpc ListStatusHistory(ListStatusHistoryRequest) returns (ListStatusHistoryResponse);
+}
+
+enum AccountStatus {
+  ACCOUNT_STATUS_UNSPECIFIED = 0;
+  ACCOUNT_STATUS_ACTIVE = 1;
+  ACCOUNT_STATUS_BLOCKED = 2;
+  ACCOUNT_STATUS_CLOSED = 3;
+}
+
+message Account {
+  string id = 1;
+  string user_id = 2;
+  string number = 3;
+  string currency = 4;
+  AccountStatus status = 5;
+  google.protobuf.Timestamp status_changed_at = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message OpenAccountRequest {
+  string user_id = 1;
+  string currency = 2;
+}
+
+message GetAccountRequest {
+  string user_id = 1;
+  string account_id = 2;
+}
+
+message ListAccountsRequest {
+  string user_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListAccountsResponse {
+  repeated Account accounts = 1;
+}
+
+message BlockAccountRequest {
+  string account_id = 1;
+  string officer_id = 2;
+  string reason = 3;
+}
+
+message UnblockAccountRequest {
+  string account_id = 1;
+  string officer_id = 2;
+  string comment = 3;
+}
+
+message CloseAccountRequest {
+  string user_id = 1;
+  string account_id = 2;
+}
+
+message GetBalanceRequest {
+  string user_id = 1;
+  string account_id = 2;
+}
+
+message GetBalanceResponse {
+  string account_id = 1;
+  int64 amount = 2;
+  string currency = 3;
+}
+
+message StatusChange {
+  int64 id = 1;
+  string account_id = 2;
+  AccountStatus from_status = 3;
+  AccountStatus to_status = 4;
+  string actor_id = 5;
+  string reason = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message ListStatusHistoryRequest {
+  string account_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListStatusHistoryResponse {
+  repeated StatusChange changes = 1;
+}

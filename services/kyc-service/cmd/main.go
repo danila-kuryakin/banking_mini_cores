@@ -15,17 +15,11 @@ import (
 	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/app/service"
 	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/app/worker"
 	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/config"
-	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/domain/models"
 	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/migrations"
 )
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-
-	if err := models.ValidateStatusTransitions(); err != nil {
-		logger.Error("invalid application status transitions", "error", err)
-		os.Exit(1)
-	}
 
 	cfg, err := config.Load()
 	if err != nil {
