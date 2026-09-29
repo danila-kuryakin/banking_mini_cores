@@ -5,6 +5,7 @@ inputs:
     paths:
       - proto/ledger
       - proto/account
+      - proto/antifraud
 
 plugins:
   - local: protoc-gen-go

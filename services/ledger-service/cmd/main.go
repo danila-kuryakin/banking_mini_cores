@@ -9,7 +9,6 @@ import (
 
 	conn "github.com/danila-kuryakin/banking_mini_cores/platform/connection"
 	"github.com/danila-kuryakin/banking_mini_cores/platform/migrator"
-	"github.com/danila-kuryakin/banking_mini_cores/services/ledger-service/internal/adapters/antifraud"
 	"github.com/danila-kuryakin/banking_mini_cores/services/ledger-service/internal/adapters/grpc/client"
 	"github.com/danila-kuryakin/banking_mini_cores/services/ledger-service/internal/adapters/kafka"
 	"github.com/danila-kuryakin/banking_mini_cores/services/ledger-service/internal/adapters/repository"
@@ -65,7 +64,7 @@ func main() {
 	}
 	defer clients.Close()
 
-	serv := service.NewService(repo, clients, antifraud.NewAllowAll(), cfg, cash)
+	serv := service.NewService(repo, clients, cfg, cash)
 
 	// Воркер живёт до того же сигнала, что и сервер: grpc_server.NewServer блокирует до SIGINT/SIGTERM.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

@@ -26,8 +26,9 @@ type Balance struct {
 	Currency  Currency
 }
 
-// Verdict - решение антифрода по переводу.
+// Verdict - решение антифрода по переводу; CheckID - запись в журнале антифрода.
 type Verdict struct {
 	Allowed bool
+	CheckID string
 	Reasons []string
 }

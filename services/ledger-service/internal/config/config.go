@@ -11,7 +11,8 @@ import (
 )
 
 type Upstreams struct {
-	Account string `mapstructure:"account"`
+	Account   string `mapstructure:"account"`
+	Antifraud string `mapstructure:"antifraud"`
 }
 
 // Outbox - настройки публикации событий в Kafka.
@@ -36,6 +37,10 @@ type Config struct {
 func (c *Config) Validate() error {
 	if c.Upstreams.Account == "" {
 		return errors.New("upstream address for account-service is empty")
+	}
+
+	if c.Upstreams.Antifraud == "" {
+		return errors.New("upstream address for antifraud-service is empty")
 	}
 
 	currencies, err := models.NewCurrencySet(c.Currencies)

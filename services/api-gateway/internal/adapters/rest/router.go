@@ -27,6 +27,8 @@ func (r *Router) Init(g *gin.Engine) {
 	r.initKycRoutes(api)
 	r.initAccountRoutes(api)
 	r.initLedgerRoutes(api)
+	r.initAntifraudRoutes(api)
+	r.initNotificationRoutes(api)
 
 	g.GET(domain.SWAGGER_ROUTE, ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
@@ -137,6 +139,25 @@ func (r *Router) initLedgerRoutes(api *gin.RouterGroup) {
 		r.handler.Middleware.RequireAuth(),
 		r.handler.Middleware.RequireRole(domain.ROLE_OFFICER, domain.ROLE_ADMIN),
 		r.handler.Ledger.GetTransaction)
+}
+
+// Правила антифрода правят только сотрудники; id офицера берётся из токена.
+func (r *Router) initAntifraudRoutes(api *gin.RouterGroup) {
+	rules := api.Group("/antifraud/rules",
+		r.handler.Middleware.RequireAuth(),
+		r.handler.Middleware.RequireRole(domain.ROLE_OFFICER, domain.ROLE_ADMIN))
+	{
+		rules.GET("", r.handler.Antifraud.ListRules)
+		rules.PATCH("/:"+domain.RULE_CODE_PARAM, r.handler.Antifraud.UpdateRule)
+	}
+}
+
+// Уведомления висят под /customer/:user_id ради проверки владения и подстановки "me".
+func (r *Router) initNotificationRoutes(api *gin.RouterGroup) {
+	api.GET("/customer/:user_id/notifications",
+		r.handler.Middleware.RequireAuth(),
+		r.handler.Middleware.RequireSelfOrRole(domain.USER_ID_PARAM, domain.ROLE_OFFICER, domain.ROLE_ADMIN),
+		r.handler.Notification.ListNotifications)
 }
 
 // Файлы висят под тем же /customer/:user_id, поэтому проверка владения и

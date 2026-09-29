@@ -4,14 +4,14 @@ inputs:
   - directory: .
     paths:
       - proto/account
-#      - proto/antifraud
+      - proto/antifraud
       - proto/auth
       - proto/common
       - proto/customer
       - proto/kyc
       - proto/filestore
       - proto/ledger
-#      - proto/notification
+      - proto/notification
 
 plugins:
   - local: protoc-gen-go

@@ -164,6 +164,10 @@ func (s *LedgerServer) fail(msg string, err error, tx *models.Transaction, fallb
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, domain.ErrSameAccount):
 		return domain.ErrSameAccountTransfer
+	case errors.Is(err, domain.ErrFraudCheckFailed):
+		s.log.Error(msg, append(logArgs, "error", err)...)
+
+		return domain.ErrAntifraudIsDown
 	}
 
 	if _, isStatus := status.FromError(err); isStatus {

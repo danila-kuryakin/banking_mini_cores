@@ -19,6 +19,8 @@ var (
 	// ErrCurrencyMismatch - валюта операции не совпадает с валютой счёта.
 	ErrCurrencyMismatch = errors.New("currency does not match the account currency")
 	ErrSameAccount      = errors.New("source and destination accounts are the same")
+	// ErrFraudCheckFailed - антифрод не ответил; перевод не проводится и не записывается.
+	ErrFraudCheckFailed = errors.New("antifraud check failed")
 )
 
 // Ошибки, приходящие от account-service.
@@ -48,6 +50,7 @@ var (
 	ErrForeignAccount     = status.Error(codes.PermissionDenied, "source account belongs to another user")
 	ErrAccountIsNotActive = status.Error(codes.FailedPrecondition, "both accounts must be active")
 	ErrCurrencyIsMismatch = status.Error(codes.FailedPrecondition, "currency does not match the account currency")
+	ErrAntifraudIsDown    = status.Error(codes.Unavailable, "antifraud check is unavailable, try again later")
 
 	ErrTransferFailed = status.Error(codes.Internal, "failed to transfer")
 	ErrDepositFailed  = status.Error(codes.Internal, "failed to deposit")

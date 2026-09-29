@@ -8,20 +8,24 @@ import (
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/config"
 	accountv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/account/v1"
+	antifraudv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/antifraud/v1"
 	authv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/auth/v1"
 	customerv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/customer/v1"
 	filestorev1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/filestore/v1"
 	kycv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/kyc/v1"
 	ledgerv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/ledger/v1"
+	notificationv1 "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/notification/v1"
 )
 
 type GRPCClients struct {
-	Auth      authv1.AuthServiceClient
-	Customer  customerv1.CustomerServiceClient
-	Filestore filestorev1.FileServiceClient
-	Kyc       kycv1.KycServiceClient
-	Account   accountv1.AccountServiceClient
-	Ledger    ledgerv1.LedgerServiceClient
+	Auth         authv1.AuthServiceClient
+	Customer     customerv1.CustomerServiceClient
+	Filestore    filestorev1.FileServiceClient
+	Kyc          kycv1.KycServiceClient
+	Account      accountv1.AccountServiceClient
+	Ledger       ledgerv1.LedgerServiceClient
+	Antifraud    antifraudv1.AntifraudServiceClient
+	Notification notificationv1.NotificationServiceClient
 
 	conns []*grpc.ClientConn // Для удобного закрытия коннектов клиентов
 }
@@ -64,6 +68,18 @@ func NewGRPCClients(cfg *config.Config) (*GRPCClients, error) {
 		return nil, c.closeOnError(err)
 	}
 	c.Ledger = ledgerv1.NewLedgerServiceClient(ledgerConn)
+
+	antifraudConn, err := c.dial(cfg.Upstreams.Antifraud)
+	if err != nil {
+		return nil, c.closeOnError(err)
+	}
+	c.Antifraud = antifraudv1.NewAntifraudServiceClient(antifraudConn)
+
+	notificationConn, err := c.dial(cfg.Upstreams.Notification)
+	if err != nil {
+		return nil, c.closeOnError(err)
+	}
+	c.Notification = notificationv1.NewNotificationServiceClient(notificationConn)
 
 	return c, nil
 }

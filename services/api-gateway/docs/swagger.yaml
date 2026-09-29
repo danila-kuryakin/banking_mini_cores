@@ -285,6 +285,20 @@ definitions:
           $ref: '#/definitions/dto.File'
         type: array
     type: object
+  dto.ListNotifications:
+    properties:
+      notifications:
+        items:
+          $ref: '#/definitions/dto.Notification'
+        type: array
+    type: object
+  dto.ListRules:
+    properties:
+      rules:
+        items:
+          $ref: '#/definitions/dto.Rule'
+        type: array
+    type: object
   dto.ListSanctions:
     properties:
       entries:
@@ -331,6 +345,20 @@ definitions:
         type: string
     required:
     - refresh_token
+    type: object
+  dto.Notification:
+    properties:
+      created_at:
+        type: string
+      event_id:
+        type: string
+      event_type:
+        example: ledger.transaction_completed
+        type: string
+      id:
+        type: string
+      text:
+        type: string
     type: object
   dto.OpenAccount:
     properties:
@@ -413,6 +441,43 @@ definitions:
         type: array
       ok:
         type: boolean
+    type: object
+  dto.Rule:
+    properties:
+      code:
+        enum:
+        - single_amount_limit
+        - velocity
+        - daily_amount_limit
+        - same_account
+        example: velocity
+        type: string
+      description:
+        type: string
+      enabled:
+        type: boolean
+      params:
+        $ref: '#/definitions/dto.RuleParams'
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  dto.RuleParams:
+    properties:
+      limits:
+        additionalProperties:
+          format: int64
+          type: integer
+        description: Суммы по валютам в минорных единицах; валюта без порога правилом
+          не проверяется.
+        type: object
+      max_count:
+        example: 5
+        type: integer
+      window_seconds:
+        example: 60
+        type: integer
     type: object
   dto.SanctionEntry:
     properties:
@@ -536,6 +601,14 @@ definitions:
         type: string
       phone:
         type: string
+    type: object
+  dto.UpdateRule:
+    properties:
+      enabled:
+        example: true
+        type: boolean
+      params:
+        $ref: '#/definitions/dto.RuleParams'
     type: object
   dto.UploadTicket:
     properties:
@@ -766,6 +839,83 @@ paths:
       summary: Разблокировать счёт
       tags:
       - accounts
+  /antifraud/rules:
+    get:
+      description: Все правила с порогами и признаком включения. Суммы в минорных
+        единицах по валютам.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Правила
+          schema:
+            $ref: '#/definitions/dto.ListRules'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Правила антифрода
+      tags:
+      - antifraud
+  /antifraud/rules/{code}:
+    patch:
+      consumes:
+      - application/json
+      description: Включает, выключает правило или меняет пороги. Не переданное поле
+        не меняется, переданные params заменяют пороги целиком. single_amount_limit
+        и daily_amount_limit читают limits по валютам из конфига, velocity - max_count
+        и window_seconds, у same_account порогов нет. Действует со следующей проверки.
+      parameters:
+      - description: Код правила
+        enum:
+        - single_amount_limit
+        - velocity
+        - daily_amount_limit
+        - same_account
+        in: path
+        name: code
+        required: true
+        type: string
+      - description: Изменения
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateRule'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Правило после изменения
+          schema:
+            $ref: '#/definitions/dto.Rule'
+        "400":
+          description: Пустой запрос или пороги не подходят правилу
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Правило не найдено
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Изменить правило антифрода
+      tags:
+      - antifraud
   /auth/login:
     post:
       consumes:
@@ -1632,6 +1782,48 @@ paths:
       summary: Подать заявку на верификацию
       tags:
       - kyc
+  /customer/{user_id}/notifications:
+    get:
+      description: 'Уведомления, «отправленные» клиенту по событиям переводов и KYC,
+        от новых к старым. Отправка - мок: уведомление только записывается.'
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Размер страницы
+        in: query
+        name: limit
+        type: integer
+      - description: Смещение
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Уведомления
+          schema:
+            $ref: '#/definitions/dto.ListNotifications'
+        "400":
+          description: Некорректная пагинация
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Чужой клиент
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Уведомления клиента
+      tags:
+      - notification
   /customer/{user_id}/status:
     get:
       description: 'Возвращает текущий статус и момент его последней смены. Возможные

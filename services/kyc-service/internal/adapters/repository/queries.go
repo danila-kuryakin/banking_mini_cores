@@ -162,3 +162,20 @@ const LIST_SANCTIONS_QUERY = `
 		FROM ` + TABLE_SANCTIONS + `
 		ORDER BY lower(last_name), lower(first_name), birth_date
 		LIMIT $1 OFFSET $2`
+
+const TABLE_OUTBOX = "outbox"
+
+const INSERT_OUTBOX_QUERY = `
+INSERT INTO ` + TABLE_OUTBOX + ` (id, message_key, event_type, payload, occurred_at)
+VALUES ($1, $2, $3, $4, $5)`
+
+// TAKE_OUTBOX_QUERY с SKIP LOCKED: вторая реплика возьмёт другую пачку, а не будет ждать первую.
+const TAKE_OUTBOX_QUERY = `
+SELECT id, message_key, event_type, payload, occurred_at
+FROM ` + TABLE_OUTBOX + `
+WHERE published_at IS NULL
+ORDER BY id
+LIMIT $1
+FOR UPDATE SKIP LOCKED`
+
+const MARK_OUTBOX_PUBLISHED_QUERY = `UPDATE ` + TABLE_OUTBOX + ` SET published_at = now() WHERE id = ANY($1::uuid[])`

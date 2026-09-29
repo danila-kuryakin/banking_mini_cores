@@ -40,6 +40,8 @@ type TransactionEvent struct {
 	Amount        int64     `json:"amount"`
 	Currency      string    `json:"currency"`
 	InitiatorID   string    `json:"initiator_id,omitempty"`
+	FromUserID    string    `json:"from_user_id,omitempty"`
+	ToUserID      string    `json:"to_user_id,omitempty"`
 	DeclineReason string    `json:"decline_reason,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
 }
@@ -64,6 +66,14 @@ func NewTransactionEvent(tx *Transaction) (OutboxMessage, error) {
 
 	if tx.InitiatorID != nil {
 		event.InitiatorID = tx.InitiatorID.String()
+	}
+
+	if tx.FromUserID != nil {
+		event.FromUserID = tx.FromUserID.String()
+	}
+
+	if tx.ToUserID != nil {
+		event.ToUserID = tx.ToUserID.String()
 	}
 
 	payload, err := json.Marshal(event)

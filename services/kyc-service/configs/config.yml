@@ -21,4 +21,15 @@ auto_checks:
   interval: 5s
   batch_size: 20
 
+# Брокер из services/kafka-service, топик заводит его kafka-init.
+kafka:
+  brokers: [localhost:29092]
+  topic: kyc.events
+  client_id: kyc-service
+
+# Публикация событий заявок из таблицы outbox.
+outbox:
+  interval: 1s
+  batch_size: 100
+
 request_timeout: 30s

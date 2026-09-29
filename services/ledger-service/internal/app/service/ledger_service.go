@@ -56,7 +56,8 @@ func (s *LedgerService) Transfer(ctx context.Context, cmd models.TransferCommand
 		return nil, domain.ErrAccountNotOwned
 	}
 
-	if _, err := s.activeAccount(ctx, cmd.To, currency); err != nil {
+	to, err := s.activeAccount(ctx, cmd.To, currency)
+	if err != nil {
 		return nil, err
 	}
 
@@ -67,15 +68,21 @@ func (s *LedgerService) Transfer(ctx context.Context, cmd models.TransferCommand
 		Amount:      cmd.Amount,
 		Currency:    currency,
 		InitiatorID: &cmd.InitiatorID,
+		FromUserID:  &from.UserID,
+		ToUserID:    &to.UserID,
 	}
 
 	verdict, err := s.fraud.CheckTransfer(ctx, cmd)
 	if err != nil {
-		return nil, fmt.Errorf("transfer: antifraud: %w", err)
+		return nil, fmt.Errorf("transfer: %w: %v", domain.ErrFraudCheckFailed, err)
 	}
 
 	if !verdict.Allowed {
 		reason := domain.DECLINE_ANTIFRAUD
+		if verdict.CheckID != "" {
+			reason += " (check " + verdict.CheckID + ")"
+		}
+
 		if len(verdict.Reasons) > 0 {
 			reason += ": " + strings.Join(verdict.Reasons, ", ")
 		}
@@ -98,7 +105,8 @@ func (s *LedgerService) Deposit(ctx context.Context, cmd models.DepositCommand) 
 		return nil, err
 	}
 
-	if _, err := s.activeAccount(ctx, cmd.AccountID, currency); err != nil {
+	account, err := s.activeAccount(ctx, cmd.AccountID, currency)
+	if err != nil {
 		return nil, err
 	}
 
@@ -114,6 +122,7 @@ func (s *LedgerService) Deposit(ctx context.Context, cmd models.DepositCommand) 
 		Amount:      cmd.Amount,
 		Currency:    currency,
 		InitiatorID: &cmd.OfficerID,
+		ToUserID:    &account.UserID,
 	})
 }
 

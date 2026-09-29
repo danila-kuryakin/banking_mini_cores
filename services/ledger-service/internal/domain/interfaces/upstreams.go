@@ -12,7 +12,7 @@ type Accounts interface {
 	GetAccount(ctx context.Context, id uuid.UUID) (*models.AccountInfo, error)
 }
 
-// FraudChecker - антифрод; пока сервиса нет, стоит заглушка, которая всё разрешает.
+// FraudChecker - антифрод; недоступность сервиса - ошибка перевода, а не разрешение.
 type FraudChecker interface {
 	CheckTransfer(ctx context.Context, cmd models.TransferCommand) (models.Verdict, error)
 }

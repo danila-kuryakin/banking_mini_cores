@@ -314,6 +314,9 @@ func insertTransaction(
 		return nil, fmt.Errorf("insert transaction: %w", err)
 	}
 
+	transaction.FromUserID = p.FromUserID
+	transaction.ToUserID = p.ToUserID
+
 	return transaction, nil
 }
 

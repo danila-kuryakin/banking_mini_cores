@@ -296,6 +296,119 @@ const docTemplate = `{
                 }
             }
         },
+        "/antifraud/rules": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Все правила с порогами и признаком включения. Суммы в минорных единицах по валютам.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "antifraud"
+                ],
+                "summary": "Правила антифрода",
+                "responses": {
+                    "200": {
+                        "description": "Правила",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListRules"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/antifraud/rules/{code}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Включает, выключает правило или меняет пороги. Не переданное поле не меняется, переданные params заменяют пороги целиком. single_amount_limit и daily_amount_limit читают limits по валютам из конфига, velocity - max_count и window_seconds, у same_account порогов нет. Действует со следующей проверки.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "antifraud"
+                ],
+                "summary": "Изменить правило антифрода",
+                "parameters": [
+                    {
+                        "enum": [
+                            "single_amount_limit",
+                            "velocity",
+                            "daily_amount_limit",
+                            "same_account"
+                        ],
+                        "type": "string",
+                        "description": "Код правила",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Изменения",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateRule"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Правило после изменения",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Rule"
+                        }
+                    },
+                    "400": {
+                        "description": "Пустой запрос или пороги не подходят правилу",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Правило не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Возвращает данные пользователя и пару токенов. Access-токен передаётся дальше в заголовке Authorization.",
@@ -1599,6 +1712,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/customer/{user_id}/notifications": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Уведомления, «отправленные» клиенту по событиям переводов и KYC, от новых к старым. Отправка - мок: уведомление только записывается.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notification"
+                ],
+                "summary": "Уведомления клиента",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Смещение",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Уведомления",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListNotifications"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректная пагинация",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Чужой клиент",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/customer/{user_id}/status": {
             "get": {
                 "security": [
@@ -2718,6 +2895,28 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ListNotifications": {
+            "type": "object",
+            "properties": {
+                "notifications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.Notification"
+                    }
+                }
+            }
+        },
+        "dto.ListRules": {
+            "type": "object",
+            "properties": {
+                "rules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.Rule"
+                    }
+                }
+            }
+        },
         "dto.ListSanctions": {
             "type": "object",
             "properties": {
@@ -2786,6 +2985,27 @@ const docTemplate = `{
             ],
             "properties": {
                 "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.Notification": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "event_id": {
+                    "type": "string"
+                },
+                "event_type": {
+                    "type": "string",
+                    "example": "ledger.transaction_completed"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "text": {
                     "type": "string"
                 }
             }
@@ -2910,6 +3130,57 @@ const docTemplate = `{
                 },
                 "ok": {
                     "type": "boolean"
+                }
+            }
+        },
+        "dto.Rule": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "enum": [
+                        "single_amount_limit",
+                        "velocity",
+                        "daily_amount_limit",
+                        "same_account"
+                    ],
+                    "example": "velocity"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "params": {
+                    "$ref": "#/definitions/dto.RuleParams"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.RuleParams": {
+            "type": "object",
+            "properties": {
+                "limits": {
+                    "description": "Суммы по валютам в минорных единицах; валюта без порога правилом не проверяется.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "max_count": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "window_seconds": {
+                    "type": "integer",
+                    "example": 60
                 }
             }
         },
@@ -3089,6 +3360,18 @@ const docTemplate = `{
                 },
                 "phone": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.UpdateRule": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "params": {
+                    "$ref": "#/definitions/dto.RuleParams"
                 }
             }
         },

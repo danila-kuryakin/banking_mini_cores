@@ -57,6 +57,10 @@ const (
 )
 
 const (
+	RULE_CODE_PARAM = "code"
+)
+
+const (
 	APPLICATION_ID_PARAM           = "application_id"
 	APPLICATION_STATUS_ENUM_PREFIX = "APPLICATION_STATUS_"
 	DOCUMENT_TYPE_ENUM_PREFIX      = "DOCUMENT_TYPE_"

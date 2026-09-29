@@ -45,6 +45,10 @@ type Transaction struct {
 
 	// Заполняются только при чтении одной транзакции.
 	Entries []Entry
+
+	// Владельцы счетов на момент проводки: в БД не хранятся, уходят только в событие.
+	FromUserID *uuid.UUID
+	ToUserID   *uuid.UUID
 }
 
 type Entry struct {
@@ -65,6 +69,9 @@ type Posting struct {
 	Amount      int64
 	Currency    Currency
 	InitiatorID *uuid.UUID
+	// Владельцы счетов для события; у кассового счёта владельца нет.
+	FromUserID *uuid.UUID
+	ToUserID   *uuid.UUID
 }
 
 // TransferCommand - перевод между счетами клиентов.

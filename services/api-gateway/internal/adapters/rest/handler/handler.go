@@ -5,23 +5,27 @@ import (
 )
 
 type Handler struct {
-	Auth       *AuthHandler
-	Customer   *CustomerHandler
-	Filestore  *FilestoreHandler
-	Kyc        *KycHandler
-	Account    *AccountHandler
-	Ledger     *LedgerHandler
-	Middleware *Middleware
+	Auth         *AuthHandler
+	Customer     *CustomerHandler
+	Filestore    *FilestoreHandler
+	Kyc          *KycHandler
+	Account      *AccountHandler
+	Ledger       *LedgerHandler
+	Antifraud    *AntifraudHandler
+	Notification *NotificationHandler
+	Middleware   *Middleware
 }
 
 func NewHandler(service *service.Service) *Handler {
 	return &Handler{
-		Auth:       NewAuthHandler(service),
-		Customer:   NewCustomerHandler(service),
-		Filestore:  NewFilestoreHandler(service),
-		Kyc:        NewKycHandler(service),
-		Account:    NewAccountHandler(service),
-		Ledger:     NewLedgerHandler(service),
-		Middleware: NewMiddleware(service),
+		Auth:         NewAuthHandler(service),
+		Customer:     NewCustomerHandler(service),
+		Filestore:    NewFilestoreHandler(service),
+		Kyc:          NewKycHandler(service),
+		Account:      NewAccountHandler(service),
+		Ledger:       NewLedgerHandler(service),
+		Antifraud:    NewAntifraudHandler(service),
+		Notification: NewNotificationHandler(service),
+		Middleware:   NewMiddleware(service),
 	}
 }
