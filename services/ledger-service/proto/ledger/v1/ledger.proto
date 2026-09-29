@@ -44,23 +44,17 @@ message Transaction {
   string id = 1;
   TransactionType type = 2;
   TransactionStatus status = 3;
-  // У пополнения источник - кассовый счёт леджера.
   string from_account_id = 4;
   string to_account_id = 5;
-  // Сумма в минорных единицах валюты.
   int64 amount = 6;
   string currency = 7;
-  // Клиент-отправитель перевода или офицер, сделавший пополнение.
   string initiator_id = 8;
-  // Причина отказа. Непусто только в DECLINED.
   string decline_reason = 9;
   google.protobuf.Timestamp created_at = 10;
-  // Проводки. У отклонённой транзакции их нет.
   repeated Entry entries = 11;
 }
 
 message TransferRequest {
-  // Владелец счёта-источника, гейтвей берёт его из пути после проверки владения.
   string initiator_id = 1;
   string from_account_id = 2;
   string to_account_id = 3;
@@ -80,7 +74,6 @@ message GetTransactionRequest {
 }
 
 message ListTransactionsRequest {
-  // Непусто - счёт должен принадлежать этому пользователю, иначе NOT_FOUND.
   string user_id = 1;
   string account_id = 2;
   int32 limit = 3;

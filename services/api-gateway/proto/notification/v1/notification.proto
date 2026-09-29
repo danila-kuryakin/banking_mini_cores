@@ -6,7 +6,6 @@ option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/api-
 
 import "google/protobuf/timestamp.proto";
 
-// Сервис - консьюмер Kafka, gRPC нужен только чтобы посмотреть, что «отправлено».
 service NotificationService {
   rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse);
 }
@@ -14,7 +13,6 @@ service NotificationService {
 message Notification {
   string id = 1;
   string user_id = 2;
-  // Событие, из которого родилось уведомление.
   string event_id = 3;
   string event_type = 4;
   string text = 5;

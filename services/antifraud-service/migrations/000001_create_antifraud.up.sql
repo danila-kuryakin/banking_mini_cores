@@ -36,10 +36,8 @@ CREATE TABLE af_checks (
     CONSTRAINT af_checks_verdict_rules_chk CHECK ((verdict = 'deny') = (cardinality(triggered_rules) > 0))
 );
 
--- Velocity считает разрешённые проверки счёта за окно.
 CREATE INDEX af_checks_velocity_idx ON af_checks (from_account_id, created_at) WHERE verdict = 'allow';
 
--- Сумма проведённых переводов счёта за день UTC, копится по событиям ledger.
 CREATE TABLE af_daily_totals (
     account_id UUID        NOT NULL,
     day        DATE        NOT NULL,

@@ -42,7 +42,6 @@ func main() {
 	repo := repository.NewRepository(dbPool)
 	serv := service.NewService(repo, cfg)
 
-	// Консьюмеры живут до того же сигнала, что и сервер: grpc_server.NewServer блокирует до SIGINT/SIGTERM.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 

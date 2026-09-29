@@ -52,7 +52,6 @@ func main() {
 	deadLetter := kafka.NewDeadLetter(writer)
 	defer func() { _ = deadLetter.Close() }()
 
-	// Консьюмеры живут до того же сигнала, что и сервер: grpc_server.NewServer блокирует до SIGINT/SIGTERM.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 

@@ -21,8 +21,7 @@ type TransferCheck struct {
 	ToAccountID   uuid.UUID
 	Amount        int64
 	Currency      Currency
-	// Момент проверки: от него отсчитываются окно velocity и текущий день.
-	At time.Time
+	At            time.Time
 }
 
 // Hit - сработавшее правило и объяснение, почему.

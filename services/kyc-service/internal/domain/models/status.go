@@ -4,14 +4,9 @@ import (
 	"slices"
 )
 
-// ApplicationStatus - статус заявки. Значение совпадает с меткой enum
-// application_status в Postgres, поэтому пишется в нижнем регистре и уезжает в
-// базу как есть.
 type ApplicationStatus string
 
 const (
-	//STATUS_UNSPECIFIED ApplicationStatus = ""
-
 	STATUS_SUBMITTED      ApplicationStatus = "submitted"
 	STATUS_AUTO_CHECKS    ApplicationStatus = "auto_checks"
 	STATUS_AUTO_REJECTED  ApplicationStatus = "auto_rejected"
@@ -31,12 +26,6 @@ var allStatuses = []ApplicationStatus{
 	STATUS_REJECTED,
 }
 
-// activeStatuses - заявка ещё в работе и занимает у клиента единственный слот
-// активной заявки.
-//
-// Этот список обязан совпадать с условием частичного уникального индекса
-// applications_active_user_id_key в миграции 000001: индекс - единственное, что
-// на самом деле не даёт завести вторую заявку, а домен только объясняет отказ.
 var activeStatuses = []ApplicationStatus{
 	STATUS_SUBMITTED,
 	STATUS_AUTO_CHECKS,

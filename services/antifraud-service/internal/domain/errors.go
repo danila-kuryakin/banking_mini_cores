@@ -8,11 +8,9 @@ import (
 )
 
 var (
-	ErrRuleNotFound = errors.New("rule not found")
-	// ErrInvalidRuleParams - пороги не подходят правилу: отрицательные, не та валюта, лишние поля.
+	ErrRuleNotFound      = errors.New("rule not found")
 	ErrInvalidRuleParams = errors.New("invalid rule params")
-	// ErrPoisonMessage - событие не разобрать, повтор не поможет.
-	ErrPoisonMessage = errors.New("message cannot be processed")
+	ErrPoisonMessage     = errors.New("message cannot be processed")
 )
 
 // Ошибки, уходящие наружу gRPC-статусами.

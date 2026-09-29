@@ -19,28 +19,21 @@ enum Verdict {
 }
 
 message CheckTransferRequest {
-  // Владелец счёта-источника.
   string initiator_id = 1;
   string from_account_id = 2;
   string to_account_id = 3;
-  // Сумма в минорных единицах валюты.
   int64 amount = 4;
   string currency = 5;
 }
 
 message CheckTransferResponse {
-  // Запись в af_checks, по ней проверку можно найти в журнале.
   string check_id = 1;
   Verdict verdict = 2;
-  // Сработавшие правила. Непусто только у DENY.
   repeated string reasons = 3;
 }
 
-// Пороги правила. Каждое правило читает только свои поля.
 message RuleParams {
-  // Суммы по валютам в минорных единицах. Валюта без порога правилом не проверяется.
   map<string, int64> limits = 1;
-  // Velocity: сколько разрешённых переводов допустимо за окно.
   int32 max_count = 2;
   int32 window_seconds = 3;
 }
@@ -50,7 +43,6 @@ message Rule {
   string description = 2;
   bool enabled = 3;
   RuleParams params = 4;
-  // Кто правил последним. Пусто, пока правило не меняли.
   string updated_by = 5;
   google.protobuf.Timestamp updated_at = 6;
 }

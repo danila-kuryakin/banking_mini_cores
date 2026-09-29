@@ -1,5 +1,3 @@
-// Копия services/ledger-service/proto/ledger/v1/ledger.proto, отличается только go_package - меняете контракт, синхронизируйте все копии.
-
 syntax = "proto3";
 
 package ledger.v1;
