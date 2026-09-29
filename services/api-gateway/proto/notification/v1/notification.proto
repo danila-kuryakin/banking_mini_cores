@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package notification.v1;
+
+option go_package = "github.com/danila-kuryakin/banking_mini_cores/services/api-gateway/internal/pb/gen/notification/v1;notificationv1";
+
+import "google/protobuf/timestamp.proto";
+
+// Сервис - консьюмер Kafka, gRPC нужен только чтобы посмотреть, что «отправлено».
+service NotificationService {
+  rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse);
+}
+
+message Notification {
+  string id = 1;
+  string user_id = 2;
+  // Событие, из которого родилось уведомление.
+  string event_id = 3;
+  string event_type = 4;
+  string text = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message ListNotificationsRequest {
+  string user_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListNotificationsResponse {
+  repeated Notification notifications = 1;
+}

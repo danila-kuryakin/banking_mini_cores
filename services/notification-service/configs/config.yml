@@ -1,0 +1,28 @@
+server:
+  host: localhost
+  port: 50058
+
+database:
+  host: localhost
+  port: 5458
+  user: banking_notification
+  password: 123
+  dbname: banking_notification
+  ssl_mode: disable
+
+# topics - что слушаем, topic - DLQ для событий, которые не удалось обработать.
+kafka:
+  brokers: [localhost:29092]
+  topics: [ledger.events, kyc.events]
+  topic: notification.dlq
+  group_id: notification
+  client_id: notification-service
+  start_offset: first
+
+# После max_attempts неудачных попыток событие уходит в DLQ; паузы удваиваются от min до max.
+consumer:
+  max_attempts: 5
+  min_backoff: 500ms
+  max_backoff: 30s
+
+request_timeout: 30s

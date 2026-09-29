@@ -37,7 +37,7 @@ func (r *Runner) Run(ctx context.Context, app *models.Application) ([]models.Che
 		case models.CHECK_TYPE_AGE:
 			check = ageCheck(app)
 		default:
-			return nil, fmt.Errorf("проверка %q не реализована", checkType)
+			return nil, fmt.Errorf("check %q is not implemented", checkType)
 		}
 
 		if err != nil {

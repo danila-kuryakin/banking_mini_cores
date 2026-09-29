@@ -72,6 +72,8 @@ services:
       kafka:
         condition: service_healthy
     entrypoint: ["/bin/sh", "-c"]
+    # notification.dlq - сообщения, которые notification-service не смог обработать.
+    #
     # Партиций три, чтобы консьюмеров одной группы можно было масштабировать:
     # больше инстансов, чем партиций, работать не начнут. Реплика одна - узел
     # в кластере тоже один.
@@ -81,7 +83,7 @@ services:
     # $$t — это экранированный $t: одиночный $ compose съел бы сам.
     command:
       - |
-        for t in auth.events customer.events kyc.events ledger.events; do
+        for t in auth.events customer.events kyc.events ledger.events notification.dlq; do
           /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 \
             --create --if-not-exists --topic "$$t" \
             --partitions 3 --replication-factor 1

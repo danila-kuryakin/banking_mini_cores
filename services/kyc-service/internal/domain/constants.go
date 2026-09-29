@@ -35,6 +35,12 @@ const (
 // авто-отказа. К ней дописывается, какая именно проверка не прошла.
 const REASON_AUTO_REJECTED = "kyc auto check failed"
 
+// Публикация outbox в Kafka.
+const (
+	DEFAULT_OUTBOX_INTERVAL   = time.Second
+	DEFAULT_OUTBOX_BATCH_SIZE = 100
+)
+
 const COMMENT_MAX_LENGTH = 500
 
 // Ограничения записи санкционного списка.

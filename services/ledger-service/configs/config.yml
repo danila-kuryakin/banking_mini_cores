@@ -1,0 +1,31 @@
+server:
+  host: localhost
+  port: 50056
+
+database:
+  host: localhost
+  port: 5456
+  user: banking_ledger
+  password: 123
+  dbname: banking_ledger
+  ssl_mode: disable
+
+# Должен совпадать со списком account-service: на каждую валюту заводится кассовый счёт.
+currencies: [RUB, USD, EUR]
+
+# Брокер из services/kafka-service, топик заводит его kafka-init.
+kafka:
+  brokers: [localhost:29092]
+  topic: ledger.events
+  client_id: ledger-service
+
+# Публикация событий из таблицы outbox.
+outbox:
+  interval: 1s
+  batch_size: 100
+
+upstreams:
+  account: localhost:50055
+  antifraud: localhost:50057
+
+request_timeout: 30s

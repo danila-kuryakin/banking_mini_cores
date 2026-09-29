@@ -95,14 +95,14 @@ func parseTargets(raw string) ([]checker.Target, error) {
 
 		name, addr, ok := strings.Cut(part, "=")
 		if !ok || name == "" || addr == "" {
-			return nil, fmt.Errorf("цель %q: ожидался формат имя=адрес", part)
+			return nil, fmt.Errorf("target %q: expected name=address format", part)
 		}
 
 		targets = append(targets, checker.Target{Name: name, Addr: addr})
 	}
 
 	if len(targets) == 0 {
-		return nil, fmt.Errorf("список целей пуст")
+		return nil, fmt.Errorf("target list is empty")
 	}
 
 	return targets, nil

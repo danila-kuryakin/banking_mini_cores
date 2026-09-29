@@ -61,6 +61,10 @@ func (r *ApplicationRepo) Create(ctx context.Context, app models.Application) (*
 		return nil, fmt.Errorf("create application: write event: %w", err)
 	}
 
+	if err := writeOutbox(ctx, tx, created, nil); err != nil {
+		return nil, fmt.Errorf("create application: %w", err)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("create application: commit: %w", err)
 	}
@@ -183,6 +187,10 @@ func (r *ApplicationRepo) Transition(
 		return nil, fmt.Errorf("transition application: write event: %w", err)
 	}
 
+	if err := writeOutbox(ctx, tx, updated, t.ActorID); err != nil {
+		return nil, fmt.Errorf("transition application: %w", err)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("transition application: commit: %w", err)
 	}
@@ -232,6 +240,25 @@ func (r *ApplicationRepo) TakeForAutoChecks(ctx context.Context, limit int) ([]*
 	}
 
 	return taken, nil
+}
+
+// writeOutbox кладёт событие о новом статусе в outbox той же транзакцией, что и смену статуса.
+func writeOutbox(ctx context.Context, tx pgx.Tx, app *models.Application, actorID *uuid.UUID) error {
+	msg, ok, err := models.NewApplicationEvent(app, actorID)
+	if err != nil {
+		return fmt.Errorf("build event: %w", err)
+	}
+
+	if !ok {
+		return nil
+	}
+
+	_, err = tx.Exec(ctx, INSERT_OUTBOX_QUERY, msg.ID, msg.Key, msg.EventType, []byte(msg.Payload), msg.OccurredAt)
+	if err != nil {
+		return fmt.Errorf("write outbox: %w", err)
+	}
+
+	return nil
 }
 
 // Claim закрепляет заявку за офицером. Статус при этом не меняется, поэтому и

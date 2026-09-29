@@ -1,0 +1,31 @@
+name: banking-antifraud
+
+
+# для удобства отладки создал контейнеры
+services:
+  postgres:
+    image: postgres:16
+    container_name: banking-antifraud-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-banking_antifraud}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123}
+      POSTGRES_DB: ${POSTGRES_DB:-banking_antifraud}
+    ports:
+      - "${POSTGRES_PORT:-5457}:5432"
+    volumes:
+      - antifraud-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-banking_antifraud} -d ${POSTGRES_DB:-banking_antifraud}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks: [banking-net]
+
+volumes:
+  antifraud-pgdata:
+
+networks:
+  banking-net:
+    external: true

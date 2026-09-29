@@ -46,6 +46,20 @@ const (
 	DEFAULT_JWKS_FETCH_TIMEOUT    = 5 * time.Second
 )
 
+// Счета и леджер: enum-ы наружу отдаются доменными именами без префикса.
+const (
+	ACCOUNT_ID_PARAM               = "account_id"
+	TRANSACTION_ID_PARAM           = "transaction_id"
+	ACCOUNT_STATUS_ENUM_PREFIX     = "ACCOUNT_STATUS_"
+	TRANSACTION_TYPE_ENUM_PREFIX   = "TRANSACTION_TYPE_"
+	TRANSACTION_STATUS_ENUM_PREFIX = "TRANSACTION_STATUS_"
+	ENTRY_DIRECTION_ENUM_PREFIX    = "ENTRY_DIRECTION_"
+)
+
+const (
+	RULE_CODE_PARAM = "code"
+)
+
 const (
 	APPLICATION_ID_PARAM           = "application_id"
 	APPLICATION_STATUS_ENUM_PREFIX = "APPLICATION_STATUS_"

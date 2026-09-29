@@ -1,0 +1,9 @@
+BEGIN;
+
+DROP TABLE IF EXISTS processed_events;
+DROP TABLE IF EXISTS af_daily_totals;
+DROP TABLE IF EXISTS af_checks;
+DROP TABLE IF EXISTS af_rules;
+DROP TYPE IF EXISTS af_verdict;
+
+COMMIT;

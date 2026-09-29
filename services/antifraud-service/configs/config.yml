@@ -1,0 +1,29 @@
+server:
+  host: localhost
+  port: 50057
+
+database:
+  host: localhost
+  port: 5457
+  user: banking_antifraud
+  password: 123
+  dbname: banking_antifraud
+  ssl_mode: disable
+
+# Тот же список, что у account и ledger: пороги правил можно задать только для этих валют.
+currencies: [RUB, USD, EUR]
+
+# Дневные суммы копятся по событиям ledger.events; first - новая группа читает топик с начала.
+kafka:
+  brokers: [localhost:29092]
+  topics: [ledger.events]
+  group_id: antifraud
+  client_id: antifraud-service
+  start_offset: first
+
+# Паузы между повторами, если событие не записалось в базу.
+consumer:
+  min_backoff: 500ms
+  max_backoff: 30s
+
+request_timeout: 30s

@@ -10,6 +10,7 @@ type Repository struct {
 	Application interfaces.ApplicationRepository
 	Check       interfaces.CheckRepository
 	Sanctions   interfaces.SanctionsRepository
+	Outbox      interfaces.OutboxRepository
 }
 
 func NewRepository(db *pgxpool.Pool) *Repository {
@@ -17,5 +18,6 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 		Application: NewApplicationRepo(db),
 		Check:       NewCheckRepo(db),
 		Sanctions:   NewSanctionsRepo(db),
+		Outbox:      NewOutboxRepo(db),
 	}
 }

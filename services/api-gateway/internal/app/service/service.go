@@ -8,17 +8,25 @@ import (
 )
 
 type Service struct {
-	Auth      *AuthService
-	Customer  *CustomerService
-	Filestore *FilestoreService
-	Kyc       *KycService
+	Auth         *AuthService
+	Customer     *CustomerService
+	Filestore    *FilestoreService
+	Kyc          *KycService
+	Account      *AccountService
+	Ledger       *LedgerService
+	Antifraud    *AntifraudService
+	Notification *NotificationService
 }
 
 func NewService(client *grpc.GRPCClients, verifier *auth.Verifier, timeout time.Duration) *Service {
 	return &Service{
-		Auth:      NewAuthService(client.Auth, verifier, timeout),
-		Customer:  NewCustomerService(client.Customer, timeout),
-		Filestore: NewFilestoreService(client.Filestore, timeout),
-		Kyc:       NewKycService(client.Kyc, timeout),
+		Auth:         NewAuthService(client.Auth, verifier, timeout),
+		Customer:     NewCustomerService(client.Customer, timeout),
+		Filestore:    NewFilestoreService(client.Filestore, timeout),
+		Kyc:          NewKycService(client.Kyc, timeout),
+		Account:      NewAccountService(client.Account, timeout),
+		Ledger:       NewLedgerService(client.Ledger, timeout),
+		Antifraud:    NewAntifraudService(client.Antifraud, timeout),
+		Notification: NewNotificationService(client.Notification, timeout),
 	}
 }

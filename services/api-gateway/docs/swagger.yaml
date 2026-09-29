@@ -1,5 +1,31 @@
 basePath: /api/v1
 definitions:
+  dto.Account:
+    properties:
+      created_at:
+        type: string
+      currency:
+        example: RUB
+        type: string
+      id:
+        type: string
+      number:
+        example: "40817810500000000001"
+        type: string
+      status:
+        enum:
+        - active
+        - blocked
+        - closed
+        example: active
+        type: string
+      status_changed_at:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
   dto.AddSanctionEntry:
     properties:
       birth_date:
@@ -65,6 +91,23 @@ definitions:
         example: всё сходится
         type: string
     type: object
+  dto.Balance:
+    properties:
+      account_id:
+        type: string
+      amount:
+        example: 150000
+        type: integer
+      currency:
+        example: RUB
+        type: string
+    type: object
+  dto.BlockAccount:
+    properties:
+      reason:
+        example: подозрительные операции
+        type: string
+    type: object
   dto.Check:
     properties:
       created_at:
@@ -120,11 +163,39 @@ definitions:
       status:
         type: string
     type: object
+  dto.Deposit:
+    properties:
+      amount:
+        example: 100000
+        type: integer
+      currency:
+        example: RUB
+        type: string
+    type: object
   dto.DownloadTicket:
     properties:
       expires_at:
         type: string
       url:
+        type: string
+    type: object
+  dto.Entry:
+    properties:
+      account_id:
+        type: string
+      amount:
+        example: 10000
+        type: integer
+      currency:
+        example: RUB
+        type: string
+      direction:
+        enum:
+        - debit
+        - credit
+        example: debit
+        type: string
+      id:
         type: string
     type: object
   dto.ErrorResponse:
@@ -186,6 +257,13 @@ definitions:
         example: passport
         type: string
     type: object
+  dto.ListAccounts:
+    properties:
+      accounts:
+        items:
+          $ref: '#/definitions/dto.Account'
+        type: array
+    type: object
   dto.ListApplications:
     properties:
       applications:
@@ -207,11 +285,39 @@ definitions:
           $ref: '#/definitions/dto.File'
         type: array
     type: object
+  dto.ListNotifications:
+    properties:
+      notifications:
+        items:
+          $ref: '#/definitions/dto.Notification'
+        type: array
+    type: object
+  dto.ListRules:
+    properties:
+      rules:
+        items:
+          $ref: '#/definitions/dto.Rule'
+        type: array
+    type: object
   dto.ListSanctions:
     properties:
       entries:
         items:
           $ref: '#/definitions/dto.SanctionEntry'
+        type: array
+    type: object
+  dto.ListStatusHistory:
+    properties:
+      changes:
+        items:
+          $ref: '#/definitions/dto.StatusChange'
+        type: array
+    type: object
+  dto.ListTransactions:
+    properties:
+      transactions:
+        items:
+          $ref: '#/definitions/dto.Transaction'
         type: array
     type: object
   dto.LoginRequest:
@@ -239,6 +345,26 @@ definitions:
         type: string
     required:
     - refresh_token
+    type: object
+  dto.Notification:
+    properties:
+      created_at:
+        type: string
+      event_id:
+        type: string
+      event_type:
+        example: ledger.transaction_completed
+        type: string
+      id:
+        type: string
+      text:
+        type: string
+    type: object
+  dto.OpenAccount:
+    properties:
+      currency:
+        example: RUB
+        type: string
     type: object
   dto.Profile:
     properties:
@@ -316,6 +442,43 @@ definitions:
       ok:
         type: boolean
     type: object
+  dto.Rule:
+    properties:
+      code:
+        enum:
+        - single_amount_limit
+        - velocity
+        - daily_amount_limit
+        - same_account
+        example: velocity
+        type: string
+      description:
+        type: string
+      enabled:
+        type: boolean
+      params:
+        $ref: '#/definitions/dto.RuleParams'
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  dto.RuleParams:
+    properties:
+      limits:
+        additionalProperties:
+          format: int64
+          type: integer
+        description: Суммы по валютам в минорных единицах; валюта без порога правилом
+          не проверяется.
+        type: object
+      max_count:
+        example: 5
+        type: integer
+      window_seconds:
+        example: 60
+        type: integer
+    type: object
   dto.SanctionEntry:
     properties:
       birth_date:
@@ -330,6 +493,35 @@ definitions:
       source:
         type: string
     type: object
+  dto.StatusChange:
+    properties:
+      account_id:
+        type: string
+      actor_id:
+        type: string
+      created_at:
+        type: string
+      from_status:
+        enum:
+        - active
+        - blocked
+        - closed
+        example: active
+        type: string
+      id:
+        example: 1
+        type: integer
+      reason:
+        example: подозрительные операции
+        type: string
+      to_status:
+        enum:
+        - active
+        - blocked
+        - closed
+        example: blocked
+        type: string
+    type: object
   dto.TokenPair:
     properties:
       access_expires_at:
@@ -339,6 +531,62 @@ definitions:
       refresh_expires_at:
         type: string
       refresh_token:
+        type: string
+    type: object
+  dto.Transaction:
+    properties:
+      amount:
+        example: 10000
+        type: integer
+      created_at:
+        type: string
+      currency:
+        example: RUB
+        type: string
+      decline_reason:
+        type: string
+      entries:
+        items:
+          $ref: '#/definitions/dto.Entry'
+        type: array
+      from_account_id:
+        type: string
+      id:
+        type: string
+      initiator_id:
+        type: string
+      status:
+        enum:
+        - completed
+        - declined
+        example: completed
+        type: string
+      to_account_id:
+        type: string
+      type:
+        enum:
+        - transfer
+        - deposit
+        example: transfer
+        type: string
+    type: object
+  dto.Transfer:
+    properties:
+      amount:
+        example: 10000
+        type: integer
+      currency:
+        example: RUB
+        type: string
+      from_account_id:
+        type: string
+      to_account_id:
+        type: string
+    type: object
+  dto.UnblockAccount:
+    properties:
+      comment:
+        example: проверка завершена
         type: string
     type: object
   dto.UpdateProfile:
@@ -353,6 +601,14 @@ definitions:
         type: string
       phone:
         type: string
+    type: object
+  dto.UpdateRule:
+    properties:
+      enabled:
+        example: true
+        type: boolean
+      params:
+        $ref: '#/definitions/dto.RuleParams'
     type: object
   dto.UploadTicket:
     properties:
@@ -401,6 +657,265 @@ info:
   title: Banking Mini Cores API Gateway
   version: "1.0"
 paths:
+  /accounts/{account_id}/block:
+    post:
+      consumes:
+      - application/json
+      description: Блокировка с обязательной причиной. Заблокированный счёт не участвует
+        в переводах и пополнениях.
+      parameters:
+      - description: UUID счёта
+        in: path
+        name: account_id
+        required: true
+        type: string
+      - description: Причина блокировки
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.BlockAccount'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Счёт заблокирован
+          schema:
+            $ref: '#/definitions/dto.Account'
+        "400":
+          description: Причина не указана или счёт закрыт
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Счёт не найден
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Заблокировать счёт
+      tags:
+      - accounts
+  /accounts/{account_id}/deposit:
+    post:
+      consumes:
+      - application/json
+      description: 'Пополнение для тестов: дебет кассового счёта леджера, кредит счёта
+        клиента. Сумма в минорных единицах.'
+      parameters:
+      - description: UUID счёта
+        in: path
+        name: account_id
+        required: true
+        type: string
+      - description: Сумма и валюта
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.Deposit'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пополнение проведено
+          schema:
+            $ref: '#/definitions/dto.Transaction'
+        "400":
+          description: Некорректная сумма, валюта не совпадает или счёт не активен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Счёт не найден
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Пополнить счёт из кассы
+      tags:
+      - ledger
+  /accounts/{account_id}/history:
+    get:
+      description: Все смены статуса счёта, от новых к старым. Первая запись без from_status
+        - открытие счёта. Пустой actor_id - действие владельца или системы. Только
+        для сотрудников.
+      parameters:
+      - description: UUID счёта
+        in: path
+        name: account_id
+        required: true
+        type: string
+      - description: Размер страницы
+        in: query
+        name: limit
+        type: integer
+      - description: Смещение
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: История статусов
+          schema:
+            $ref: '#/definitions/dto.ListStatusHistory'
+        "400":
+          description: Некорректная пагинация
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Счёт не найден
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: История статусов счёта
+      tags:
+      - accounts
+  /accounts/{account_id}/unblock:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: UUID счёта
+        in: path
+        name: account_id
+        required: true
+        type: string
+      - description: Комментарий
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/dto.UnblockAccount'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Счёт снова активен
+          schema:
+            $ref: '#/definitions/dto.Account'
+        "400":
+          description: Счёт закрыт
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Счёт не найден
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Разблокировать счёт
+      tags:
+      - accounts
+  /antifraud/rules:
+    get:
+      description: Все правила с порогами и признаком включения. Суммы в минорных
+        единицах по валютам.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Правила
+          schema:
+            $ref: '#/definitions/dto.ListRules'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Правила антифрода
+      tags:
+      - antifraud
+  /antifraud/rules/{code}:
+    patch:
+      consumes:
+      - application/json
+      description: Включает, выключает правило или меняет пороги. Не переданное поле
+        не меняется, переданные params заменяют пороги целиком. single_amount_limit
+        и daily_amount_limit читают limits по валютам из конфига, velocity - max_count
+        и window_seconds, у same_account порогов нет. Действует со следующей проверки.
+      parameters:
+      - description: Код правила
+        enum:
+        - single_amount_limit
+        - velocity
+        - daily_amount_limit
+        - same_account
+        in: path
+        name: code
+        required: true
+        type: string
+      - description: Изменения
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateRule'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Правило после изменения
+          schema:
+            $ref: '#/definitions/dto.Rule'
+        "400":
+          description: Пустой запрос или пороги не подходят правилу
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Правило не найдено
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Изменить правило антифрода
+      tags:
+      - antifraud
   /auth/login:
     post:
       consumes:
@@ -729,6 +1244,262 @@ paths:
       summary: Обновление профиля клиента
       tags:
       - customer
+  /customer/{user_id}/accounts:
+    get:
+      description: 'Счета от новых к старым: последний открытый - первым.'
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Размер страницы
+        in: query
+        name: limit
+        type: integer
+      - description: Смещение
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Счета
+          schema:
+            $ref: '#/definitions/dto.ListAccounts'
+        "400":
+          description: Некорректная пагинация
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Чужой клиент
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Счета клиента
+      tags:
+      - accounts
+    post:
+      consumes:
+      - application/json
+      description: Счёт открывается только активному клиенту (прошёл KYC) и только
+        в валюте из списка сервиса (RUB, USD, EUR). Без валюты - RUB. Не больше трёх
+        незакрытых счетов в одной валюте.
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Валюта счёта
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/dto.OpenAccount'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Счёт открыт
+          schema:
+            $ref: '#/definitions/dto.Account'
+        "400":
+          description: Валюта не поддерживается, клиент не активен или превышен лимит
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Чужой клиент
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Клиент не найден
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Открыть счёт
+      tags:
+      - accounts
+  /customer/{user_id}/accounts/{account_id}:
+    get:
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: UUID счёта
+        in: path
+        name: account_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Счёт
+          schema:
+            $ref: '#/definitions/dto.Account'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Чужой клиент
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Счёт не найден у этого клиента
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Счёт клиента
+      tags:
+      - accounts
+  /customer/{user_id}/accounts/{account_id}/balance:
+    get:
+      description: Баланс хранит ledger-service, account-service его только проксирует.
+        Сумма в минорных единицах (копейки, центы).
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: UUID счёта
+        in: path
+        name: account_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Баланс
+          schema:
+            $ref: '#/definitions/dto.Balance'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Чужой клиент
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Счёт не найден у этого клиента
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Баланс счёта
+      tags:
+      - accounts
+  /customer/{user_id}/accounts/{account_id}/close:
+    post:
+      description: Закрыть можно только активный счёт с нулевым балансом. Закрытый
+        счёт снова не открывается.
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: UUID счёта
+        in: path
+        name: account_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Счёт закрыт
+          schema:
+            $ref: '#/definitions/dto.Account'
+        "400":
+          description: Баланс не нулевой или счёт заблокирован
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Чужой клиент
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Счёт не найден у этого клиента
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Закрыть счёт
+      tags:
+      - accounts
+  /customer/{user_id}/accounts/{account_id}/transactions:
+    get:
+      description: Исходящие переводы (включая отклонённые) и проведённые входящие,
+        от новых к старым.
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: UUID счёта
+        in: path
+        name: account_id
+        required: true
+        type: string
+      - description: Размер страницы
+        in: query
+        name: limit
+        type: integer
+      - description: Смещение
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Выписка
+          schema:
+            $ref: '#/definitions/dto.ListTransactions'
+        "400":
+          description: Некорректная пагинация
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Чужой клиент
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Счёт не найден у этого клиента
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Выписка по счёту
+      tags:
+      - ledger
   /customer/{user_id}/files:
     get:
       description: Постраничный список файлов, отсортированный по дате создания по
@@ -1011,6 +1782,48 @@ paths:
       summary: Подать заявку на верификацию
       tags:
       - kyc
+  /customer/{user_id}/notifications:
+    get:
+      description: 'Уведомления, «отправленные» клиенту по событиям переводов и KYC,
+        от новых к старым. Отправка - мок: уведомление только записывается.'
+      parameters:
+      - description: UUID пользователя или me - текущий пользователь
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Размер страницы
+        in: query
+        name: limit
+        type: integer
+      - description: Смещение
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Уведомления
+          schema:
+            $ref: '#/definitions/dto.ListNotifications'
+        "400":
+          description: Некорректная пагинация
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Чужой клиент
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Уведомления клиента
+      tags:
+      - notification
   /customer/{user_id}/status:
     get:
       description: 'Возвращает текущий статус и момент его последней смены. Возможные
@@ -1045,6 +1858,55 @@ paths:
       summary: Статус клиента
       tags:
       - customer
+  /customer/{user_id}/transfers:
+    post:
+      consumes:
+      - application/json
+      description: Списывает со своего счёта и зачисляет на счёт получателя в той
+        же валюте. Оба счёта должны быть активны. Сумма в минорных единицах. При нехватке
+        средств перевод сохраняется со статусом declined и возвращается 400 с его
+        id в тексте ошибки.
+      parameters:
+      - description: UUID пользователя или me - владелец счёта-источника
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Перевод
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.Transfer'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Перевод проведён
+          schema:
+            $ref: '#/definitions/dto.Transaction'
+        "400":
+          description: Некорректная сумма или валюта, счёт не активен, не хватает
+            средств
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Счёт-источник принадлежит другому клиенту
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Счёт не найден
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Перевод между счетами
+      tags:
+      - ledger
   /kyc/applications:
     get:
       description: 'Очередь для сотрудника. Без фильтров - все заявки. Свободные для
@@ -1394,6 +2256,39 @@ paths:
       summary: Добавить человека в санкционный список
       tags:
       - kyc
+  /transactions/{transaction_id}:
+    get:
+      description: 'Для сотрудников: транзакция вместе с дебетовой и кредитовой платежами.'
+      parameters:
+      - description: UUID транзакции
+        in: path
+        name: transaction_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Транзакция
+          schema:
+            $ref: '#/definitions/dto.Transaction'
+        "401":
+          description: Отсутствует или недействителен access-токен
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Недостаточно прав
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Транзакция не найдена
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Транзакция платежей
+      tags:
+      - ledger
 securityDefinitions:
   BearerAuth:
     description: Access-токен из POST /auth/login в формате "Bearer <token>".
@@ -1408,3 +2303,7 @@ tags:
   name: customer
 - description: Загрузка и выдача файлов клиента через presigned-ссылки
   name: files
+- description: 'Счета клиента: открытие, блокировка, закрытие, баланс'
+  name: accounts
+- description: Переводы, пополнения и выписки; суммы в минорных единицах валюты
+  name: ledger

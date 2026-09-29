@@ -48,7 +48,7 @@ func New(log *slog.Logger, targets []Target) (*Checker, error) {
 		conn, err := grpc.NewClient(t.Addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			c.Close()
-			return nil, fmt.Errorf("подключение к %s (%s): %w", t.Name, t.Addr, err)
+			return nil, fmt.Errorf("connect to %s (%s): %w", t.Name, t.Addr, err)
 		}
 		c.conns = append(c.conns, conn)
 		c.clients[t.Name] = healthpb.NewHealthClient(conn)

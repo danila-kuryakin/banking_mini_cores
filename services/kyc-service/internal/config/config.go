@@ -19,11 +19,19 @@ type AutoChecks struct {
 	BatchSize int           `mapstructure:"batch_size"`
 }
 
+// Outbox - настройки публикации событий заявок в Kafka.
+type Outbox struct {
+	Interval  time.Duration `mapstructure:"interval"`
+	BatchSize int           `mapstructure:"batch_size"`
+}
+
 type Config struct {
 	Server         config.Server         `mapstructure:"server"`
 	Postgres       config.DataBaseConfig `mapstructure:"database"`
+	Kafka          config.KafkaConfig    `mapstructure:"kafka"`
 	Upstreams      Upstreams             `mapstructure:"upstreams"`
 	AutoChecks     AutoChecks            `mapstructure:"auto_checks"`
+	Outbox         Outbox                `mapstructure:"outbox"`
 	RequestTimeout time.Duration         `mapstructure:"request_timeout"`
 }
 
@@ -34,6 +42,14 @@ func (c *Config) Validate() error {
 
 	if c.Upstreams.Filestore == "" {
 		return errors.New("upstream address for filestore-service is empty")
+	}
+
+	if err := c.Kafka.Validate(); err != nil {
+		return err
+	}
+
+	if c.Kafka.Topic == "" {
+		return errors.New("kafka: topic for kyc events is empty")
 	}
 
 	return nil
@@ -55,6 +71,14 @@ func Load() (*Config, error) {
 
 	if cfg.AutoChecks.BatchSize <= 0 {
 		cfg.AutoChecks.BatchSize = domain.DEFAULT_AUTO_CHECKS_BATCH_SIZE
+	}
+
+	if cfg.Outbox.Interval <= 0 {
+		cfg.Outbox.Interval = domain.DEFAULT_OUTBOX_INTERVAL
+	}
+
+	if cfg.Outbox.BatchSize <= 0 {
+		cfg.Outbox.BatchSize = domain.DEFAULT_OUTBOX_BATCH_SIZE
 	}
 
 	return cfg, nil

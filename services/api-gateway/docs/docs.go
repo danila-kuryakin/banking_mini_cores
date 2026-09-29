@@ -18,6 +18,397 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/accounts/{account_id}/block": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Блокировка с обязательной причиной. Заблокированный счёт не участвует в переводах и пополнениях.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Заблокировать счёт",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID счёта",
+                        "name": "account_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Причина блокировки",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.BlockAccount"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Счёт заблокирован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Account"
+                        }
+                    },
+                    "400": {
+                        "description": "Причина не указана или счёт закрыт",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Счёт не найден",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{account_id}/deposit": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Пополнение для тестов: дебет кассового счёта леджера, кредит счёта клиента. Сумма в минорных единицах.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ledger"
+                ],
+                "summary": "Пополнить счёт из кассы",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID счёта",
+                        "name": "account_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Сумма и валюта",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.Deposit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Пополнение проведено",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Transaction"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректная сумма, валюта не совпадает или счёт не активен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Счёт не найден",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{account_id}/history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Все смены статуса счёта, от новых к старым. Первая запись без from_status - открытие счёта. Пустой actor_id - действие владельца или системы. Только для сотрудников.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "История статусов счёта",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID счёта",
+                        "name": "account_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Смещение",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "История статусов",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListStatusHistory"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректная пагинация",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Счёт не найден",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{account_id}/unblock": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Разблокировать счёт",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID счёта",
+                        "name": "account_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Комментарий",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/dto.UnblockAccount"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Счёт снова активен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Account"
+                        }
+                    },
+                    "400": {
+                        "description": "Счёт закрыт",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Счёт не найден",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/antifraud/rules": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Все правила с порогами и признаком включения. Суммы в минорных единицах по валютам.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "antifraud"
+                ],
+                "summary": "Правила антифрода",
+                "responses": {
+                    "200": {
+                        "description": "Правила",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListRules"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/antifraud/rules/{code}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Включает, выключает правило или меняет пороги. Не переданное поле не меняется, переданные params заменяют пороги целиком. single_amount_limit и daily_amount_limit читают limits по валютам из конфига, velocity - max_count и window_seconds, у same_account порогов нет. Действует со следующей проверки.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "antifraud"
+                ],
+                "summary": "Изменить правило антифрода",
+                "parameters": [
+                    {
+                        "enum": [
+                            "single_amount_limit",
+                            "velocity",
+                            "daily_amount_limit",
+                            "same_account"
+                        ],
+                        "type": "string",
+                        "description": "Код правила",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Изменения",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateRule"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Правило после изменения",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Rule"
+                        }
+                    },
+                    "400": {
+                        "description": "Пустой запрос или пороги не подходят правилу",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Правило не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Возвращает данные пользователя и пару токенов. Access-токен передаётся дальше в заголовке Authorization.",
@@ -512,6 +903,396 @@ const docTemplate = `{
                 }
             }
         },
+        "/customer/{user_id}/accounts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Счета от новых к старым: последний открытый - первым.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Счета клиента",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Смещение",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Счета",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListAccounts"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректная пагинация",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Чужой клиент",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Счёт открывается только активному клиенту (прошёл KYC) и только в валюте из списка сервиса (RUB, USD, EUR). Без валюты - RUB. Не больше трёх незакрытых счетов в одной валюте.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Открыть счёт",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Валюта счёта",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/dto.OpenAccount"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Счёт открыт",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Account"
+                        }
+                    },
+                    "400": {
+                        "description": "Валюта не поддерживается, клиент не активен или превышен лимит",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Чужой клиент",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Клиент не найден",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/customer/{user_id}/accounts/{account_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Счёт клиента",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "UUID счёта",
+                        "name": "account_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Счёт",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Account"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Чужой клиент",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Счёт не найден у этого клиента",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/customer/{user_id}/accounts/{account_id}/balance": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Баланс хранит ledger-service, account-service его только проксирует. Сумма в минорных единицах (копейки, центы).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Баланс счёта",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "UUID счёта",
+                        "name": "account_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Баланс",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Balance"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Чужой клиент",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Счёт не найден у этого клиента",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/customer/{user_id}/accounts/{account_id}/close": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Закрыть можно только активный счёт с нулевым балансом. Закрытый счёт снова не открывается.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Закрыть счёт",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "UUID счёта",
+                        "name": "account_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Счёт закрыт",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Account"
+                        }
+                    },
+                    "400": {
+                        "description": "Баланс не нулевой или счёт заблокирован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Чужой клиент",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Счёт не найден у этого клиента",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/customer/{user_id}/accounts/{account_id}/transactions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Исходящие переводы (включая отклонённые) и проведённые входящие, от новых к старым.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ledger"
+                ],
+                "summary": "Выписка по счёту",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "UUID счёта",
+                        "name": "account_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Смещение",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Выписка",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListTransactions"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректная пагинация",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Чужой клиент",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Счёт не найден у этого клиента",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/customer/{user_id}/files": {
             "get": {
                 "security": [
@@ -931,6 +1712,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/customer/{user_id}/notifications": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Уведомления, «отправленные» клиенту по событиям переводов и KYC, от новых к старым. Отправка - мок: уведомление только записывается.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notification"
+                ],
+                "summary": "Уведомления клиента",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - текущий пользователь",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Смещение",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Уведомления",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListNotifications"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректная пагинация",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Чужой клиент",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/customer/{user_id}/status": {
             "get": {
                 "security": [
@@ -976,6 +1821,76 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Клиент не найден",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/customer/{user_id}/transfers": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Списывает со своего счёта и зачисляет на счёт получателя в той же валюте. Оба счёта должны быть активны. Сумма в минорных единицах. При нехватке средств перевод сохраняется со статусом declined и возвращается 400 с его id в тексте ошибки.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ledger"
+                ],
+                "summary": "Перевод между счетами",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя или me - владелец счёта-источника",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Перевод",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.Transfer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Перевод проведён",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Transaction"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректная сумма или валюта, счёт не активен, не хватает средств",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Счёт-источник принадлежит другому клиенту",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Счёт не найден",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -1507,9 +2422,98 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/transactions/{transaction_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Для сотрудников: транзакция вместе с дебетовой и кредитовой платежами.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ledger"
+                ],
+                "summary": "Транзакция платежей",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID транзакции",
+                        "name": "transaction_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Транзакция",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Transaction"
+                        }
+                    },
+                    "401": {
+                        "description": "Отсутствует или недействителен access-токен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Недостаточно прав",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Транзакция не найдена",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "dto.Account": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "RUB"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "string",
+                    "example": "40817810500000000001"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "blocked",
+                        "closed"
+                    ],
+                    "example": "active"
+                },
+                "status_changed_at": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.AddSanctionEntry": {
             "type": "object",
             "properties": {
@@ -1603,6 +2607,31 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.Balance": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "amount": {
+                    "type": "integer",
+                    "example": 150000
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "RUB"
+                }
+            }
+        },
+        "dto.BlockAccount": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "example": "подозрительные операции"
+                }
+            }
+        },
         "dto.Check": {
             "type": "object",
             "properties": {
@@ -1684,6 +2713,19 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.Deposit": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer",
+                    "example": 100000
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "RUB"
+                }
+            }
+        },
         "dto.DownloadTicket": {
             "type": "object",
             "properties": {
@@ -1691,6 +2733,33 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.Entry": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "amount": {
+                    "type": "integer",
+                    "example": 10000
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "RUB"
+                },
+                "direction": {
+                    "type": "string",
+                    "enum": [
+                        "debit",
+                        "credit"
+                    ],
+                    "example": "debit"
+                },
+                "id": {
                     "type": "string"
                 }
             }
@@ -1782,6 +2851,17 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ListAccounts": {
+            "type": "object",
+            "properties": {
+                "accounts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.Account"
+                    }
+                }
+            }
+        },
         "dto.ListApplications": {
             "type": "object",
             "properties": {
@@ -1815,6 +2895,28 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ListNotifications": {
+            "type": "object",
+            "properties": {
+                "notifications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.Notification"
+                    }
+                }
+            }
+        },
+        "dto.ListRules": {
+            "type": "object",
+            "properties": {
+                "rules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.Rule"
+                    }
+                }
+            }
+        },
         "dto.ListSanctions": {
             "type": "object",
             "properties": {
@@ -1822,6 +2924,28 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/dto.SanctionEntry"
+                    }
+                }
+            }
+        },
+        "dto.ListStatusHistory": {
+            "type": "object",
+            "properties": {
+                "changes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.StatusChange"
+                    }
+                }
+            }
+        },
+        "dto.ListTransactions": {
+            "type": "object",
+            "properties": {
+                "transactions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.Transaction"
                     }
                 }
             }
@@ -1862,6 +2986,36 @@ const docTemplate = `{
             "properties": {
                 "refresh_token": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.Notification": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "event_id": {
+                    "type": "string"
+                },
+                "event_type": {
+                    "type": "string",
+                    "example": "ledger.transaction_completed"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.OpenAccount": {
+            "type": "object",
+            "properties": {
+                "currency": {
+                    "type": "string",
+                    "example": "RUB"
                 }
             }
         },
@@ -1979,6 +3133,57 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.Rule": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "enum": [
+                        "single_amount_limit",
+                        "velocity",
+                        "daily_amount_limit",
+                        "same_account"
+                    ],
+                    "example": "velocity"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "params": {
+                    "$ref": "#/definitions/dto.RuleParams"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.RuleParams": {
+            "type": "object",
+            "properties": {
+                "limits": {
+                    "description": "Суммы по валютам в минорных единицах; валюта без порога правилом не проверяется.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "max_count": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "window_seconds": {
+                    "type": "integer",
+                    "example": 60
+                }
+            }
+        },
         "dto.SanctionEntry": {
             "type": "object",
             "properties": {
@@ -2000,6 +3205,46 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.StatusChange": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "actor_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "from_status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "blocked",
+                        "closed"
+                    ],
+                    "example": "active"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "подозрительные операции"
+                },
+                "to_status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "blocked",
+                        "closed"
+                    ],
+                    "example": "blocked"
+                }
+            }
+        },
         "dto.TokenPair": {
             "type": "object",
             "properties": {
@@ -2014,6 +3259,87 @@ const docTemplate = `{
                 },
                 "refresh_token": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.Transaction": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer",
+                    "example": 10000
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "RUB"
+                },
+                "decline_reason": {
+                    "type": "string"
+                },
+                "entries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.Entry"
+                    }
+                },
+                "from_account_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "initiator_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "completed",
+                        "declined"
+                    ],
+                    "example": "completed"
+                },
+                "to_account_id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "transfer",
+                        "deposit"
+                    ],
+                    "example": "transfer"
+                }
+            }
+        },
+        "dto.Transfer": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer",
+                    "example": 10000
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "RUB"
+                },
+                "from_account_id": {
+                    "type": "string"
+                },
+                "to_account_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.UnblockAccount": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "example": "проверка завершена"
                 }
             }
         },
@@ -2034,6 +3360,18 @@ const docTemplate = `{
                 },
                 "phone": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.UpdateRule": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "params": {
+                    "$ref": "#/definitions/dto.RuleParams"
                 }
             }
         },
@@ -2117,6 +3455,14 @@ const docTemplate = `{
         {
             "description": "Загрузка и выдача файлов клиента через presigned-ссылки",
             "name": "files"
+        },
+        {
+            "description": "Счета клиента: открытие, блокировка, закрытие, баланс",
+            "name": "accounts"
+        },
+        {
+            "description": "Переводы, пополнения и выписки; суммы в минорных единицах валюты",
+            "name": "ledger"
         }
     ]
 }`

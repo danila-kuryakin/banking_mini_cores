@@ -10,22 +10,17 @@ import (
 	conn "github.com/danila-kuryakin/banking_mini_cores/platform/connection"
 	"github.com/danila-kuryakin/banking_mini_cores/platform/migrator"
 	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/adapters/grpc/client"
+	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/adapters/kafka"
 	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/adapters/repository"
 	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/adapters/server"
 	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/app/service"
 	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/app/worker"
 	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/config"
-	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/internal/domain/models"
 	"github.com/danila-kuryakin/banking_mini_cores/services/kyc-service/migrations"
 )
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-
-	if err := models.ValidateStatusTransitions(); err != nil {
-		logger.Error("invalid application status transitions", "error", err)
-		os.Exit(1)
-	}
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -45,6 +40,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	writer, err := conn.NewKafkaWriter(cfg.Kafka)
+	if err != nil {
+		logger.Error("failed to connect to kafka", "error", err)
+		os.Exit(1)
+	}
+
+	publisher := kafka.NewPublisher(writer)
+	defer func() { _ = publisher.Close() }()
+
 	clients, err := client.NewClients(cfg)
 	if err != nil {
 		logger.Error("failed to create grpc clients", "error", err)
@@ -62,6 +66,9 @@ func main() {
 
 	autoChecks := worker.NewAutoChecks(repo, clients, logger, cfg.AutoChecks.Interval, cfg.AutoChecks.BatchSize)
 	go autoChecks.Run(ctx)
+
+	relay := worker.NewOutboxRelay(repo.Outbox, publisher, logger, cfg.Outbox.Interval, cfg.Outbox.BatchSize)
+	go relay.Run(ctx)
 
 	srv, err := server.NewServer(cfg, serv, logger)
 	if err != nil {

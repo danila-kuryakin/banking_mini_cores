@@ -1,0 +1,31 @@
+name: banking-account
+
+
+# для удобства отладки создал контейнеры
+services:
+  postgres:
+    image: postgres:16
+    container_name: banking-account-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-banking_account}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123}
+      POSTGRES_DB: ${POSTGRES_DB:-banking_account}
+    ports:
+      - "${POSTGRES_PORT:-5455}:5432"
+    volumes:
+      - account-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-banking_account} -d ${POSTGRES_DB:-banking_account}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks: [banking-net]
+
+volumes:
+  account-pgdata:
+
+networks:
+  banking-net:
+    external: true
