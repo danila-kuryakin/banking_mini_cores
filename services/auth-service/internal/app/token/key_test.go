@@ -6,9 +6,11 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/pem"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"testing"
 	"time"
 
@@ -165,4 +167,60 @@ func TestNewManager_BrokenDER(t *testing.T) {
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, domain.ErrPrivateKeyNotPEM)
 	assert.NotErrorIs(t, err, domain.ErrPrivateKeyNotRSA)
+}
+
+// generatedKeyFile создаёт менеджер на пустом каталоге и отдаёт путь к единственному ключу.
+func generatedKeyFile(t *testing.T) (*Manager, string) {
+	t.Helper()
+	dir := t.TempDir()
+	manager, err := NewManager(dir, TEST_ACCESS_TTL, TEST_REFRESH_TTL, testLogger(t))
+	require.NoError(t, err)
+	names := listDir(t, dir)
+	require.Len(t, names, 1)
+	return manager, filepath.Join(dir, names[0])
+}
+
+func TestNewManager_GeneratedKeyPersists(t *testing.T) {
+	dir := t.TempDir()
+	first, err := NewManager(dir, TEST_ACCESS_TTL, TEST_REFRESH_TTL, testLogger(t))
+	require.NoError(t, err)
+	second, err := NewManager(dir, TEST_ACCESS_TTL, TEST_REFRESH_TTL, testLogger(t))
+	require.NoError(t, err)
+
+	assert.Len(t, listDir(t, dir), 1)
+	assert.Equal(t, jwksKids(t, first.JWKS()), jwksKids(t, second.JWKS()))
+
+	user := testUser(t)
+	pair, err := first.NewPair(user)
+	require.NoError(t, err)
+	claims, err := second.ParseAccess(pair.Access)
+	require.NoError(t, err)
+	assert.Equal(t, user.ID, claims.UserID)
+}
+
+func TestNewManager_GeneratedKeyFormat(t *testing.T) {
+	manager, path := generatedKeyFile(t)
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	block, _ := pem.Decode(data)
+	require.NotNil(t, block, "generated key file is not PEM")
+	assert.Equal(t, domain.PEM_RSA_PRIVATE_KEY, block.Type)
+	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	require.NoError(t, err)
+
+	kids := jwksKids(t, manager.JWKS())
+	require.Len(t, kids, 1)
+	assert.Equal(t, keyID(&key.PublicKey), kids[0])
+}
+
+func TestNewManager_GeneratedKeyPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("unix file permissions only")
+	}
+	_, path := generatedKeyFile(t)
+
+	info, err := os.Stat(path)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
 }

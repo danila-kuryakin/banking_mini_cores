@@ -18,8 +18,6 @@ import (
 const (
 	TEST_EMAIL                  = "user@example.com"
 	TEST_EMAIL_DOMAIN           = "@example.com"
-	TEST_REFRESH_TOKEN_MAX_LEN  = 512
-	TEST_ACCESS_TOKEN_MAX_LEN   = 4096
 	TEST_CYRILLIC_PASSWORD_RUNE = "ж"
 )
 
@@ -200,7 +198,7 @@ func TestValidate_RefreshTokenEmpty(t *testing.T) {
 func TestValidate_RefreshTokenMaxLength(t *testing.T) {
 	t.Parallel()
 
-	refreshToken := strings.Repeat("r", TEST_REFRESH_TOKEN_MAX_LEN)
+	refreshToken := strings.Repeat("r", domain.REFRESH_TOKEN_MAX_LENGTH)
 	requirePasses(t, &authv1.RefreshRequest{RefreshToken: refreshToken})
 	requirePasses(t, &authv1.LogoutRequest{RefreshToken: refreshToken})
 }
@@ -208,7 +206,7 @@ func TestValidate_RefreshTokenMaxLength(t *testing.T) {
 func TestValidate_RefreshTokenTooLong(t *testing.T) {
 	t.Parallel()
 
-	refreshToken := strings.Repeat("r", TEST_REFRESH_TOKEN_MAX_LEN+1)
+	refreshToken := strings.Repeat("r", domain.REFRESH_TOKEN_MAX_LENGTH+1)
 	requireInvalid(t, &authv1.RefreshRequest{RefreshToken: refreshToken}, domain.ErrRefreshTokenTooLong)
 	requireInvalid(t, &authv1.LogoutRequest{RefreshToken: refreshToken}, domain.ErrRefreshTokenTooLong)
 }
@@ -222,13 +220,13 @@ func TestValidate_AccessTokenEmpty(t *testing.T) {
 func TestValidate_AccessTokenMaxLength(t *testing.T) {
 	t.Parallel()
 
-	requirePasses(t, &authv1.ValidateTokenRequest{AccessToken: strings.Repeat("a", TEST_ACCESS_TOKEN_MAX_LEN)})
+	requirePasses(t, &authv1.ValidateTokenRequest{AccessToken: strings.Repeat("a", domain.ACCESS_TOKEN_MAX_LENGTH)})
 }
 
 func TestValidate_AccessTokenTooLong(t *testing.T) {
 	t.Parallel()
 
-	req := &authv1.ValidateTokenRequest{AccessToken: strings.Repeat("a", TEST_ACCESS_TOKEN_MAX_LEN+1)}
+	req := &authv1.ValidateTokenRequest{AccessToken: strings.Repeat("a", domain.ACCESS_TOKEN_MAX_LENGTH+1)}
 	requireInvalid(t, req, domain.ErrAccessTokenTooLong)
 }
 
@@ -242,4 +240,24 @@ func TestValidate_DeleteUserValid(t *testing.T) {
 	t.Parallel()
 
 	requirePasses(t, &authv1.DeleteUserRequest{Id: uuid.NewString()})
+}
+
+func TestValidate_EmailTrimmedBeforeLength(t *testing.T) {
+	t.Parallel()
+
+	email := "  " + emailOfLength(t, domain.EMAIL_MAX_LENGTH) + "  "
+	requirePasses(t, &authv1.RegisterRequest{Email: email, Password: validPassword(t)})
+}
+
+func TestValidate_PasswordNotTrimmed(t *testing.T) {
+	t.Parallel()
+
+	password := " " + strings.Repeat("p", domain.PASSWORD_MIN_RUNES-1)
+	requirePasses(t, &authv1.RegisterRequest{Email: TEST_EMAIL, Password: password})
+}
+
+func TestValidate_PasswordOnlySpaces(t *testing.T) {
+	t.Parallel()
+
+	requirePasses(t, &authv1.RegisterRequest{Email: TEST_EMAIL, Password: strings.Repeat(" ", domain.PASSWORD_MIN_RUNES)})
 }

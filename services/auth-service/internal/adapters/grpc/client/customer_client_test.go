@@ -54,3 +54,22 @@ func TestCreateProfile_Unavailable(t *testing.T) {
 	assert.NotErrorIs(t, err, domain.ErrProfileAlreadyExists)
 	assert.Equal(t, codes.Unavailable, status.Code(err))
 }
+
+// testCtxKey - ключ метки в контексте, чтобы узнать его на стороне мока.
+type testCtxKey struct{}
+
+func TestCreateProfile_PassesContext(t *testing.T) {
+	grpcClient := &mocks.CustomerServiceClientMock{}
+	defer grpcClient.AssertExpectations(t)
+	ctx := context.WithValue(context.Background(), testCtxKey{}, "marker")
+	var gotCtx context.Context
+	grpcClient.On("CreateProfile", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) { gotCtx = args.Get(0).(context.Context) }).
+		Return(&customerv1.CreateProfileResponse{}, nil).Once()
+
+	err := NewCustomerClient(grpcClient).CreateProfile(ctx, uuid.New())
+
+	require.NoError(t, err)
+	require.NotNil(t, gotCtx)
+	assert.Equal(t, "marker", gotCtx.Value(testCtxKey{}))
+}

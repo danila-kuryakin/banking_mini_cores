@@ -109,6 +109,16 @@ func activeRefreshToken(t *testing.T, userID uuid.UUID) *models.RefreshToken {
 	}
 }
 
+// requireDeadline проверяет, что у контекста репозитория дедлайн около calledAt + TEST_TIMEOUT.
+func requireDeadline(t *testing.T, ctx context.Context, calledAt time.Time) {
+	t.Helper()
+	require.NotNil(t, ctx, "repository was not called")
+	deadline, ok := ctx.Deadline()
+	require.True(t, ok, "repository context must have a deadline")
+	assert.False(t, deadline.After(calledAt.Add(TEST_TIMEOUT)), "deadline is later than call time plus timeout")
+	assert.True(t, deadline.After(calledAt.Add(TEST_TIMEOUT-time.Second)), "deadline is too early, timeout is not applied")
+}
+
 // --- Register ---
 
 func TestRegister_Success(t *testing.T) {
@@ -240,10 +250,7 @@ func TestLogin_SetsDeadline(t *testing.T) {
 
 	_, _ = env.server.Login(context.Background(), &authv1.LoginRequest{Email: TEST_EMAIL, Password: TEST_PASSWORD})
 
-	require.NotNil(t, gotCtx)
-	deadline, ok := gotCtx.Deadline()
-	require.True(t, ok, "repository context must have a deadline")
-	assert.False(t, deadline.After(calledAt.Add(TEST_TIMEOUT)), "deadline is later than call time plus timeout")
+	requireDeadline(t, gotCtx, calledAt)
 }
 
 // --- Refresh ---
@@ -437,4 +444,113 @@ func TestDeleteUser_RepoError(t *testing.T) {
 
 	require.ErrorIs(t, err, domain.ErrDeleteUserFailed)
 	assert.Equal(t, codes.Internal, status.Code(err))
+}
+
+// --- Таймауты остальных методов ---
+
+func TestRegister_SetsDeadline(t *testing.T) {
+	env := newTestEnv(t)
+	defer env.assertExpectations(t)
+	var gotCtx context.Context
+	var calledAt time.Time
+	env.repo.On("CreateUser", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			gotCtx = args.Get(0).(context.Context)
+			calledAt = time.Now()
+		}).
+		Return(nil, domain.ErrEmailTaken).Once()
+
+	_, _ = env.server.Register(context.Background(), &authv1.RegisterRequest{Email: TEST_EMAIL, Password: TEST_PASSWORD})
+
+	requireDeadline(t, gotCtx, calledAt)
+}
+
+func TestRefresh_SetsDeadline(t *testing.T) {
+	env := newTestEnv(t)
+	defer env.assertExpectations(t)
+	var gotCtx context.Context
+	var calledAt time.Time
+	env.repo.On("GetRefreshToken", mock.Anything, token.Hash(TEST_REFRESH_TOKEN)).
+		Run(func(args mock.Arguments) {
+			gotCtx = args.Get(0).(context.Context)
+			calledAt = time.Now()
+		}).
+		Return(nil, domain.ErrRefreshTokenNotFound).Once()
+
+	_, _ = env.server.Refresh(context.Background(), &authv1.RefreshRequest{RefreshToken: TEST_REFRESH_TOKEN})
+
+	requireDeadline(t, gotCtx, calledAt)
+}
+
+func TestLogout_SetsDeadline(t *testing.T) {
+	env := newTestEnv(t)
+	defer env.assertExpectations(t)
+	var gotCtx context.Context
+	var calledAt time.Time
+	env.repo.On("RevokeRefreshToken", mock.Anything, token.Hash(TEST_REFRESH_TOKEN)).
+		Run(func(args mock.Arguments) {
+			gotCtx = args.Get(0).(context.Context)
+			calledAt = time.Now()
+		}).
+		Return(nil).Once()
+
+	_, _ = env.server.Logout(context.Background(), &authv1.LogoutRequest{RefreshToken: TEST_REFRESH_TOKEN})
+
+	requireDeadline(t, gotCtx, calledAt)
+}
+
+func TestCreateOfficer_SetsDeadline(t *testing.T) {
+	env := newTestEnv(t)
+	defer env.assertExpectations(t)
+	var gotCtx context.Context
+	var calledAt time.Time
+	env.repo.On("CreateUser", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			gotCtx = args.Get(0).(context.Context)
+			calledAt = time.Now()
+		}).
+		Return(nil, domain.ErrEmailTaken).Once()
+
+	_, _ = env.server.CreateOfficer(context.Background(), &authv1.RegisterRequest{Email: TEST_EMAIL, Password: TEST_PASSWORD})
+
+	requireDeadline(t, gotCtx, calledAt)
+}
+
+func TestDeleteUser_SetsDeadline(t *testing.T) {
+	env := newTestEnv(t)
+	defer env.assertExpectations(t)
+	userID := uuid.New()
+	var gotCtx context.Context
+	var calledAt time.Time
+	env.repo.On("DeleteUser", mock.Anything, userID).
+		Run(func(args mock.Arguments) {
+			gotCtx = args.Get(0).(context.Context)
+			calledAt = time.Now()
+		}).
+		Return(nil).Once()
+
+	_, _ = env.server.DeleteUser(context.Background(), &authv1.DeleteUserRequest{Id: userID.String()})
+
+	requireDeadline(t, gotCtx, calledAt)
+}
+
+func TestRefresh_ReturnsRotatedPair(t *testing.T) {
+	env := newTestEnv(t)
+	defer env.assertExpectations(t)
+	user := testUser(t, domain.ROLE_CLIENT)
+	var gotNext models.RefreshToken
+	env.repo.On("GetRefreshToken", mock.Anything, token.Hash(TEST_REFRESH_TOKEN)).Return(activeRefreshToken(t, user.ID), nil).Once()
+	env.repo.On("GetUserByID", mock.Anything, user.ID).Return(user, nil).Once()
+	env.repo.On("RotateRefreshToken", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) { gotNext = args.Get(2).(models.RefreshToken) }).
+		Return(nil).Once()
+
+	resp, err := env.server.Refresh(context.Background(), &authv1.RefreshRequest{RefreshToken: TEST_REFRESH_TOKEN})
+
+	require.NoError(t, err)
+	assert.NotEqual(t, TEST_REFRESH_TOKEN, resp.GetRefreshToken())
+	assert.Equal(t, gotNext.TokenHash, token.Hash(resp.GetRefreshToken()))
+	claims, err := env.manager.ParseAccess(resp.GetAccessToken())
+	require.NoError(t, err)
+	assert.Equal(t, user.ID, claims.UserID)
 }

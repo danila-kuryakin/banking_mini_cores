@@ -9,6 +9,7 @@ import (
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/argon2"
 )
 
 const (
@@ -195,4 +196,14 @@ func TestDecode_Valid(t *testing.T) {
 	assert.Equal(t, want.threads, got.threads)
 	assert.Equal(t, want.salt, got.salt)
 	assert.Equal(t, want.key, got.key)
+}
+
+func TestVerify_UsesStoredParams(t *testing.T) {
+	t.Parallel()
+
+	salt := []byte("0123456789abcdef")
+	key := argon2.IDKey([]byte(TEST_PASSWORD), salt, 1, 64, 1, domain.ARGON2_KEY_LENGTH)
+	encoded := encode(params{time: 1, memory: 64, threads: 1, salt: salt, key: key})
+
+	require.NoError(t, Verify(encoded, TEST_PASSWORD))
 }
