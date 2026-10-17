@@ -2,10 +2,12 @@ package repository
 
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/domain/interfaces"
 )
 
 type Repository struct {
-	Auth *AuthRepo
+	Auth interfaces.AuthRepository
 }
 
 func NewRepository(db *pgxpool.Pool) *Repository {

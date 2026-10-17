@@ -4,8 +4,8 @@ CREATE TABLE refresh_tokens (
     id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id    UUID        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     token_hash BYTEA       NOT NULL,   -- SHA-256 от refresh-токена; сам токен не храним
-    expires_at TIMESTAMPTZ NOT NULL,   -- TokenPair.refresh_expires_at
-    revoked_at TIMESTAMPTZ,            -- Logout и ротация при Refresh
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

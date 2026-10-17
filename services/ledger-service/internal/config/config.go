@@ -15,7 +15,6 @@ type Upstreams struct {
 	Antifraud string `mapstructure:"antifraud"`
 }
 
-// Outbox - настройки публикации событий в Kafka.
 type Outbox struct {
 	Interval  time.Duration `mapstructure:"interval"`
 	BatchSize int           `mapstructure:"batch_size"`
