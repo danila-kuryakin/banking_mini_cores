@@ -98,13 +98,17 @@ func decode(encoded string) (params, error) {
 		return params{}, domain.ErrInvalidPasswordHash
 	}
 
+	if p.time < 1 || p.threads < 1 {
+		return params{}, domain.ErrInvalidPasswordHash
+	}
+
 	salt, err := base64.RawStdEncoding.DecodeString(sections[4])
-	if err != nil {
+	if err != nil || len(salt) == 0 {
 		return params{}, domain.ErrInvalidPasswordHash
 	}
 
 	key, err := base64.RawStdEncoding.DecodeString(sections[5])
-	if err != nil {
+	if err != nil || len(key) == 0 {
 		return params{}, domain.ErrInvalidPasswordHash
 	}
 
