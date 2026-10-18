@@ -452,6 +452,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
+                    "429": {
+                        "description": "Слишком много неудачных попыток по этому email или сервис перегружен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Ошибка auth-service",
                         "schema": {
@@ -564,6 +570,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
+                    "429": {
+                        "description": "Сервис перегружен, повторите позже",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Ошибка auth-service",
                         "schema": {
@@ -664,6 +676,12 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Email уже зарегистрирован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Сервис перегружен, повторите позже",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }

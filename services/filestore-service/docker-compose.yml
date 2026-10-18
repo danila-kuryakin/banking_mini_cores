@@ -44,6 +44,37 @@ services:
     restart: unless-stopped
     networks: [banking-net]
 
+  filestore-service:
+    build:
+      context: ../..
+      dockerfile: services/filestore-service/Dockerfile
+    image: banking/filestore-service:local
+    container_name: filestore-service
+    environment:
+      SERVER_HOST: 0.0.0.0
+      # База адресуется по имени контейнера и внутреннему порту, а не по порту с хоста.
+      DATABASE_HOST: banking-filestore-postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: ${POSTGRES_USER:-banking_filestore}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-123}
+      DATABASE_DBNAME: ${POSTGRES_DB:-banking_filestore}
+      # Хост из endpoint попадает в подпись presigned-ссылки, поэтому имя должно открываться и из сети, и с хоста.
+      MINIO_CONFIG_ENDPOINT: host.docker.internal:${MINIO_PORT:-9000}
+      MINIO_CONFIG_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_CONFIG_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "${SERVER_PORT:-50054}:50054"
+    # На Linux имени host.docker.internal нет само по себе, Docker Desktop его и так знает.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [banking-net]
+
 volumes:
   filestore-pgdata:
   filestore-minio-data:

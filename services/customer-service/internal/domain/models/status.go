@@ -62,11 +62,6 @@ var editableStatuses = []Status{
 	STATUS_PROFILE_FILLED,
 }
 
-// EditableStatuses отдаёт копию перечня статусов, в которых анкета правится.
-func EditableStatuses() []Status {
-	return slices.Clone(editableStatuses)
-}
-
 // IsEditable сообщает, можно ли в этом статусе править анкету.
 func (s Status) IsEditable() bool {
 	return slices.Contains(editableStatuses, s)

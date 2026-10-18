@@ -23,6 +23,30 @@ services:
     restart: unless-stopped
     networks: [banking-net]
 
+  account-service:
+    build:
+      context: ../..
+      dockerfile: services/account-service/Dockerfile
+    image: banking/account-service:local
+    container_name: account-service
+    environment:
+      SERVER_HOST: 0.0.0.0
+      # База адресуется по имени контейнера и внутреннему порту, а не по порту с хоста.
+      DATABASE_HOST: banking-account-postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: ${POSTGRES_USER:-banking_account}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-123}
+      DATABASE_DBNAME: ${POSTGRES_DB:-banking_account}
+      UPSTREAMS_CUSTOMER: customer-service:50052
+      UPSTREAMS_LEDGER: ledger-service:50056
+    ports:
+      - "${SERVER_PORT:-50055}:50055"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [banking-net]
+
 volumes:
   account-pgdata:
 

@@ -32,6 +32,11 @@ func validate(req any) error {
 			return domain.ErrFileTypeRequired
 		}
 
+		// typeFromProto отсюда недоступен из-за цикла импортов, поэтому сверка с самим enum.
+		if _, ok := filestorev1.FileType_name[int32(in.Type)]; !ok {
+			return domain.ErrFileTypeUnknown
+		}
+
 		return validateFilename(in.Filename)
 	case *filestorev1.ConfirmUploadRequest:
 		return validateIDs(in.UserId, in.FileId)

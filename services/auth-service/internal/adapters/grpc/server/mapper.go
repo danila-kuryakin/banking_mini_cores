@@ -18,6 +18,10 @@ func (s *AuthServer) credentialsError(err error, message string) error {
 		return status.Error(codes.Unauthenticated, err.Error())
 	case errors.Is(err, domain.ErrEmailTaken):
 		return domain.ErrEmailAlreadyExists
+	case errors.Is(err, domain.ErrLoginLocked):
+		return domain.ErrTooManyLoginAttempts
+	case errors.Is(err, domain.ErrPasswordHasherBusy):
+		return domain.ErrServerBusy
 	default:
 		s.log.Error(message, "error", err)
 

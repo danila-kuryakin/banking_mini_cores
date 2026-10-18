@@ -31,6 +31,7 @@ func NewAuthHandler(service *service.Service) *AuthHandler {
 //	@Success		201		{object}	dto.RegisterResponse	"Пользователь создан"
 //	@Failure		400		{object}	dto.ErrorResponse		"Тело запроса не прошло валидацию"
 //	@Failure		409		{object}	dto.ErrorResponse		"Email уже зарегистрирован"
+//	@Failure		429		{object}	dto.ErrorResponse		"Сервис перегружен, повторите позже"
 //	@Failure		500		{object}	dto.ErrorResponse		"Ошибка auth-service"
 //	@Router			/auth/register [post]
 func (h AuthHandler) Register(c *gin.Context) {
@@ -73,6 +74,7 @@ func (h AuthHandler) Register(c *gin.Context) {
 //	@Success		200		{object}	dto.LoginResponse	"Пользователь и пара токенов"
 //	@Failure		400		{object}	dto.ErrorResponse	"Тело запроса не прошло валидацию"
 //	@Failure		401		{object}	dto.ErrorResponse	"Неверные учётные данные"
+//	@Failure		429		{object}	dto.ErrorResponse	"Слишком много неудачных попыток по этому email или сервис перегружен"
 //	@Failure		500		{object}	dto.ErrorResponse	"Ошибка auth-service"
 //	@Router			/auth/login [post]
 func (h AuthHandler) Login(c *gin.Context) {
@@ -223,6 +225,7 @@ func (h AuthHandler) ValidateToken(c *gin.Context) {
 //	@Failure		401		{object}	dto.ErrorResponse			"Отсутствует или недействителен access-токен"
 //	@Failure		403		{object}	dto.ErrorResponse			"Роль не admin"
 //	@Failure		409		{object}	dto.ErrorResponse			"Email уже зарегистрирован"
+//	@Failure		429		{object}	dto.ErrorResponse			"Сервис перегружен, повторите позже"
 //	@Failure		500		{object}	dto.ErrorResponse			"Ошибка auth-service"
 //	@Router			/auth/officers [post]
 func (h AuthHandler) CreateOfficers(c *gin.Context) {

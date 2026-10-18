@@ -24,11 +24,14 @@ var (
 	ErrInvalidCredentials  = errors.New("invalid email or password")
 	ErrInvalidRefreshToken = errors.New("invalid refresh token")
 	ErrInvalidToken        = errors.New("invalid token")
+	ErrLoginLocked         = errors.New("login is temporarily locked")
+	ErrAdminEmailNotAdmin  = errors.New("default admin email belongs to a non-admin user")
 )
 
 var (
 	ErrInvalidPasswordHash    = errors.New("password hash is malformed")
 	ErrUnsupportedHashVersion = errors.New("unsupported password hash version")
+	ErrPasswordHasherBusy     = errors.New("password hashing capacity exhausted")
 )
 
 var (
@@ -46,6 +49,9 @@ var (
 	ErrLogoutFailed          = status.Error(codes.Internal, "failed to logout")
 	ErrValidateFailed        = status.Error(codes.Internal, "failed to validate token")
 	ErrDeleteUserFailed      = status.Error(codes.Internal, "failed to delete user")
+	ErrUserDoesNotExist      = status.Error(codes.NotFound, "user not found")
+	ErrTooManyLoginAttempts  = status.Error(codes.ResourceExhausted, "too many failed login attempts, try again later")
+	ErrServerBusy            = status.Error(codes.ResourceExhausted, "server is busy, try again later")
 )
 
 var (

@@ -7,11 +7,13 @@ import (
 )
 
 type Repository struct {
-	Auth interfaces.AuthRepository
+	Auth          interfaces.AuthRepository
+	LoginAttempts interfaces.LoginAttemptRepository
 }
 
 func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{
-		Auth: NewAuthRepo(db),
+		Auth:          NewAuthRepo(db),
+		LoginAttempts: NewLoginAttemptRepo(db),
 	}
 }

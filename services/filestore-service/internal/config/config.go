@@ -52,18 +52,22 @@ func (c *Config) setDefaults() {
 
 func (c *Config) Validate() error {
 	required := []struct {
-		key   string
-		value string
+		key     string
+		missing bool
 	}{
-		{"server.port", c.Server.Port},
-		{"minio_config.endpoint", c.MinIOConfig.Endpoint},
-		{"minio_config.access_key", c.MinIOConfig.AccessKey},
-		{"minio_config.secret_key", c.MinIOConfig.SecretKey},
-		{"minio_config.bucket_name", c.MinIOConfig.BucketName},
+		{"server.port", c.Server.Port == ""},
+		{"database.host", c.Postgres.Host == ""},
+		{"database.port", c.Postgres.Port <= 0},
+		{"database.user", c.Postgres.User == ""},
+		{"database.dbname", c.Postgres.DBName == ""},
+		{"minio_config.endpoint", c.MinIOConfig.Endpoint == ""},
+		{"minio_config.access_key", c.MinIOConfig.AccessKey == ""},
+		{"minio_config.secret_key", c.MinIOConfig.SecretKey == ""},
+		{"minio_config.bucket_name", c.MinIOConfig.BucketName == ""},
 	}
 
 	for _, field := range required {
-		if field.value == "" {
+		if field.missing {
 			return fmt.Errorf("%w: %s", domain.ErrConfigValueRequired, field.key)
 		}
 	}

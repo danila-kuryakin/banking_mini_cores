@@ -17,7 +17,7 @@ type CustomerRepository interface {
 	// GetStatusByUserID отдаёт только статус и время его последней смены.
 	GetStatusByUserID(ctx context.Context, userID uuid.UUID) (*models.Status, *time.Time, error)
 	// UpdateProfile сохраняет анкету; статус меняется вместе с ней.
-	UpdateProfile(ctx context.Context, userID uuid.UUID, profile models.Profile, status models.Status, editable []models.Status) (*models.Customer, error)
+	UpdateProfile(ctx context.Context, userID uuid.UUID, profile models.Profile, expected models.Status, next models.Status) (*models.Customer, error)
 	// ListCustomers отдаёт карточки постранично.
 	ListCustomers(ctx context.Context, limit, offset int) ([]*models.Customer, error)
 	// SetStatus переводит клиента в статус to и пишет переход в историю.

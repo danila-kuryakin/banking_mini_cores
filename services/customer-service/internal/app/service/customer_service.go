@@ -30,20 +30,32 @@ func (s *CustomerService) GetCustomer(ctx context.Context, id uuid.UUID) (*model
 }
 
 func (s *CustomerService) UpdateProfile(ctx context.Context, userID uuid.UUID, profile models.Profile) (*models.Customer, error) {
-	status, _, err := s.repo.Customer.GetStatusByUserID(ctx, userID)
+	profile = profile.Normalize()
+
+	if err := profile.Validate(time.Now().UTC()); err != nil {
+		return nil, err
+	}
+
+	current, _, err := s.repo.Customer.GetStatusByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	if !status.IsEditable() {
+	if !current.IsEditable() {
 		return nil, domain.ErrProfileLocked
 	}
 
-	if *status == models.STATUS_PROFILE_FILLED && !profile.IsComplete() {
+	if *current == models.STATUS_PROFILE_FILLED && !profile.IsComplete() {
 		return nil, domain.ErrProfileIncomplete
 	}
 
-	return s.repo.Customer.UpdateProfile(ctx, userID, profile, nextStatus(profile), models.EditableStatuses())
+	next := nextStatus(profile)
+
+	if next != *current && !models.CanTransition(*current, next) {
+		return nil, domain.ErrStatusTransitionForbidden
+	}
+
+	return s.repo.Customer.UpdateProfile(ctx, userID, profile, *current, next)
 }
 
 func nextStatus(profile models.Profile) models.Status {
@@ -66,6 +78,15 @@ func (s *CustomerService) SetStatus(
 		return nil, domain.ErrStatusRequired
 	}
 
+	current, changedAt, err := s.repo.Customer.GetStatusByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if *current == to {
+		return &models.StatusChange{Previous: to, Current: to, ChangedAt: *changedAt}, nil
+	}
+
 	// TODO: Не забыть исправить в будущем
 	// Блокировать клиента вправе только админ, а проверки роли здесь пока нет.
 	// Таблица переходов blocked из любого статуса разрешает - закрыто именно
@@ -77,15 +98,6 @@ func (s *CustomerService) SetStatus(
 	// Без причины запись в истории отвечает "когда отказали", но не "за что".
 	if to == models.STATUS_REJECTED && strings.TrimSpace(reason) == "" {
 		return nil, domain.ErrReasonRequired
-	}
-
-	current, changedAt, err := s.repo.Customer.GetStatusByUserID(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	if *current == to {
-		return &models.StatusChange{Previous: to, Current: to, ChangedAt: *changedAt}, nil
 	}
 
 	if !models.CanTransition(*current, to) {

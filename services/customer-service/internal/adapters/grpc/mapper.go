@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"errors"
 	"time"
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/customer-service/internal/domain/models"
@@ -81,12 +82,20 @@ func dateToProto(in *time.Time) *date.Date {
 	}
 }
 
-func dateFromProto(in *date.Date) *time.Time {
-	if in == nil || in.Year == 0 || in.Month == 0 || in.Day == 0 {
-		return nil
+func dateFromProto(in *date.Date) (*time.Time, error) {
+	if in == nil || (in.Year == 0 && in.Month == 0 && in.Day == 0) {
+		return nil, nil
+	}
+
+	if in.Year == 0 || in.Month == 0 || in.Day == 0 {
+		return nil, errors.New("date is partially set")
 	}
 
 	parsed := time.Date(int(in.Year), time.Month(in.Month), int(in.Day), 0, 0, 0, 0, time.UTC)
 
-	return &parsed
+	if int32(parsed.Year()) != in.Year || int32(parsed.Month()) != in.Month || int32(parsed.Day()) != in.Day {
+		return nil, errors.New("date is not a calendar date")
+	}
+
+	return &parsed, nil
 }

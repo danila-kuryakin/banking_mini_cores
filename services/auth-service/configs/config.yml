@@ -22,10 +22,17 @@ upstreams:
   customer: localhost:50052
 
 jwt:
-  # Каталог ключей подписи. Активный - последний по имени файла, остальные
-  # остаются в JWKS и продолжают проверять уже выданные токены.
   keys_dir: ./configs/jwt_keys
   access_ttl: 15m
   refresh_ttl: 720h
+
+login:
+  max_failed_attempts: 5
+  window: 15m
+  lock_duration: 15m
+
+password_hashing:
+  max_concurrent: 4
+  max_wait: 5s
 
 request_timeout: 30s

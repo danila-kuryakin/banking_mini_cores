@@ -36,6 +36,7 @@ var (
 	ErrUserIDMustBeUUID  = status.Error(codes.InvalidArgument, "user_id must be a uuid")
 	ErrFileIDMustBeUUID  = status.Error(codes.InvalidArgument, "file_id must be a uuid")
 	ErrFileTypeRequired  = status.Error(codes.InvalidArgument, "type must be specified")
+	ErrFileTypeUnknown   = status.Error(codes.InvalidArgument, "type is unknown")
 	ErrFilenameIsTooLong = status.Error(codes.InvalidArgument, "filename is longer than 255 characters")
 	ErrLimitIsNegative   = status.Error(codes.InvalidArgument, "limit must not be negative")
 	ErrOffsetIsNegative  = status.Error(codes.InvalidArgument, "offset must not be negative")
