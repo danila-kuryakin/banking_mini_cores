@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/account-service/internal/app/service"
@@ -189,7 +188,8 @@ func (s *AccountServer) fail(msg string, err error, fallback error, logArgs ...a
 	case errors.Is(err, domain.ErrCustomerNotActive):
 		return domain.ErrCustomerIsNotActive
 	case errors.Is(err, domain.ErrCurrencyNotAllowed):
-		return status.Error(codes.InvalidArgument, err.Error())
+		s.log.Error(msg, append(logArgs, "error", err)...)
+		return domain.ErrCurrencyIsNotValid
 	case errors.Is(err, domain.ErrAccountLimitReached):
 		return domain.ErrAccountLimit
 	case errors.Is(err, domain.ErrStatusConflict):
