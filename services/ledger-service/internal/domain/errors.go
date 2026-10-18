@@ -50,6 +50,7 @@ var (
 	ErrForeignAccount     = status.Error(codes.PermissionDenied, "source account belongs to another user")
 	ErrAccountIsNotActive = status.Error(codes.FailedPrecondition, "both accounts must be active")
 	ErrCurrencyIsMismatch = status.Error(codes.FailedPrecondition, "currency does not match the account currency")
+	ErrCurrencyIsNotValid = status.Error(codes.InvalidArgument, "currency is not allowed")
 	ErrAntifraudIsDown    = status.Error(codes.Unavailable, "antifraud check is unavailable, try again later")
 
 	ErrTransferFailed = status.Error(codes.Internal, "failed to transfer")

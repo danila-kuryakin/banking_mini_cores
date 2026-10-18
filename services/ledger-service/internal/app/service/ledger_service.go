@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 
@@ -81,10 +80,6 @@ func (s *LedgerService) Transfer(ctx context.Context, cmd models.TransferCommand
 		reason := domain.DECLINE_ANTIFRAUD
 		if verdict.CheckID != "" {
 			reason += " (check " + verdict.CheckID + ")"
-		}
-
-		if len(verdict.Reasons) > 0 {
-			reason += ": " + strings.Join(verdict.Reasons, ", ")
 		}
 
 		declined, err := s.repo.Decline(ctx, posting, reason)

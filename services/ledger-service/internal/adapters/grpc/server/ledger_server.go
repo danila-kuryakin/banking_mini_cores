@@ -161,17 +161,13 @@ func (s *LedgerServer) fail(msg string, err error, tx *models.Transaction, fallb
 	case errors.Is(err, domain.ErrCurrencyMismatch):
 		return domain.ErrCurrencyIsMismatch
 	case errors.Is(err, domain.ErrCurrencyNotAllowed):
-		return status.Error(codes.InvalidArgument, err.Error())
+		return domain.ErrCurrencyIsNotValid
 	case errors.Is(err, domain.ErrSameAccount):
 		return domain.ErrSameAccountTransfer
 	case errors.Is(err, domain.ErrFraudCheckFailed):
 		s.log.Error(msg, append(logArgs, "error", err)...)
 
 		return domain.ErrAntifraudIsDown
-	}
-
-	if _, isStatus := status.FromError(err); isStatus {
-		return err
 	}
 
 	s.log.Error(msg, append(logArgs, "error", err)...)
