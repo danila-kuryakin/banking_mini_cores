@@ -126,8 +126,8 @@ func (s *LedgerService) Deposit(ctx context.Context, cmd models.DepositCommand) 
 	})
 }
 
-func (s *LedgerService) GetTransaction(ctx context.Context, transactionId uuid.UUID) (*models.Transaction, error) {
-	return s.repo.GetTransaction(ctx, transactionId)
+func (s *LedgerService) GetTransaction(ctx context.Context, transactionID uuid.UUID) (*models.Transaction, error) {
+	return s.repo.GetTransaction(ctx, transactionID)
 }
 
 // ListTransactions - выписка; непустой userID ограничивает её счетами этого клиента.
