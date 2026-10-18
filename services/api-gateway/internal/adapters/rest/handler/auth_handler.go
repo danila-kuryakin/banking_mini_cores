@@ -148,13 +148,13 @@ func (h AuthHandler) RefreshToken(c *gin.Context) {
 // Logout godoc
 //
 //	@Summary		Выход из сессии
-//	@Description	Отзывает refresh-токен. Ранее выданный access-токен продолжает действовать до истечения срока.
+//	@Description	Отзывает refresh-токен. Ранее выданный access-токен продолжает действовать до истечения срока. Повторный выход тем же токеном, а также неизвестный или уже отозванный токен тоже дают 204.
 //	@Tags			auth
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body	dto.LogoutRequest	true	"Refresh-токен"
 //	@Success		204		"Сессия завершена, тело ответа пустое"
-//	@Failure		400		{object}	dto.ErrorResponse	"Тело запроса не прошло валидацию или токен неизвестен"
+//	@Failure		400		{object}	dto.ErrorResponse	"Тело запроса не прошло валидацию"
 //	@Failure		500		{object}	dto.ErrorResponse	"Ошибка auth-service"
 //	@Router			/auth/logout [post]
 func (h AuthHandler) Logout(c *gin.Context) {

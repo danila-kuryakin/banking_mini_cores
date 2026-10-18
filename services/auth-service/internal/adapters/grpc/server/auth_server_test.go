@@ -308,16 +308,27 @@ func TestLogout_Success(t *testing.T) {
 	assert.NotNil(t, resp)
 }
 
-func TestLogout_Invalid(t *testing.T) {
+func TestLogout_UnknownTokenSucceeds(t *testing.T) {
 	env := newTestEnv(t)
 	defer env.assertExpectations(t)
 	env.repo.On("RevokeRefreshToken", mock.Anything, token.Hash(TEST_REFRESH_TOKEN)).Return(domain.ErrRefreshTokenNotFound).Once()
 
-	_, err := env.server.Logout(context.Background(), &authv1.LogoutRequest{RefreshToken: TEST_REFRESH_TOKEN})
+	resp, err := env.server.Logout(context.Background(), &authv1.LogoutRequest{RefreshToken: TEST_REFRESH_TOKEN})
+
+	require.NoError(t, err)
+	assert.NotNil(t, resp)
+}
+
+func TestLogout_EmptyToken(t *testing.T) {
+	env := newTestEnv(t)
+	defer env.assertExpectations(t)
+
+	_, err := env.server.Logout(context.Background(), &authv1.LogoutRequest{RefreshToken: ""})
 
 	require.Error(t, err)
 	assert.Equal(t, codes.InvalidArgument, status.Code(err))
 	assert.Equal(t, "invalid refresh token", status.Convert(err).Message())
+	env.repo.AssertNotCalled(t, "RevokeRefreshToken", mock.Anything, mock.Anything)
 }
 
 func TestLogout_RepoError(t *testing.T) {

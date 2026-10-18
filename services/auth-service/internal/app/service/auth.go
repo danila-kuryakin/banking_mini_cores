@@ -182,7 +182,7 @@ func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
 
 	if err := s.repo.Auth.RevokeRefreshToken(ctx, token.Hash(refreshToken)); err != nil {
 		if errors.Is(err, domain.ErrRefreshTokenNotFound) {
-			return domain.ErrInvalidRefreshToken
+			return nil
 		}
 
 		return err

@@ -632,14 +632,12 @@ func TestLogout_Empty(t *testing.T) {
 	env.repo.AssertNotCalled(t, "RevokeRefreshToken", mock.Anything, mock.Anything)
 }
 
-func TestLogout_NotFound(t *testing.T) {
+func TestLogout_UnknownTokenSucceeds(t *testing.T) {
 	env := newTestEnv(t)
 	defer env.assertExpectations(t)
 	env.repo.On("RevokeRefreshToken", mock.Anything, token.Hash(TEST_REFRESH_TOKEN)).Return(domain.ErrRefreshTokenNotFound).Once()
 
-	err := env.service.Logout(context.Background(), TEST_REFRESH_TOKEN)
-
-	require.ErrorIs(t, err, domain.ErrInvalidRefreshToken)
+	require.NoError(t, env.service.Logout(context.Background(), TEST_REFRESH_TOKEN))
 }
 
 func TestLogout_RepoError(t *testing.T) {

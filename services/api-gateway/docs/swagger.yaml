@@ -956,7 +956,8 @@ paths:
       consumes:
       - application/json
       description: Отзывает refresh-токен. Ранее выданный access-токен продолжает
-        действовать до истечения срока.
+        действовать до истечения срока. Повторный выход тем же токеном, а также неизвестный
+        или уже отозванный токен тоже дают 204.
       parameters:
       - description: Refresh-токен
         in: body
@@ -970,7 +971,7 @@ paths:
         "204":
           description: Сессия завершена, тело ответа пустое
         "400":
-          description: Тело запроса не прошло валидацию или токен неизвестен
+          description: Тело запроса не прошло валидацию
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
         "500":
