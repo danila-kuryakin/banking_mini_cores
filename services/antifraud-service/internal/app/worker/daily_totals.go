@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/danila-kuryakin/banking_mini_cores/services/antifraud-service/internal/domain"
 	"github.com/danila-kuryakin/banking_mini_cores/services/antifraud-service/internal/domain/interfaces"
 	"github.com/danila-kuryakin/banking_mini_cores/services/antifraud-service/internal/domain/models"
@@ -124,6 +126,18 @@ func (w *DailyTotals) handle(ctx context.Context, msg models.Message) error {
 
 	if payload.Type != models.TRANSACTION_TYPE_TRANSFER {
 		return nil
+	}
+
+	if payload.FromAccountID == uuid.Nil {
+		return fmt.Errorf("%w: payload: from_account_id is required", domain.ErrPoisonMessage)
+	}
+
+	if payload.Amount <= 0 {
+		return fmt.Errorf("%w: payload: amount must be positive", domain.ErrPoisonMessage)
+	}
+
+	if payload.CreatedAt.IsZero() {
+		return fmt.Errorf("%w: payload: created_at is required", domain.ErrPoisonMessage)
 	}
 
 	currency, err := models.ParseCurrency(payload.Currency)

@@ -3,6 +3,7 @@ package server
 import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/danila-kuryakin/banking_mini_cores/services/antifraud-service/internal/domain"
 	"github.com/danila-kuryakin/banking_mini_cores/services/antifraud-service/internal/domain/models"
 	antifraudv1 "github.com/danila-kuryakin/banking_mini_cores/services/antifraud-service/internal/pb/gen/antifraud/v1"
 )
@@ -54,7 +55,11 @@ func paramsFromProto(in *antifraudv1.RuleParams) (*models.RuleParams, error) {
 	for raw, limit := range in.Limits {
 		currency, err := models.ParseCurrency(raw)
 		if err != nil {
-			return nil, err
+			return nil, domain.ErrCurrencyIsNotValid
+		}
+
+		if _, ok := params.Limits[currency]; ok {
+			return nil, domain.ErrLimitsCurrencyDuplicate
 		}
 
 		params.Limits[currency] = limit

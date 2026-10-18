@@ -15,13 +15,15 @@ var (
 
 // Ошибки, уходящие наружу gRPC-статусами.
 var (
-	ErrInitiatorIDMustBeUUID = status.Error(codes.InvalidArgument, "initiator_id must be a uuid")
-	ErrAccountIDMustBeUUID   = status.Error(codes.InvalidArgument, "account_id must be a uuid")
-	ErrOfficerIDMustBeUUID   = status.Error(codes.InvalidArgument, "officer_id must be a uuid")
-	ErrAmountMustBePositive  = status.Error(codes.InvalidArgument, "amount must be positive")
-	ErrCurrencyIsRequired    = status.Error(codes.InvalidArgument, "currency is required")
-	ErrRuleCodeIsRequired    = status.Error(codes.InvalidArgument, "rule code is required")
-	ErrNothingToUpdate       = status.Error(codes.InvalidArgument, "either enabled or params must be set")
+	ErrInitiatorIDMustBeUUID   = status.Error(codes.InvalidArgument, "initiator_id must be a uuid")
+	ErrAccountIDMustBeUUID     = status.Error(codes.InvalidArgument, "account_id must be a uuid")
+	ErrOfficerIDMustBeUUID     = status.Error(codes.InvalidArgument, "officer_id must be a uuid")
+	ErrAmountMustBePositive    = status.Error(codes.InvalidArgument, "amount must be positive")
+	ErrCurrencyIsRequired      = status.Error(codes.InvalidArgument, "currency is required")
+	ErrCurrencyIsNotValid      = status.Error(codes.InvalidArgument, "currency is not allowed")
+	ErrLimitsCurrencyDuplicate = status.Error(codes.InvalidArgument, "currency is listed twice in limits")
+	ErrRuleCodeIsRequired      = status.Error(codes.InvalidArgument, "rule code is required")
+	ErrNothingToUpdate         = status.Error(codes.InvalidArgument, "either enabled or params must be set")
 
 	ErrRuleMissing = status.Error(codes.NotFound, "rule not found")
 
