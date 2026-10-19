@@ -5,6 +5,7 @@ import { FullScreenLoader } from './components/Spinner';
 import { AccountPage } from './features/accounts/AccountPage';
 import { AccountsPage } from './features/accounts/AccountsPage';
 import { AntifraudPage } from './features/antifraud/AntifraudPage';
+import { CashPage } from './features/cash/CashPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
 import { CustomerPage } from './features/customers/CustomerPage';
@@ -75,6 +76,7 @@ export function AppRoutes() {
         <Route path="customers" element={<CustomersPage />} />
         <Route path="customers/:userId" element={<CustomerPage />} />
         <Route path="accounts/:accountId" element={<StaffAccountPage />} />
+        <Route path="cash" element={<CashPage />} />
         <Route path="sanctions" element={<SanctionsPage />} />
         <Route path="antifraud" element={<AntifraudPage />} />
         <Route

@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { ClipboardCheck, ShieldAlert, ShieldBan, UserPlus, Users } from 'lucide-react';
+import { Banknote, ClipboardCheck, ShieldAlert, ShieldBan, UserPlus, Users } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext';
@@ -8,6 +8,7 @@ import { Header, navClass, type NavItem } from './Header';
 const NAV: (NavItem & { adminOnly?: boolean })[] = [
   { to: '/staff/kyc', label: 'Очередь KYC', icon: <ClipboardCheck size={18} /> },
   { to: '/staff/customers', label: 'Клиенты', icon: <Users size={18} /> },
+  { to: '/staff/cash', label: 'Касса', icon: <Banknote size={18} /> },
   { to: '/staff/sanctions', label: 'Санкции', icon: <ShieldBan size={18} /> },
   { to: '/staff/antifraud', label: 'Антифрод', icon: <ShieldAlert size={18} /> },
   { to: '/staff/officers', label: 'Сотрудники', icon: <UserPlus size={18} />, adminOnly: true },
