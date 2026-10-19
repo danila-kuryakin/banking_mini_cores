@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Цвета в виде "r g b", чтобы Tailwind мог добавлять прозрачность (bg-up/15). */
+:root,
+:root[data-theme='dark'] {
+  --bg: 11 14 17;
+  --bg-elevated: 23 24 30;
+  --bg-input: 31 33 41;
+  --border: 42 45 53;
+  --text: 234 236 239;
+  --text-muted: 129 133 140;
+  --accent: 247 166 0;
+  --accent-text: 11 14 17;
+  --up: 32 178 108;
+  --down: 239 69 74;
+  --warn: 247 166 0;
+  --info: 61 126 255;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --bg: 255 255 255;
+  --bg-elevated: 245 247 250;
+  --bg-input: 238 240 244;
+  --border: 227 230 236;
+  --text: 18 18 20;
+  --text-muted: 113 117 122;
+  --accent: 247 166 0;
+  --accent-text: 11 14 17;
+  --up: 32 178 108;
+  --down: 239 69 74;
+  --warn: 217 143 0;
+  --info: 47 107 224;
+  color-scheme: light;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+  body {
+    @apply bg-bg font-sans text-base text-text antialiased;
+  }
+  * {
+    @apply border-border;
+  }
+  :focus-visible {
+    outline: 1px solid rgb(var(--accent));
+    outline-offset: 1px;
+  }
+  input[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(0.6);
+  }
+}
+
+@layer components {
+  .num {
+    @apply font-mono tabular-nums;
+  }
+  .card {
+    @apply rounded-xl bg-elevated;
+  }
+  .label {
+    @apply mb-1.5 block text-xs text-muted;
+  }
+  .field {
+    @apply h-10 w-full rounded-lg border border-transparent bg-input px-3 text-sm text-text outline-none transition-colors placeholder:text-muted/70 focus:border-accent disabled:opacity-60;
+  }
+  .field-error {
+    @apply border-down focus:border-down;
+  }
+  .link {
+    @apply text-info hover:underline;
+  }
+  .skeleton {
+    @apply animate-pulse rounded bg-input;
+  }
+}
