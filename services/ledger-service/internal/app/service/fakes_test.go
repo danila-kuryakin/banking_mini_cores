@@ -32,6 +32,14 @@ const (
 	TEST_TRANSFER_SUM = int64(1500)
 )
 
+// Номера счетов A, B, C и номер, которого нет в account-service.
+const (
+	TEST_NUMBER_A       = "40817810100000000001"
+	TEST_NUMBER_B       = "40817810200000000002"
+	TEST_NUMBER_C       = "40817840300000000003"
+	TEST_NUMBER_MISSING = "40817810900000000099"
+)
+
 // declineCall - записанный вызов Decline
 type declineCall struct {
 	Posting models.Posting
@@ -123,6 +131,10 @@ type fakeAccounts struct {
 	accounts map[uuid.UUID]*models.AccountInfo
 	errs     map[uuid.UUID]error
 	calls    []uuid.UUID
+
+	numbers     map[string]uuid.UUID
+	numberErr   error
+	numberCalls []string
 }
 
 var _ interfaces.Accounts = (*fakeAccounts)(nil)
@@ -135,6 +147,18 @@ func (f *fakeAccounts) GetAccount(_ context.Context, accountID uuid.UUID) (*mode
 	account, ok := f.accounts[accountID]
 	if !ok {
 		return nil, fmt.Errorf("account %s: %w", accountID, domain.ErrAccountNotFound)
+	}
+	return account, nil
+}
+
+func (f *fakeAccounts) GetAccountByNumber(_ context.Context, number string) (*models.AccountInfo, error) {
+	f.numberCalls = append(f.numberCalls, number)
+	if f.numberErr != nil {
+		return nil, f.numberErr
+	}
+	account, ok := f.accounts[f.numbers[number]]
+	if !ok {
+		return nil, fmt.Errorf("number %s: %w", number, domain.ErrAccountNotFound)
 	}
 	return account, nil
 }
@@ -176,7 +200,7 @@ func account(accountID, userID uuid.UUID, currency models.Currency, status model
 
 // accountsOf строит фейк accounts из списка счетов
 func accountsOf(list ...*models.AccountInfo) *fakeAccounts {
-	accounts := &fakeAccounts{accounts: map[uuid.UUID]*models.AccountInfo{}, errs: map[uuid.UUID]error{}}
+	accounts := &fakeAccounts{accounts: map[uuid.UUID]*models.AccountInfo{}, errs: map[uuid.UUID]error{}, numbers: map[string]uuid.UUID{}}
 	for _, info := range list {
 		accounts.accounts[info.ID] = info
 	}

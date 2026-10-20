@@ -10,6 +10,7 @@ import (
 
 type Accounts interface {
 	GetAccount(ctx context.Context, id uuid.UUID) (*models.AccountInfo, error)
+	GetAccountByNumber(ctx context.Context, number string) (*models.AccountInfo, error)
 }
 
 // FraudChecker - антифрод; недоступность сервиса - ошибка перевода, а не разрешение.

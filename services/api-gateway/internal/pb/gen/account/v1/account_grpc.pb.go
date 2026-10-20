@@ -19,14 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AccountService_OpenAccount_FullMethodName       = "/account.v1.AccountService/OpenAccount"
-	AccountService_GetAccount_FullMethodName        = "/account.v1.AccountService/GetAccount"
-	AccountService_ListAccounts_FullMethodName      = "/account.v1.AccountService/ListAccounts"
-	AccountService_BlockAccount_FullMethodName      = "/account.v1.AccountService/BlockAccount"
-	AccountService_UnblockAccount_FullMethodName    = "/account.v1.AccountService/UnblockAccount"
-	AccountService_CloseAccount_FullMethodName      = "/account.v1.AccountService/CloseAccount"
-	AccountService_GetBalance_FullMethodName        = "/account.v1.AccountService/GetBalance"
-	AccountService_ListStatusHistory_FullMethodName = "/account.v1.AccountService/ListStatusHistory"
+	AccountService_OpenAccount_FullMethodName        = "/account.v1.AccountService/OpenAccount"
+	AccountService_GetAccount_FullMethodName         = "/account.v1.AccountService/GetAccount"
+	AccountService_GetAccountByNumber_FullMethodName = "/account.v1.AccountService/GetAccountByNumber"
+	AccountService_ListAccounts_FullMethodName       = "/account.v1.AccountService/ListAccounts"
+	AccountService_BlockAccount_FullMethodName       = "/account.v1.AccountService/BlockAccount"
+	AccountService_UnblockAccount_FullMethodName     = "/account.v1.AccountService/UnblockAccount"
+	AccountService_CloseAccount_FullMethodName       = "/account.v1.AccountService/CloseAccount"
+	AccountService_GetBalance_FullMethodName         = "/account.v1.AccountService/GetBalance"
+	AccountService_ListStatusHistory_FullMethodName  = "/account.v1.AccountService/ListStatusHistory"
 )
 
 // AccountServiceClient is the client API for AccountService service.
@@ -35,6 +36,7 @@ const (
 type AccountServiceClient interface {
 	OpenAccount(ctx context.Context, in *OpenAccountRequest, opts ...grpc.CallOption) (*Account, error)
 	GetAccount(ctx context.Context, in *GetAccountRequest, opts ...grpc.CallOption) (*Account, error)
+	GetAccountByNumber(ctx context.Context, in *GetAccountByNumberRequest, opts ...grpc.CallOption) (*Account, error)
 	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
 	BlockAccount(ctx context.Context, in *BlockAccountRequest, opts ...grpc.CallOption) (*Account, error)
 	UnblockAccount(ctx context.Context, in *UnblockAccountRequest, opts ...grpc.CallOption) (*Account, error)
@@ -65,6 +67,16 @@ func (c *accountServiceClient) GetAccount(ctx context.Context, in *GetAccountReq
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Account)
 	err := c.cc.Invoke(ctx, AccountService_GetAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *accountServiceClient) GetAccountByNumber(ctx context.Context, in *GetAccountByNumberRequest, opts ...grpc.CallOption) (*Account, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Account)
+	err := c.cc.Invoke(ctx, AccountService_GetAccountByNumber_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -137,6 +149,7 @@ func (c *accountServiceClient) ListStatusHistory(ctx context.Context, in *ListSt
 type AccountServiceServer interface {
 	OpenAccount(context.Context, *OpenAccountRequest) (*Account, error)
 	GetAccount(context.Context, *GetAccountRequest) (*Account, error)
+	GetAccountByNumber(context.Context, *GetAccountByNumberRequest) (*Account, error)
 	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
 	BlockAccount(context.Context, *BlockAccountRequest) (*Account, error)
 	UnblockAccount(context.Context, *UnblockAccountRequest) (*Account, error)
@@ -158,6 +171,9 @@ func (UnimplementedAccountServiceServer) OpenAccount(context.Context, *OpenAccou
 }
 func (UnimplementedAccountServiceServer) GetAccount(context.Context, *GetAccountRequest) (*Account, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAccount not implemented")
+}
+func (UnimplementedAccountServiceServer) GetAccountByNumber(context.Context, *GetAccountByNumberRequest) (*Account, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAccountByNumber not implemented")
 }
 func (UnimplementedAccountServiceServer) ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAccounts not implemented")
@@ -230,6 +246,24 @@ func _AccountService_GetAccount_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AccountServiceServer).GetAccount(ctx, req.(*GetAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AccountService_GetAccountByNumber_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAccountByNumberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountServiceServer).GetAccountByNumber(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AccountService_GetAccountByNumber_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountServiceServer).GetAccountByNumber(ctx, req.(*GetAccountByNumberRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -356,6 +390,10 @@ var AccountService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAccount",
 			Handler:    _AccountService_GetAccount_Handler,
+		},
+		{
+			MethodName: "GetAccountByNumber",
+			Handler:    _AccountService_GetAccountByNumber_Handler,
 		},
 		{
 			MethodName: "ListAccounts",

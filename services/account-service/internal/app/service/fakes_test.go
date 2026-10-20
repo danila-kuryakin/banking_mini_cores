@@ -69,6 +69,8 @@ type fakeAccountRepository struct {
 	createErr        error
 	getByIDResult    *models.Account
 	getByIDErr       error
+	getByNumResult   *models.Account
+	getByNumErr      error
 	listResult       []*models.Account
 	listErr          error
 	historyResult    []*models.StatusChange
@@ -79,6 +81,7 @@ type fakeAccountRepository struct {
 	nextSerialCalls int
 	createCalls     []createCall
 	getByIDCalls    []getByIDCall
+	getByNumCalls   []string
 	listCalls       []listCall
 	historyCalls    []historyCall
 	transitionCalls []transitionCall
@@ -117,6 +120,16 @@ func (f *fakeAccountRepository) GetByID(_ context.Context, userID *uuid.UUID, ac
 		return nil, f.getByIDErr
 	}
 	return f.getByIDResult, nil
+}
+
+func (f *fakeAccountRepository) GetByNumber(_ context.Context, number string) (*models.Account, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.getByNumCalls = append(f.getByNumCalls, number)
+	if f.getByNumErr != nil {
+		return nil, f.getByNumErr
+	}
+	return f.getByNumResult, nil
 }
 
 func (f *fakeAccountRepository) ListByUser(_ context.Context, userID uuid.UUID, page models.Page) ([]*models.Account, error) {

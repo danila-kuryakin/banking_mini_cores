@@ -177,3 +177,85 @@ func TestAccountClient_GetAccount_InvalidOwner(t *testing.T) {
 		})
 	}
 }
+
+func TestAccountClient_GetAccountByNumber(t *testing.T) {
+	fake := &fakeAccountServiceClient{resp: &accountv1.Account{
+		Id: TEST_ACCOUNT_ID, UserId: TEST_OWNER_ID, Number: TEST_ACCOUNT_NUMBER, Currency: TEST_CURRENCY_RUB, Status: accountv1.AccountStatus_ACCOUNT_STATUS_BLOCKED,
+	}}
+	c := NewAccountClient(fake)
+
+	got, err := c.GetAccountByNumber(t.Context(), TEST_ACCOUNT_NUMBER)
+
+	require.NoError(t, err)
+	assert.Equal(t, &models.AccountInfo{
+		ID:       uuid.MustParse(TEST_ACCOUNT_ID),
+		UserID:   uuid.MustParse(TEST_OWNER_ID),
+		Currency: models.Currency(TEST_CURRENCY_RUB),
+		Status:   models.ACCOUNT_STATUS_BLOCKED,
+	}, got)
+	assert.Empty(t, fake.requests)
+	require.Len(t, fake.numberRequests, 1)
+	assert.True(t, proto.Equal(&accountv1.GetAccountByNumberRequest{Number: TEST_ACCOUNT_NUMBER}, fake.numberRequests[0]), "unexpected request: %v", fake.numberRequests[0])
+}
+
+func TestAccountClient_GetAccountByNumber_NotFound(t *testing.T) {
+	fake := &fakeAccountServiceClient{err: status.Error(codes.NotFound, "account not found")}
+	c := NewAccountClient(fake)
+
+	got, err := c.GetAccountByNumber(t.Context(), TEST_ACCOUNT_NUMBER)
+
+	require.ErrorIs(t, err, domain.ErrAccountNotFound)
+	assert.Nil(t, got)
+}
+
+func TestAccountClient_GetAccountByNumber_RPCError(t *testing.T) {
+	tests := []struct {
+		name     string
+		rpcErr   error
+		wantCode codes.Code
+	}{
+		{name: "unavailable", rpcErr: status.Error(codes.Unavailable, "connection refused"), wantCode: codes.Unavailable},
+		{name: "invalid argument", rpcErr: status.Error(codes.InvalidArgument, "number must be 20 digits"), wantCode: codes.InvalidArgument},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fake := &fakeAccountServiceClient{err: tt.rpcErr}
+			c := NewAccountClient(fake)
+
+			got, err := c.GetAccountByNumber(t.Context(), TEST_ACCOUNT_NUMBER)
+
+			require.ErrorIs(t, err, tt.rpcErr)
+			assert.Equal(t, tt.wantCode, status.Code(err))
+			assert.NotErrorIs(t, err, domain.ErrAccountNotFound)
+			assert.Nil(t, got)
+		})
+	}
+}
+
+func TestAccountClient_GetAccountByNumber_InvalidIDs(t *testing.T) {
+	tests := []struct {
+		name      string
+		accountID string
+		userID    string
+	}{
+		{name: "empty account id", accountID: "", userID: TEST_OWNER_ID},
+		{name: "non uuid account id", accountID: TEST_NOT_UUID, userID: TEST_OWNER_ID},
+		{name: "non uuid user id", accountID: TEST_ACCOUNT_ID, userID: TEST_NOT_UUID},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fake := &fakeAccountServiceClient{resp: &accountv1.Account{
+				Id: tt.accountID, UserId: tt.userID, Currency: TEST_CURRENCY_RUB, Status: accountv1.AccountStatus_ACCOUNT_STATUS_ACTIVE,
+			}}
+			c := NewAccountClient(fake)
+
+			got, err := c.GetAccountByNumber(t.Context(), TEST_ACCOUNT_NUMBER)
+
+			require.Error(t, err)
+			assert.NotErrorIs(t, err, domain.ErrAccountNotFound)
+			assert.Nil(t, got)
+		})
+	}
+}

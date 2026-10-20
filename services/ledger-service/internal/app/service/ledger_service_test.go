@@ -1077,3 +1077,148 @@ func TestLedgerService_Deposit_CurrencyNormalized(t *testing.T) {
 		})
 	}
 }
+
+// numberAccounts - defaultAccounts с номерами счетов A, B и C
+func numberAccounts() *fakeAccounts {
+	accounts := defaultAccounts()
+	accounts.numbers[TEST_NUMBER_A] = TEST_ACCOUNT_A_ID
+	accounts.numbers[TEST_NUMBER_B] = TEST_ACCOUNT_B_ID
+	accounts.numbers[TEST_NUMBER_C] = TEST_ACCOUNT_C_ID
+	return accounts
+}
+
+// transferByNumberCmd - перевод со счёта A от U1 на счёт с указанным номером
+func transferByNumberCmd(number string) models.TransferCommand {
+	return models.TransferCommand{
+		InitiatorID: TEST_USER1_ID,
+		From:        TEST_ACCOUNT_A_ID,
+		Amount:      TEST_TRANSFER_SUM,
+		Currency:    "RUB",
+		ToNumber:    number,
+	}
+}
+
+func TestLedgerService_TransferByNumber(t *testing.T) {
+	errAccounts := errors.New("accounts unavailable")
+
+	tests := []struct {
+		name            string
+		cmd             models.TransferCommand
+		setup           func(accounts *fakeAccounts)
+		want            *models.Transaction
+		wantErr         error
+		wantNotErr      error
+		wantAccountCall []uuid.UUID
+		wantPostCalls   []models.Posting
+	}{
+		{
+			// получатель найден по номеру, повторно по id его не ищем
+			name:            "success",
+			cmd:             transferByNumberCmd(TEST_NUMBER_B),
+			setup:           func(*fakeAccounts) {},
+			want:            completedTx(),
+			wantAccountCall: []uuid.UUID{TEST_ACCOUNT_A_ID},
+			wantPostCalls:   []models.Posting{transferPosting(TEST_TRANSFER_SUM)},
+		},
+		{
+			name:    "own_source_number",
+			cmd:     transferByNumberCmd(TEST_NUMBER_A),
+			setup:   func(*fakeAccounts) {},
+			wantErr: domain.ErrSameAccount,
+		},
+		{
+			name:    "recipient_not_found",
+			cmd:     transferByNumberCmd(TEST_NUMBER_MISSING),
+			setup:   func(*fakeAccounts) {},
+			wantErr: domain.ErrAccountNotFound,
+		},
+		{
+			name: "recipient_blocked",
+			cmd:  transferByNumberCmd(TEST_NUMBER_B),
+			setup: func(accounts *fakeAccounts) {
+				accounts.accounts[TEST_ACCOUNT_B_ID].Status = models.ACCOUNT_STATUS_BLOCKED
+			},
+			wantErr:         domain.ErrAccountNotActive,
+			wantAccountCall: []uuid.UUID{TEST_ACCOUNT_A_ID},
+		},
+		{
+			name: "recipient_closed",
+			cmd:  transferByNumberCmd(TEST_NUMBER_B),
+			setup: func(accounts *fakeAccounts) {
+				accounts.accounts[TEST_ACCOUNT_B_ID].Status = models.ACCOUNT_STATUS_CLOSED
+			},
+			wantErr:         domain.ErrAccountNotActive,
+			wantAccountCall: []uuid.UUID{TEST_ACCOUNT_A_ID},
+		},
+		{
+			name:            "recipient_other_currency",
+			cmd:             transferByNumberCmd(TEST_NUMBER_C),
+			setup:           func(*fakeAccounts) {},
+			wantErr:         domain.ErrCurrencyMismatch,
+			wantAccountCall: []uuid.UUID{TEST_ACCOUNT_A_ID},
+		},
+		{
+			// источник проверяется раньше статуса получателя, как и при переводе по id
+			name: "source_not_owned_and_recipient_blocked",
+			cmd:  transferByNumberCmd(TEST_NUMBER_B),
+			setup: func(accounts *fakeAccounts) {
+				accounts.accounts[TEST_ACCOUNT_A_ID].UserID = TEST_USER2_ID
+				accounts.accounts[TEST_ACCOUNT_B_ID].Status = models.ACCOUNT_STATUS_BLOCKED
+			},
+			wantErr:         domain.ErrAccountNotOwned,
+			wantAccountCall: []uuid.UUID{TEST_ACCOUNT_A_ID},
+		},
+		{
+			name: "accounts_error",
+			cmd:  transferByNumberCmd(TEST_NUMBER_B),
+			setup: func(accounts *fakeAccounts) {
+				accounts.numberErr = errAccounts
+			},
+			wantErr:    errAccounts,
+			wantNotErr: domain.ErrAccountNotFound,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := defaultRepo()
+			accounts := numberAccounts()
+			tt.setup(accounts)
+			fraud := &fakeFraudChecker{verdict: models.Verdict{Allowed: true}}
+			svc := newTestService(t, repo, accounts, fraud, testCash())
+
+			got, err := svc.Transfer(t.Context(), tt.cmd)
+
+			assert.Equal(t, []string{tt.cmd.ToNumber}, accounts.numberCalls)
+			assert.Equal(t, tt.wantAccountCall, accounts.calls)
+			assert.Equal(t, tt.wantPostCalls, repo.postCalls)
+			assert.Empty(t, repo.declineCalls)
+			assert.Equal(t, tt.want, got)
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+				if tt.wantNotErr != nil {
+					assert.NotErrorIs(t, err, tt.wantNotErr)
+				}
+				assert.Empty(t, fraud.calls)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, fraud.calls, 1)
+			assert.Equal(t, TEST_ACCOUNT_B_ID, fraud.calls[0].To)
+		})
+	}
+}
+
+func TestLedgerService_TransferByNumber_DenyDeclinesResolvedRecipient(t *testing.T) {
+	repo := defaultRepo()
+	accounts := numberAccounts()
+	fraud := &fakeFraudChecker{verdict: models.Verdict{Allowed: false, CheckID: TEST_CHECK_ID}}
+	svc := newTestService(t, repo, accounts, fraud, testCash())
+
+	got, err := svc.Transfer(t.Context(), transferByNumberCmd(TEST_NUMBER_B))
+
+	require.ErrorIs(t, err, domain.ErrTransferDenied)
+	assert.Equal(t, declinedTx(), got)
+	assert.Equal(t, []declineCall{
+		{Posting: transferPosting(TEST_TRANSFER_SUM), Reason: "denied by antifraud (check chk-1)"},
+	}, repo.declineCalls)
+}

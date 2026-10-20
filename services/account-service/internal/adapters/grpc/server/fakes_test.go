@@ -85,6 +85,7 @@ type historyCall struct {
 type fakeAccountService struct {
 	openAccount    *models.Account
 	getAccount     *models.Account
+	getByNumber    *models.Account
 	listAccounts   []*models.Account
 	blockAccount   *models.Account
 	unblockAccount *models.Account
@@ -94,6 +95,7 @@ type fakeAccountService struct {
 
 	openErr    error
 	getErr     error
+	numberErr  error
 	listErr    error
 	blockErr   error
 	unblockErr error
@@ -103,6 +105,7 @@ type fakeAccountService struct {
 
 	openCalls    []openCall
 	getCalls     []getCall
+	numberCalls  []string
 	listCalls    []listCall
 	blockCalls   []blockCall
 	unblockCalls []unblockCall
@@ -126,6 +129,11 @@ func (f *fakeAccountService) Get(_ context.Context, userID *uuid.UUID, accountID
 	}
 	f.getCalls = append(f.getCalls, call)
 	return f.getAccount, f.getErr
+}
+
+func (f *fakeAccountService) GetByNumber(_ context.Context, number string) (*models.Account, error) {
+	f.numberCalls = append(f.numberCalls, number)
+	return f.getByNumber, f.numberErr
 }
 
 func (f *fakeAccountService) List(_ context.Context, userID uuid.UUID, page models.Page) ([]*models.Account, error) {
@@ -160,7 +168,7 @@ func (f *fakeAccountService) History(_ context.Context, accountID uuid.UUID, pag
 
 // totalCalls - число вызовов всех методов фейка.
 func (f *fakeAccountService) totalCalls() int {
-	return len(f.openCalls) + len(f.getCalls) + len(f.listCalls) + len(f.blockCalls) +
+	return len(f.openCalls) + len(f.getCalls) + len(f.numberCalls) + len(f.listCalls) + len(f.blockCalls) +
 		len(f.unblockCalls) + len(f.closeCalls) + len(f.balanceCalls) + len(f.historyCalls)
 }
 
@@ -229,7 +237,7 @@ type rpcCase struct {
 	stubError error
 }
 
-// allRPCs - все 8 RPC с валидными запросами; первый результат call - ответ nil.
+// allRPCs - все 9 RPC с валидными запросами; первый результат call - ответ nil.
 func allRPCs() []rpcCase {
 	return []rpcCase{
 		{
@@ -250,6 +258,16 @@ func allRPCs() []rpcCase {
 			},
 			setErr:    func(f *fakeAccountService, err error) { f.getErr = err },
 			ownCalls:  func(f *fakeAccountService) int { return len(f.getCalls) },
+			stubError: domain.ErrGetFailed,
+		},
+		{
+			name: "GetAccountByNumber",
+			call: func(t *testing.T, s *AccountServer) (bool, error) {
+				resp, err := s.GetAccountByNumber(t.Context(), &accountv1.GetAccountByNumberRequest{Number: TEST_ACCOUNT_NUMBER})
+				return resp == nil, err
+			},
+			setErr:    func(f *fakeAccountService, err error) { f.numberErr = err },
+			ownCalls:  func(f *fakeAccountService) int { return len(f.numberCalls) },
 			stubError: domain.ErrGetFailed,
 		},
 		{

@@ -29,6 +29,7 @@ var (
 	ErrReasonIsRequired    = status.Error(codes.InvalidArgument, "reason is required to block an account")
 	ErrReasonIsTooLong     = status.Error(codes.InvalidArgument, "reason is longer than 500 characters")
 	ErrCurrencyIsNotValid  = status.Error(codes.InvalidArgument, "currency is not allowed")
+	ErrNumberIsInvalid     = status.Error(codes.InvalidArgument, "number must be 20 digits")
 
 	ErrAccountMissing      = status.Error(codes.NotFound, "account not found")
 	ErrCustomerMissing     = status.Error(codes.NotFound, "customer not found")

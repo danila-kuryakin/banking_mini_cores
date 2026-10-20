@@ -37,6 +37,7 @@ const (
 	TEST_CURRENCY_RUB     = "RUB"
 	TEST_ERROR_LOG        = "level=ERROR"
 	TEST_CURRENCY_MESSAGE = "currency is not allowed"
+	TEST_ACCOUNT_NUMBER   = "40817810400000000014"
 )
 
 // testCreatedAt - фиксированное время создания тестовых транзакций.
@@ -768,4 +769,80 @@ func TestLedgerServer_NoUnknownCode(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestLedgerServer_TransferByNumber(t *testing.T) {
+	validRequest := func() *ledgerv1.TransferRequest {
+		return &ledgerv1.TransferRequest{InitiatorId: TEST_INITIATOR_ID, FromAccountId: TEST_FROM_ACCOUNT_ID, ToAccountNumber: TEST_ACCOUNT_NUMBER, Amount: TEST_AMOUNT, Currency: "rub"}
+	}
+	tests := []struct {
+		name      string
+		modify    func(in *ledgerv1.TransferRequest)
+		wantCalls []models.TransferCommand
+		wantErr   error
+	}{
+		{
+			// id получателя сервис узнаёт сам, To остаётся пустым
+			name:   "number passed as is",
+			modify: func(in *ledgerv1.TransferRequest) {},
+			wantCalls: []models.TransferCommand{{
+				InitiatorID: uuid.MustParse(TEST_INITIATOR_ID),
+				From:        uuid.MustParse(TEST_FROM_ACCOUNT_ID),
+				Amount:      TEST_AMOUNT,
+				Currency:    "rub",
+				ToNumber:    TEST_ACCOUNT_NUMBER,
+			}},
+		},
+		{name: "19 digits", modify: func(in *ledgerv1.TransferRequest) { in.ToAccountNumber = TEST_ACCOUNT_NUMBER[1:] }, wantErr: domain.ErrAccountNumberIsInvalid},
+		{name: "21 digits", modify: func(in *ledgerv1.TransferRequest) { in.ToAccountNumber = TEST_ACCOUNT_NUMBER + "0" }, wantErr: domain.ErrAccountNumberIsInvalid},
+		{name: "letters", modify: func(in *ledgerv1.TransferRequest) { in.ToAccountNumber = "4081781040000000001A" }, wantErr: domain.ErrAccountNumberIsInvalid},
+		{name: "spaces", modify: func(in *ledgerv1.TransferRequest) { in.ToAccountNumber = " 4081781040000000001" }, wantErr: domain.ErrAccountNumberIsInvalid},
+		{
+			name:    "initiator checked before number",
+			modify:  func(in *ledgerv1.TransferRequest) { in.InitiatorId = TEST_BAD_ID; in.ToAccountNumber = "x" },
+			wantErr: domain.ErrInitiatorIDMustBeUUID,
+		},
+		{
+			name:    "from checked before number",
+			modify:  func(in *ledgerv1.TransferRequest) { in.FromAccountId = TEST_BAD_ID; in.ToAccountNumber = "x" },
+			wantErr: domain.ErrAccountIDMustBeUUID,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := newTestTransaction()
+			fake := &fakeLedgerService{transferTx: tx}
+			srv, _ := newTestServer(fake)
+			in := validRequest()
+			tt.modify(in)
+
+			got, err := srv.Transfer(t.Context(), in)
+
+			assert.Equal(t, tt.wantCalls, fake.transferCalls)
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+				assert.Equal(t, codes.InvalidArgument, status.Code(err))
+				assert.Nil(t, got)
+				return
+			}
+			require.NoError(t, err)
+			want := transactionToProto(tx)
+			assert.Truef(t, proto.Equal(want, got), "want %v, got %v", want, got)
+		})
+	}
+}
+
+func TestLedgerServer_TransferByNumber_RecipientNotFound(t *testing.T) {
+	fake := newFailingLedgerService(fmt.Errorf("number %s: %w", TEST_ACCOUNT_NUMBER, domain.ErrAccountNotFound))
+	srv, logBuf := newTestServer(fake)
+
+	got, err := srv.Transfer(t.Context(), &ledgerv1.TransferRequest{
+		InitiatorId: TEST_INITIATOR_ID, FromAccountId: TEST_FROM_ACCOUNT_ID, ToAccountNumber: TEST_ACCOUNT_NUMBER, Amount: TEST_AMOUNT, Currency: TEST_CURRENCY_RUB,
+	})
+
+	require.ErrorIs(t, err, domain.ErrAccountMissing)
+	assert.Equal(t, codes.NotFound, status.Code(err))
+	assert.Equal(t, "account not found", status.Convert(err).Message())
+	assert.Nil(t, got)
+	assert.NotContains(t, logBuf.String(), TEST_ERROR_LOG)
 }

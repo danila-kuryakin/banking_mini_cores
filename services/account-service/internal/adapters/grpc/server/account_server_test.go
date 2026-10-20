@@ -351,6 +351,61 @@ func TestAccountServer_GetAccount(t *testing.T) {
 	}
 }
 
+// TestAccountServer_GetAccountByNumber_InvalidNumber проверяет разбор номера: не 20 цифр - InvalidArgument без вызова сервиса.
+func TestAccountServer_GetAccountByNumber_InvalidNumber(t *testing.T) {
+	tests := []struct {
+		name   string
+		number string
+	}{
+		{name: "empty", number: ""},
+		{name: "19 digits", number: "4081781050000000000"},
+		{name: "21 digits", number: "408178105000000000011"},
+		{name: "letters", number: "40817810A00000000001"},
+		{name: "spaces around", number: " 40817810500000000001"},
+		{name: "minus sign", number: "-4081781050000000001"},
+		{name: "non-ascii digits", number: "40817810500000000٠٠1"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fake := &fakeAccountService{}
+			srv := newTestServer(fake)
+
+			resp, err := srv.GetAccountByNumber(t.Context(), &accountv1.GetAccountByNumberRequest{Number: tt.number})
+
+			require.ErrorIs(t, err, domain.ErrNumberIsInvalid)
+			assert.Equal(t, codes.InvalidArgument, status.Code(err))
+			assert.Nil(t, resp)
+			assert.Zero(t, fake.totalCalls())
+		})
+	}
+}
+
+// TestAccountServer_GetAccountByNumber проверяет успех и передачу номера в сервис как есть.
+func TestAccountServer_GetAccountByNumber(t *testing.T) {
+	fake := &fakeAccountService{getByNumber: newAccountModel(TEST_ACCOUNT_ID, models.STATUS_BLOCKED)}
+	srv := newTestServer(fake)
+
+	resp, err := srv.GetAccountByNumber(t.Context(), &accountv1.GetAccountByNumberRequest{Number: TEST_ACCOUNT_NUMBER})
+
+	require.NoError(t, err)
+	requireProtoEqual(t, newAccountProto(TEST_ACCOUNT_ID, accountv1.AccountStatus_ACCOUNT_STATUS_BLOCKED), resp)
+	assert.Equal(t, []string{TEST_ACCOUNT_NUMBER}, fake.numberCalls)
+}
+
+// TestAccountServer_GetAccountByNumber_NotFound проверяет NOT_FOUND "account not found" для неизвестного номера.
+func TestAccountServer_GetAccountByNumber_NotFound(t *testing.T) {
+	fake := &fakeAccountService{numberErr: fmt.Errorf("get: %w", domain.ErrAccountNotFound)}
+	srv := newTestServer(fake)
+
+	resp, err := srv.GetAccountByNumber(t.Context(), &accountv1.GetAccountByNumberRequest{Number: TEST_ACCOUNT_NUMBER})
+
+	require.ErrorIs(t, err, domain.ErrAccountMissing)
+	assert.Equal(t, codes.NotFound, status.Code(err))
+	assert.Equal(t, "account not found", status.Convert(err).Message())
+	assert.Nil(t, resp)
+}
+
 // TestAccountServer_AccountMapping проверяет маппинг статуса и времени счёта.
 func TestAccountServer_AccountMapping(t *testing.T) {
 	zeroTimeAccount := newAccountModel(TEST_ACCOUNT_ID, models.STATUS_ACTIVE)
@@ -987,6 +1042,7 @@ func TestAccountServer_CallsOwnMethodOnce(t *testing.T) {
 			fake := &fakeAccountService{
 				openAccount:    newAccountModel(TEST_ACCOUNT_ID, models.STATUS_ACTIVE),
 				getAccount:     newAccountModel(TEST_ACCOUNT_ID, models.STATUS_ACTIVE),
+				getByNumber:    newAccountModel(TEST_ACCOUNT_ID, models.STATUS_ACTIVE),
 				blockAccount:   newAccountModel(TEST_ACCOUNT_ID, models.STATUS_BLOCKED),
 				unblockAccount: newAccountModel(TEST_ACCOUNT_ID, models.STATUS_ACTIVE),
 				closeAccount:   newAccountModel(TEST_ACCOUNT_ID, models.STATUS_CLOSED),

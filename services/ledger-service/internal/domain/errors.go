@@ -43,6 +43,9 @@ var (
 	ErrLimitIsNegative         = status.Error(codes.InvalidArgument, "limit must not be negative")
 	ErrOffsetIsNegative        = status.Error(codes.InvalidArgument, "offset must not be negative")
 	ErrSameAccountTransfer     = status.Error(codes.InvalidArgument, "cannot transfer to the same account")
+	ErrRecipientIsRequired     = status.Error(codes.InvalidArgument, "either to_account_id or to_account_number is required")
+	ErrRecipientIsAmbiguous    = status.Error(codes.InvalidArgument, "to_account_id and to_account_number are mutually exclusive")
+	ErrAccountNumberIsInvalid  = status.Error(codes.InvalidArgument, "to_account_number must be 20 digits")
 
 	ErrAccountMissing     = status.Error(codes.NotFound, "account not found")
 	ErrTransactionMissing = status.Error(codes.NotFound, "transaction not found")

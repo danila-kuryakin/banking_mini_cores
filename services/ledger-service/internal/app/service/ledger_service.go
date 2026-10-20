@@ -42,6 +42,21 @@ func (s *LedgerService) Transfer(ctx context.Context, cmd models.TransferCommand
 		return nil, err
 	}
 
+	var to *models.AccountInfo
+
+	if cmd.ToNumber != "" {
+		to, err = s.accounts.GetAccountByNumber(ctx, cmd.ToNumber)
+		if err != nil {
+			if errors.Is(err, domain.ErrAccountNotFound) {
+				return nil, err
+			}
+
+			return nil, fmt.Errorf("get account by number %s: %w", cmd.ToNumber, err)
+		}
+
+		cmd.To = to.ID
+	}
+
 	if cmd.From == cmd.To {
 		return nil, domain.ErrSameAccount
 	}
@@ -55,7 +70,12 @@ func (s *LedgerService) Transfer(ctx context.Context, cmd models.TransferCommand
 		return nil, domain.ErrAccountNotOwned
 	}
 
-	to, err := s.activeAccount(ctx, cmd.To, currency)
+	if to == nil {
+		to, err = s.activeAccount(ctx, cmd.To, currency)
+	} else {
+		err = usableAccount(to, currency)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -183,13 +203,22 @@ func (s *LedgerService) activeAccount(ctx context.Context, id uuid.UUID, currenc
 		return nil, fmt.Errorf("get account %s: %w", id, err)
 	}
 
-	if account.Status != models.ACCOUNT_STATUS_ACTIVE {
-		return nil, fmt.Errorf("%w: %s is %s", domain.ErrAccountNotActive, id, account.Status)
-	}
-
-	if account.Currency != currency {
-		return nil, fmt.Errorf("%w: %s is in %s", domain.ErrCurrencyMismatch, id, account.Currency)
+	if err := usableAccount(account, currency); err != nil {
+		return nil, err
 	}
 
 	return account, nil
+}
+
+// usableAccount - счёт активен и открыт в валюте операции.
+func usableAccount(account *models.AccountInfo, currency models.Currency) error {
+	if account.Status != models.ACCOUNT_STATUS_ACTIVE {
+		return fmt.Errorf("%w: %s is %s", domain.ErrAccountNotActive, account.ID, account.Status)
+	}
+
+	if account.Currency != currency {
+		return fmt.Errorf("%w: %s is in %s", domain.ErrCurrencyMismatch, account.ID, account.Currency)
+	}
+
+	return nil
 }

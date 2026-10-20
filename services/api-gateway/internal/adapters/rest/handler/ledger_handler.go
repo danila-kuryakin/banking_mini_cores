@@ -22,7 +22,7 @@ func NewLedgerHandler(service *service.Service) *LedgerHandler {
 // Transfer godoc
 //
 //	@Summary		Перевод между счетами
-//	@Description	Списывает со своего счёта и зачисляет на счёт получателя в той же валюте. Оба счёта должны быть активны. Сумма в минорных единицах. При нехватке средств перевод сохраняется со статусом declined и возвращается 400 с его id в тексте ошибки.
+//	@Description	Списывает со своего счёта и зачисляет на счёт получателя в той же валюте. Получатель задаётся ровно одним полем: to_account_id (UUID) или to_account_number (20 цифр). Оба счёта должны быть активны. Сумма в минорных единицах. При нехватке средств перевод сохраняется со статусом declined и возвращается 400 с его id в тексте ошибки.
 //	@Tags			ledger
 //	@Accept			json
 //	@Produce		json
@@ -30,10 +30,10 @@ func NewLedgerHandler(service *service.Service) *LedgerHandler {
 //	@Param			user_id	path		string				true	"UUID пользователя или me - владелец счёта-источника"
 //	@Param			request	body		dto.Transfer		true	"Перевод"
 //	@Success		200		{object}	dto.Transaction		"Перевод проведён"
-//	@Failure		400		{object}	dto.ErrorResponse	"Некорректная сумма или валюта, счёт не активен, не хватает средств"
+//	@Failure		400		{object}	dto.ErrorResponse	"Некорректная сумма, валюта или номер счёта, получатель не задан или задан дважды, счёт не активен, не хватает средств"
 //	@Failure		401		{object}	dto.ErrorResponse	"Отсутствует или недействителен access-токен"
 //	@Failure		403		{object}	dto.ErrorResponse	"Счёт-источник принадлежит другому клиенту"
-//	@Failure		404		{object}	dto.ErrorResponse	"Счёт не найден"
+//	@Failure		404		{object}	dto.ErrorResponse	"Счёт не найден, в том числе получатель по номеру"
 //	@Router			/customer/{user_id}/transfers [post]
 func (h LedgerHandler) Transfer(c *gin.Context) {
 	var req dto.Transfer
@@ -45,11 +45,12 @@ func (h LedgerHandler) Transfer(c *gin.Context) {
 	}
 
 	tx, err := h.service.Ledger.Transfer(c.Request.Context(), &ledgerv1.TransferRequest{
-		InitiatorId:   targetUserID(c),
-		FromAccountId: req.FromAccountID,
-		ToAccountId:   req.ToAccountID,
-		Amount:        req.Amount,
-		Currency:      req.Currency,
+		InitiatorId:     targetUserID(c),
+		FromAccountId:   req.FromAccountID,
+		ToAccountId:     req.ToAccountID,
+		Amount:          req.Amount,
+		Currency:        req.Currency,
+		ToAccountNumber: req.ToAccountNumber,
 	})
 	if err != nil {
 		writeError(c, err)

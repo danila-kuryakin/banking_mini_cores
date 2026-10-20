@@ -9,6 +9,7 @@ import "google/protobuf/timestamp.proto";
 service AccountService {
   rpc OpenAccount(OpenAccountRequest) returns (Account);
   rpc GetAccount(GetAccountRequest) returns (Account);
+  rpc GetAccountByNumber(GetAccountByNumberRequest) returns (Account);
   rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
   rpc BlockAccount(BlockAccountRequest) returns (Account);
   rpc UnblockAccount(UnblockAccountRequest) returns (Account);
@@ -43,6 +44,10 @@ message OpenAccountRequest {
 message GetAccountRequest {
   string user_id = 1;
   string account_id = 2;
+}
+
+message GetAccountByNumberRequest {
+  string number = 1;
 }
 
 message ListAccountsRequest {

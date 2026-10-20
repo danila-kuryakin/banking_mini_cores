@@ -582,6 +582,9 @@ definitions:
         type: string
       to_account_id:
         type: string
+      to_account_number:
+        example: "40817810400000000014"
+        type: string
     type: object
   dto.UnblockAccount:
     properties:
@@ -1875,10 +1878,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Списывает со своего счёта и зачисляет на счёт получателя в той
-        же валюте. Оба счёта должны быть активны. Сумма в минорных единицах. При нехватке
-        средств перевод сохраняется со статусом declined и возвращается 400 с его
-        id в тексте ошибки.
+      description: 'Списывает со своего счёта и зачисляет на счёт получателя в той
+        же валюте. Получатель задаётся ровно одним полем: to_account_id (UUID) или
+        to_account_number (20 цифр). Оба счёта должны быть активны. Сумма в минорных
+        единицах. При нехватке средств перевод сохраняется со статусом declined и
+        возвращается 400 с его id в тексте ошибки.'
       parameters:
       - description: UUID пользователя или me - владелец счёта-источника
         in: path
@@ -1899,8 +1903,8 @@ paths:
           schema:
             $ref: '#/definitions/dto.Transaction'
         "400":
-          description: Некорректная сумма или валюта, счёт не активен, не хватает
-            средств
+          description: Некорректная сумма, валюта или номер счёта, получатель не задан
+            или задан дважды, счёт не активен, не хватает средств
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
         "401":
@@ -1912,7 +1916,7 @@ paths:
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
         "404":
-          description: Счёт не найден
+          description: Счёт не найден, в том числе получатель по номеру
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       security:

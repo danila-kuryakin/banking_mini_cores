@@ -11,6 +11,9 @@ const (
 	MAX_PAGE_SIZE     = 100
 )
 
+// ACCOUNT_NUMBER_LENGTH - длина номера счёта в цифрах.
+const ACCOUNT_NUMBER_LENGTH = 20
+
 // Публикация outbox в Kafka.
 const (
 	DEFAULT_OUTBOX_INTERVAL   = time.Second

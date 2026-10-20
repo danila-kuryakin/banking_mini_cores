@@ -64,6 +64,19 @@ func (s *AccountServer) GetAccount(ctx context.Context, in *accountv1.GetAccount
 	return accountToProto(account), nil
 }
 
+func (s *AccountServer) GetAccountByNumber(ctx context.Context, in *accountv1.GetAccountByNumberRequest) (*accountv1.Account, error) {
+	if len(in.Number) != domain.ACCOUNT_NUMBER_LENGTH || strings.Trim(in.Number, "0123456789") != "" {
+		return nil, domain.ErrNumberIsInvalid
+	}
+
+	account, err := s.service.Account.GetByNumber(ctx, in.Number)
+	if err != nil {
+		return nil, s.fail("failed to get account by number", err, domain.ErrGetFailed, "number", in.Number)
+	}
+
+	return accountToProto(account), nil
+}
+
 func (s *AccountServer) ListAccounts(ctx context.Context, in *accountv1.ListAccountsRequest) (*accountv1.ListAccountsResponse, error) {
 	userID, err := uuid.Parse(in.UserId)
 	if err != nil {

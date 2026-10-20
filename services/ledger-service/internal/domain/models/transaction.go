@@ -81,6 +81,8 @@ type TransferCommand struct {
 	To          uuid.UUID
 	Amount      int64
 	Currency    string
+	// ToNumber - номер счёта получателя; задан - To сервис находит по нему.
+	ToNumber string
 }
 
 // DepositCommand - пополнение счёта из кассы офицером.

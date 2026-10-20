@@ -60,6 +60,7 @@ message TransferRequest {
   string to_account_id = 3;
   int64 amount = 4;
   string currency = 5;
+  string to_account_number = 6;
 }
 
 message DepositRequest {

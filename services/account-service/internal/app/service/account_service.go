@@ -90,6 +90,11 @@ func (s *AccountService) Get(ctx context.Context, userID *uuid.UUID, accountID u
 	return s.repo.Account.GetByID(ctx, userID, accountID)
 }
 
+// GetByNumber ищет счёт по номеру без владельца - так ходит ledger при переводе по номеру.
+func (s *AccountService) GetByNumber(ctx context.Context, number string) (*models.Account, error) {
+	return s.repo.Account.GetByNumber(ctx, number)
+}
+
 func (s *AccountService) List(ctx context.Context, userID uuid.UUID, page models.Page) ([]*models.Account, error) {
 	if page.Limit <= 0 {
 		page.Limit = domain.DEFAULT_PAGE_SIZE

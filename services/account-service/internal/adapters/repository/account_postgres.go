@@ -90,6 +90,19 @@ func (r *AccountRepo) GetByID(ctx context.Context, userID *uuid.UUID, accountID 
 	return account, nil
 }
 
+func (r *AccountRepo) GetByNumber(ctx context.Context, number string) (*models.Account, error) {
+	account, err := scanAccount(r.db.QueryRow(ctx, GET_ACCOUNT_BY_NUMBER_QUERY, number))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrAccountNotFound
+		}
+
+		return nil, fmt.Errorf("get account by number: %w", err)
+	}
+
+	return account, nil
+}
+
 func (r *AccountRepo) ListByUser(ctx context.Context, userID uuid.UUID, page models.Page) ([]*models.Account, error) {
 	rows, err := r.db.Query(ctx, LIST_ACCOUNTS_QUERY, userID, page.Limit, page.Offset)
 	if err != nil {

@@ -234,6 +234,36 @@ func TestAccountService_Get(t *testing.T) {
 	}
 }
 
+func TestAccountService_GetByNumber(t *testing.T) {
+	tests := []struct {
+		name    string
+		repoErr error
+		wantErr error
+	}{
+		{name: "found"},
+		{name: "not found", repoErr: domain.ErrAccountNotFound, wantErr: domain.ErrAccountNotFound},
+		{name: "db error", repoErr: errDB, wantErr: errDB},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			account := testAccount(TEST_NUMBER_READ, TEST_CURRENCY_RUB, models.STATUS_ACTIVE)
+			repo := &fakeAccountRepository{getByNumResult: account, getByNumErr: tt.repoErr}
+			svc := newTestService(t, repo, &fakeCustomers{}, &fakeLedger{}, TEST_CURRENCY_RUB)
+
+			got, err := svc.GetByNumber(t.Context(), TEST_NUMBER_READ)
+
+			assert.Equal(t, []string{TEST_NUMBER_READ}, repo.getByNumCalls)
+			assert.Empty(t, repo.getByIDCalls)
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Same(t, account, got)
+		})
+	}
+}
+
 // pageCases - нормализация страницы по S12 (п.6 спецификации)
 func pageCases() []struct {
 	name string

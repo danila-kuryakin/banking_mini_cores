@@ -15,3 +15,6 @@ const (
 const MAX_ACCOUNTS_PER_CURRENCY = 3
 
 const REASON_MAX_LENGTH = 500
+
+// ACCOUNT_NUMBER_LENGTH - длина номера счёта в цифрах.
+const ACCOUNT_NUMBER_LENGTH = 20

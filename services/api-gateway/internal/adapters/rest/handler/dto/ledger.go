@@ -26,11 +26,13 @@ type Entry struct {
 	Currency  string `json:"currency" example:"RUB"`
 }
 
+// Transfer - получатель задаётся ровно одним полем: to_account_id или to_account_number.
 type Transfer struct {
-	FromAccountID string `json:"from_account_id"`
-	ToAccountID   string `json:"to_account_id"`
-	Amount        int64  `json:"amount" example:"10000"`
-	Currency      string `json:"currency" example:"RUB"`
+	FromAccountID   string `json:"from_account_id"`
+	ToAccountID     string `json:"to_account_id,omitempty"`
+	ToAccountNumber string `json:"to_account_number,omitempty" example:"40817810400000000014"`
+	Amount          int64  `json:"amount" example:"10000"`
+	Currency        string `json:"currency" example:"RUB"`
 }
 
 type Deposit struct {

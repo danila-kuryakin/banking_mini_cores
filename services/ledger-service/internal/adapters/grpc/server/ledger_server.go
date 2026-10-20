@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -36,9 +37,15 @@ func (s *LedgerServer) Transfer(ctx context.Context, in *ledgerv1.TransferReques
 		return nil, domain.ErrAccountIDMustBeUUID
 	}
 
-	to, err := uuid.Parse(in.ToAccountId)
-	if err != nil {
-		return nil, domain.ErrAccountIDMustBeUUID
+	var to uuid.UUID
+
+	if in.ToAccountNumber == "" {
+		to, err = uuid.Parse(in.ToAccountId)
+		if err != nil {
+			return nil, domain.ErrAccountIDMustBeUUID
+		}
+	} else if len(in.ToAccountNumber) != domain.ACCOUNT_NUMBER_LENGTH || strings.Trim(in.ToAccountNumber, "0123456789") != "" {
+		return nil, domain.ErrAccountNumberIsInvalid
 	}
 
 	tx, err := s.service.Ledger.Transfer(ctx, models.TransferCommand{
@@ -47,6 +54,7 @@ func (s *LedgerServer) Transfer(ctx context.Context, in *ledgerv1.TransferReques
 		To:          to,
 		Amount:      in.Amount,
 		Currency:    in.Currency,
+		ToNumber:    in.ToAccountNumber,
 	})
 	if err != nil {
 		return nil, s.fail("failed to transfer", err, tx, domain.ErrTransferFailed, "from_account_id", in.FromAccountId)

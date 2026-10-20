@@ -21,6 +21,7 @@ const (
 	TEST_INITIATOR_ID   = "0b7d3c1a-6f2e-4a8b-9c1d-2e3f4a5b6c01"
 	TEST_FROM_ACCOUNT   = "0b7d3c1a-6f2e-4a8b-9c1d-2e3f4a5b6c02"
 	TEST_TO_ACCOUNT     = "0b7d3c1a-6f2e-4a8b-9c1d-2e3f4a5b6c03"
+	TEST_TO_NUMBER      = "40817810400000000014"
 	TEST_OFFICER_ID     = "0b7d3c1a-6f2e-4a8b-9c1d-2e3f4a5b6c04"
 	TEST_TRANSACTION_ID = "0b7d3c1a-6f2e-4a8b-9c1d-2e3f4a5b6c05"
 	TEST_USER_ID        = "0b7d3c1a-6f2e-4a8b-9c1d-2e3f4a5b6c06"
@@ -101,7 +102,12 @@ func TestValidate(t *testing.T) {
 		{name: "transfer blank initiator", req: transfer(func(r *ledgerv1.TransferRequest) { r.InitiatorId = " \t" }), wantErr: domain.ErrInitiatorIDMustBeUUID},
 		{name: "transfer empty from", req: transfer(func(r *ledgerv1.TransferRequest) { r.FromAccountId = "" }), wantErr: domain.ErrAccountIDMustBeUUID},
 		{name: "transfer blank from", req: transfer(func(r *ledgerv1.TransferRequest) { r.FromAccountId = "   " }), wantErr: domain.ErrAccountIDMustBeUUID},
-		{name: "transfer empty to", req: transfer(func(r *ledgerv1.TransferRequest) { r.ToAccountId = "" }), wantErr: domain.ErrAccountIDMustBeUUID},
+		{name: "transfer empty to", req: transfer(func(r *ledgerv1.TransferRequest) { r.ToAccountId = "" }), wantErr: domain.ErrRecipientIsRequired},
+		{name: "transfer blank to and number", req: transfer(func(r *ledgerv1.TransferRequest) { r.ToAccountId = " "; r.ToAccountNumber = "\t" }), wantErr: domain.ErrRecipientIsRequired},
+		{name: "transfer to and number both set", req: transfer(func(r *ledgerv1.TransferRequest) { r.ToAccountNumber = TEST_TO_NUMBER }), wantErr: domain.ErrRecipientIsAmbiguous},
+		{name: "transfer number only", req: transfer(func(r *ledgerv1.TransferRequest) { r.ToAccountId = ""; r.ToAccountNumber = TEST_TO_NUMBER })},
+		{name: "transfer malformed number passes", req: transfer(func(r *ledgerv1.TransferRequest) { r.ToAccountId = ""; r.ToAccountNumber = TEST_NOT_UUID })},
+		{name: "transfer recipient before amount", req: transfer(func(r *ledgerv1.TransferRequest) { r.ToAccountId = ""; r.Amount = 0 }), wantErr: domain.ErrRecipientIsRequired},
 		{name: "transfer zero amount", req: transfer(func(r *ledgerv1.TransferRequest) { r.Amount = 0 }), wantErr: domain.ErrAmountMustBePositive},
 		{name: "transfer negative amount", req: transfer(func(r *ledgerv1.TransferRequest) { r.Amount = -1 }), wantErr: domain.ErrAmountMustBePositive},
 		{name: "transfer min int64 amount", req: transfer(func(r *ledgerv1.TransferRequest) { r.Amount = math.MinInt64 }), wantErr: domain.ErrAmountMustBePositive},

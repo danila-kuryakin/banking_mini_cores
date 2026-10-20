@@ -31,7 +31,7 @@ func validate(req any) error {
 			return err
 		}
 
-		if err := notEmpty(in.ToAccountId, domain.ErrAccountIDMustBeUUID); err != nil {
+		if err := validateRecipient(in.ToAccountId, in.ToAccountNumber); err != nil {
 			return err
 		}
 
@@ -67,6 +67,21 @@ func notEmpty(value string, err error) error {
 	}
 
 	return nil
+}
+
+// validateRecipient - получатель задаётся ровно одним полем: id или номером счёта.
+func validateRecipient(accountID, accountNumber string) error {
+	hasID := strings.TrimSpace(accountID) != ""
+	hasNumber := strings.TrimSpace(accountNumber) != ""
+
+	switch {
+	case hasID && hasNumber:
+		return domain.ErrRecipientIsAmbiguous
+	case !hasID && !hasNumber:
+		return domain.ErrRecipientIsRequired
+	default:
+		return nil
+	}
 }
 
 func validatePage(limit, offset int32) error {
