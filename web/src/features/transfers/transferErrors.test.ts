@@ -16,6 +16,7 @@ describe('classifyTransferError', () => {
     expect(classifyTransferError(e(400, 'both accounts must be active')).kind).toBe('field');
     expect(classifyTransferError(e(400, 'currency does not match the account currency')).kind).toBe('field');
     expect(classifyTransferError(e(404, 'account not found')).kind).toBe('field');
+    expect(classifyTransferError(e(400, 'to_account_number must be 20 digits')).kind).toBe('field');
   });
 
   it('maps service errors', () => {

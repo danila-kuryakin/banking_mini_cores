@@ -19,7 +19,10 @@ import { classifyTransferError } from './transferErrors';
 type Mode = 'own' | 'other';
 type Stage = 'form' | 'confirm' | 'done';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ACCOUNT_NUMBER_RE = /^\d{20}$/;
+
+// Номер вводят группами или с пробелами, на бэкенд уходят только цифры.
+const digitsOnly = (s: string) => s.replace(/[\s-]/g, '');
 
 const label = (a: Account) => `${formatAccountNumber(a.number)} · ${a.currency}`;
 
@@ -47,19 +50,20 @@ export function TransferPage() {
   const from = active.find((a) => a.id === fromId);
   const ownTargets = active.filter((a) => a.id !== fromId && a.currency === from?.currency);
   const available = from ? balances.get(from.id) : undefined;
-  const toId = mode === 'own' ? toOwn : toOther.trim();
+  const toNumber = digitsOnly(toOther);
+  const toId = mode === 'own' ? toOwn : '';
 
   const transfer = useMutation({
-    mutationFn: (input: { from: Account; toId: string; amount: number }) =>
+    mutationFn: (input: { from: Account; toId: string; toNumber: string; amount: number }) =>
       ledgerApi.transfer('me', {
         from_account_id: input.from.id,
-        to_account_id: input.toId,
+        ...(input.toId ? { to_account_id: input.toId } : { to_account_number: input.toNumber }),
         amount: input.amount,
         currency: input.from.currency,
       }),
-    onSettled: (_data, _err, input) => {
+    onSettled: (data, _err, input) => {
       // Отказ - тоже транзакция в выписке, поэтому перечитываем и после ошибки.
-      for (const id of [input.from.id, input.toId]) {
+      for (const id of [input.from.id, input.toId || data?.to_account_id].filter(Boolean) as string[]) {
         void queryClient.invalidateQueries({ queryKey: qk.balance('me', id) });
         void queryClient.invalidateQueries({ queryKey: qk.transactions('me', id) });
       }
@@ -80,8 +84,13 @@ export function TransferPage() {
     const amount = toMinor(amountText);
     if (!from || amount === null) return null;
     const own = active.find((a) => a.id === toId);
-    return { fromLabel: label(from), toLabel: own ? label(own) : toId, amount, currency: from.currency };
-  }, [from, amountText, active, toId]);
+    return {
+      fromLabel: label(from),
+      toLabel: own ? label(own) : formatAccountNumber(toNumber),
+      amount,
+      currency: from.currency,
+    };
+  }, [from, amountText, active, toId, toNumber]);
 
   const goConfirm = () => {
     setToError(null);
@@ -89,13 +98,13 @@ export function TransferPage() {
     setNotice(null);
     const amount = toMinor(amountText);
     let ok = true;
-    if (!toId) {
-      setToError(mode === 'own' ? 'Выберите счёт' : 'Укажите реквизиты получателя');
+    if (mode === 'own' && !toId) {
+      setToError('Выберите счёт');
       ok = false;
-    } else if (mode === 'other' && !UUID_RE.test(toId)) {
-      setToError('Реквизиты - идентификатор счёта вида 3f2a…-…, скопируйте его из карточки счёта получателя');
+    } else if (mode === 'other' && !ACCOUNT_NUMBER_RE.test(toNumber)) {
+      setToError('Номер счёта получателя - 20 цифр');
       ok = false;
-    } else if (toId === fromId) {
+    } else if (toId === fromId || (mode === 'other' && toNumber === from?.number)) {
       setToError('Выберите другой счёт');
       ok = false;
     }
@@ -135,7 +144,7 @@ export function TransferPage() {
         draft={draft}
         pending={transfer.isPending}
         onBack={() => setStage('form')}
-        onConfirm={() => transfer.mutate({ from, toId, amount: draft.amount })}
+        onConfirm={() => transfer.mutate({ from, toId, toNumber, amount: draft.amount })}
       />
     );
   }
@@ -217,11 +226,14 @@ export function TransferPage() {
             </Select>
           ) : (
             <Input
-              placeholder="Реквизиты счёта получателя"
+              placeholder="40817 810 0 0000 0000000"
+              inputMode="numeric"
+              aria-label="Номер счёта получателя"
               value={toOther}
               onChange={(e) => setToOther(e.target.value)}
+              onBlur={() => ACCOUNT_NUMBER_RE.test(toNumber) && setToOther(formatAccountNumber(toNumber))}
               error={toError ?? undefined}
-              hint="Получатель копирует их в карточке своего счёта. Поиска по номеру счёта пока нет."
+              hint="20 цифр, можно с пробелами"
               className="num"
             />
           )}

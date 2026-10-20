@@ -74,9 +74,9 @@ export function AccountPage() {
           </div>
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-2 rounded-lg bg-input px-3 py-2 text-xs text-muted">
-          Реквизиты для перевода от другого клиента:
-          <span className="num break-all text-text">{a.id}</span>
-          <CopyButton value={a.id} label="Скопировать реквизиты для перевода" />
+          Номер для перевода от другого клиента:
+          <span className="num break-all text-text">{a.number}</span>
+          <CopyButton value={a.number} label="Скопировать номер для перевода" />
         </div>
       </div>
       <Card title="Выписка" padded={false}>

@@ -17,6 +17,7 @@ export function classifyTransferError(err: unknown): TransferFailure {
       return { kind: 'field', text: 'Один из счетов заблокирован или закрыт' };
     if (msg.includes('currency does not match')) return { kind: 'field', text: 'Валюта счетов не совпадает' };
     if (msg.includes('same account')) return { kind: 'field', text: 'Выберите другой счёт' };
+    if (msg.includes('must be 20 digits')) return { kind: 'field', text: 'Номер счёта - 20 цифр' };
     if (msg.includes('currency is not allowed')) return { kind: 'fatal', text: 'Валюта недоступна', retry: false };
     return { kind: 'fatal', text: 'Перевод не выполнен: проверьте данные', retry: false };
   }
