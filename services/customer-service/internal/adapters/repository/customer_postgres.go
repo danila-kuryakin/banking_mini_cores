@@ -196,8 +196,8 @@ func (r *CustomerRepo) UpdateProfile(
 	ctx context.Context,
 	userID uuid.UUID,
 	profile models.Profile,
-	status models.Status,
-	editable []models.Status,
+	expected models.Status,
+	next models.Status,
 ) (*models.Customer, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
@@ -205,18 +205,6 @@ func (r *CustomerRepo) UpdateProfile(
 	}
 
 	defer func() { _ = tx.Rollback(ctx) }()
-
-	var previous string
-	var previousChangedAt time.Time
-
-	err = tx.QueryRow(ctx, LOCK_CUSTOMER_STATUS_QUERY, userID).Scan(&previous, &previousChangedAt)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrCustomerNotFound
-		}
-
-		return nil, fmt.Errorf("update profile: lock customer: %w", err)
-	}
 
 	var resp models.Customer
 	var statusResp string
@@ -228,8 +216,8 @@ func (r *CustomerRepo) UpdateProfile(
 		profile.BirthDate,
 		profile.Citizenship,
 		profile.Phone,
-		status,
-		statusStrings(editable),
+		next,
+		expected,
 	).Scan(
 		&resp.ID,
 		&resp.UserID,
@@ -245,15 +233,15 @@ func (r *CustomerRepo) UpdateProfile(
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrProfileLocked
+			return nil, domain.ErrStatusConflict
 		}
 
 		return nil, fmt.Errorf("update profile: %w", err)
 	}
 	resp.Status = models.Status(statusResp)
 
-	if from := models.Status(previous); from != resp.Status {
-		_, err = tx.Exec(ctx, INSERT_STATUS_HISTORY_QUERY, userID, from, resp.Status, "", nil, resp.StatusChangedAt)
+	if expected != next {
+		_, err = tx.Exec(ctx, INSERT_STATUS_HISTORY_QUERY, userID, expected, next, "", nil, resp.StatusChangedAt)
 		if err != nil {
 			return nil, fmt.Errorf("update profile: write status history: %w", err)
 		}

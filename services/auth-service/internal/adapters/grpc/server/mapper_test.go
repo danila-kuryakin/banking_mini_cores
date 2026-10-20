@@ -29,6 +29,8 @@ func TestCredentialsError_Mapping(t *testing.T) {
 		{name: "password required", err: domain.ErrPasswordRequired, wantCode: codes.InvalidArgument, wantMsg: domain.ErrPasswordRequired.Error()},
 		{name: "invalid credentials", err: domain.ErrInvalidCredentials, wantCode: codes.Unauthenticated, wantMsg: domain.ErrInvalidCredentials.Error()},
 		{name: "wrapped invalid credentials", err: fmt.Errorf("wrap: %w", domain.ErrInvalidCredentials), wantCode: codes.Unauthenticated},
+		{name: "login locked", err: domain.ErrLoginLocked, wantCode: codes.ResourceExhausted, wantMsg: "too many failed login attempts, try again later"},
+		{name: "hasher busy", err: fmt.Errorf("hash password: %w", domain.ErrPasswordHasherBusy), wantCode: codes.ResourceExhausted, wantMsg: "server is busy, try again later"},
 		{name: "unknown error", err: errors.New("db down"), wantCode: codes.Internal, wantMsg: TEST_FALLBACK_MESSAGE},
 	}
 	for _, tc := range cases {
@@ -49,6 +51,13 @@ func TestCredentialsError_Mapping(t *testing.T) {
 
 		require.ErrorIs(t, got, domain.ErrEmailAlreadyExists)
 		assert.Equal(t, codes.AlreadyExists, status.Code(got))
+	})
+
+	t.Run("hasher busy is server busy", func(t *testing.T) {
+		got := s.credentialsError(fmt.Errorf("hash password: %w", domain.ErrPasswordHasherBusy), TEST_FALLBACK_MESSAGE)
+
+		require.ErrorIs(t, got, domain.ErrServerBusy)
+		assert.Equal(t, codes.ResourceExhausted, status.Code(got))
 	})
 }
 

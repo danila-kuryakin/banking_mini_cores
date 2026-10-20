@@ -1,0 +1,14 @@
+services:
+  web:
+    build:
+      context: .
+    container_name: web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    networks:
+      - banking-net
+
+networks:
+  banking-net:
+    external: true

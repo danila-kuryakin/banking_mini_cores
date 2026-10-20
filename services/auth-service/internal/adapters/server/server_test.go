@@ -35,12 +35,13 @@ func TestServer_RunFailsWhenJWKSFails(t *testing.T) {
 
 	manager, err := token.NewManager("", TEST_ACCESS_TTL, TEST_REFRESH_TTL, logger)
 	require.NoError(t, err)
-	svc := service.NewService(&repository.Repository{Auth: &mocks.AuthRepositoryMock{}}, manager, &mocks.CustomerProfilesMock{})
 	cfg := &config.Config{
-		Server:         platformconfig.Server{Host: TEST_HOST, Port: TEST_FREE_PORT},
-		JWKS:           platformconfig.Server{Host: TEST_HOST, Port: busyPort},
-		RequestTimeout: TEST_REQUEST_TIMEOUT,
+		Server:          platformconfig.Server{Host: TEST_HOST, Port: TEST_FREE_PORT},
+		JWKS:            platformconfig.Server{Host: TEST_HOST, Port: busyPort},
+		RequestTimeout:  TEST_REQUEST_TIMEOUT,
+		PasswordHashing: config.PasswordHashing{MaxConcurrent: 4, MaxWait: time.Second},
 	}
+	svc := service.NewService(&repository.Repository{Auth: &mocks.AuthRepositoryMock{}}, manager, &mocks.CustomerProfilesMock{}, cfg)
 
 	runErr := make(chan error, 1)
 	// gRPC-сервер после теста остаётся работать до конца процесса - так задумано.

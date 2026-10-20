@@ -51,9 +51,12 @@ func main() {
 	defer clients.Close()
 
 	repo := repository.NewRepository(dbPool)
-	serv := service.NewService(repo, tokenManager, clients.Customer)
+	serv := service.NewService(repo, tokenManager, clients.Customer, cfg)
 
-	ensureAdmin(context.Background(), serv, cfg.Admin, logger)
+	if err := ensureAdmin(context.Background(), serv, cfg.Admin, logger); err != nil {
+		logger.Error("failed to ensure default admin", "email", cfg.Admin.Email, "error", err)
+		os.Exit(1)
+	}
 
 	srv := server.NewServer(cfg, serv, tokenManager.JWKS, logger)
 
@@ -64,26 +67,26 @@ func main() {
 }
 
 // ensureAdmin создаёт администратора по умолчанию при первом запуске.
-func ensureAdmin(ctx context.Context, serv *service.Service, admin config.Admin, logger *slog.Logger) {
+func ensureAdmin(ctx context.Context, serv *service.Service, admin config.Admin, logger *slog.Logger) error {
 	if admin.Password == "" {
 		logger.Warn("admin password is not set, default admin is not created",
 			"hint", "set ADMIN_PASSWORD to create it")
 
-		return
+		return nil
 	}
 
 	created, err := serv.Auth.EnsureAdmin(ctx, admin.Email, admin.Password)
 	if err != nil {
-		logger.Error("failed to ensure default admin", "email", admin.Email, "error", err)
-
-		return
+		return err
 	}
 
 	if created {
 		logger.Info("default admin created", "email", admin.Email)
 
-		return
+		return nil
 	}
 
 	logger.Info("default admin already exists", "email", admin.Email)
+
+	return nil
 }

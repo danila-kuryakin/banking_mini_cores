@@ -86,7 +86,7 @@ func (s *FileStorageService) ConfirmUpload(ctx context.Context, userID, fileID u
 		return nil, domain.ErrFileIsTooLarge
 	}
 
-	contentType, checksum, err := s.inspectObject(ctx, metadata.ObjectPath)
+	contentType, checksum, size, err := s.inspectObject(ctx, metadata.ObjectPath)
 	if err != nil {
 		if errors.Is(err, domain.ErrObjectNotFound) {
 			return nil, domain.ErrFileNotUploaded
@@ -95,13 +95,33 @@ func (s *FileStorageService) ConfirmUpload(ctx context.Context, userID, fileID u
 		return nil, err
 	}
 
+	// Объект могли перезалить после StatObject, поэтому размер проверяется ещё раз по прочитанному.
+	switch {
+	case size == 0:
+		_ = s.storage.MinIO.RemoveObject(ctx, metadata.ObjectPath)
+		return nil, domain.ErrFileIsEmpty
+	case size > domain.MAX_FILE_SIZE:
+		_ = s.storage.MinIO.RemoveObject(ctx, metadata.ObjectPath)
+		return nil, domain.ErrFileIsTooLarge
+	}
+
 	if !models.IsAllowedContentType(contentType) {
 		_ = s.storage.MinIO.RemoveObject(ctx, metadata.ObjectPath)
 
 		return nil, domain.ErrContentTypeUnsupported
 	}
 
-	return s.repo.Metadata.ConfirmMetadata(ctx, fileID, userID, contentType, info.Size, checksum)
+	confirmed, err := s.repo.Metadata.ConfirmMetadata(ctx, fileID, userID, contentType, size, checksum)
+	if err != nil {
+		if errors.Is(err, domain.ErrFileTypeConfirmed) {
+			// Путь уникален по file_id, уже подтверждённый файл этого типа не задевается.
+			_ = s.storage.MinIO.RemoveObject(ctx, metadata.ObjectPath)
+		}
+
+		return nil, err
+	}
+
+	return confirmed, nil
 }
 
 // GetDownloadURL отдаёт ссылку на скачивание.
@@ -166,30 +186,33 @@ func (s *FileStorageService) HasRequiredFiles(ctx context.Context, userID uuid.U
 	return len(missing) == 0, missing, nil
 }
 
-// inspectObject читает файл, считая sha256 и определяя тип по первым байтам.
-func (s *FileStorageService) inspectObject(ctx context.Context, objectPath string) (string, string, error) {
-	body, err := s.storage.MinIO.GetObject(ctx, objectPath)
+// inspectObject читает не больше MAX_FILE_SIZE+1 байт: тип, sha256 и размер считаются по одним байтам.
+func (s *FileStorageService) inspectObject(ctx context.Context, objectPath string) (string, string, int64, error) {
+	object, err := s.storage.MinIO.GetObject(ctx, objectPath)
 	if err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
-	defer body.Close()
+	defer object.Close()
+
+	body := io.LimitReader(object, domain.MAX_FILE_SIZE+1)
 
 	head := make([]byte, domain.CONTENT_SNIFF_LENGTH)
 
 	read, err := io.ReadFull(body, head)
 	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
-		return "", "", fmt.Errorf("read object head %s: %w", objectPath, err)
+		return "", "", 0, fmt.Errorf("read object head %s: %w", objectPath, err)
 	}
 	head = head[:read]
 
 	hasher := sha256.New()
 	hasher.Write(head)
 
-	if _, err := io.Copy(hasher, body); err != nil {
-		return "", "", fmt.Errorf("read object %s: %w", objectPath, err)
+	rest, err := io.Copy(hasher, body)
+	if err != nil {
+		return "", "", 0, fmt.Errorf("read object %s: %w", objectPath, err)
 	}
 
-	return detectContentType(head), hex.EncodeToString(hasher.Sum(nil)), nil
+	return detectContentType(head), hex.EncodeToString(hasher.Sum(nil)), int64(read) + rest, nil
 }
 
 // detectContentType срезает параметры вроде "; charset=utf-8" - на выходе

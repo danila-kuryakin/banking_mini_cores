@@ -94,10 +94,15 @@ func (s *CustomerServer) UpdateProfile(ctx context.Context, in *customerv1.Updat
 		return nil, domain.ErrProfileRequired
 	}
 
+	birthDate, err := dateFromProto(in.Profile.BirthDate)
+	if err != nil {
+		return nil, domain.ErrBirthDateIsNotValid
+	}
+
 	profile := models.Profile{
 		FirstName:   in.Profile.FirstName,
 		LastName:    in.Profile.LastName,
-		BirthDate:   dateFromProto(in.Profile.BirthDate),
+		BirthDate:   birthDate,
 		Citizenship: in.Profile.Citizenship,
 		Phone:       in.Profile.Phone,
 	}
@@ -106,6 +111,10 @@ func (s *CustomerServer) UpdateProfile(ctx context.Context, in *customerv1.Updat
 	if err != nil {
 		if errors.Is(err, domain.ErrCustomerNotFound) {
 			return nil, domain.ErrCustomerMissing
+		}
+
+		if errors.Is(err, domain.ErrStatusConflict) {
+			return nil, domain.ErrStatusChanged
 		}
 
 		if _, isStatus := status.FromError(err); isStatus {

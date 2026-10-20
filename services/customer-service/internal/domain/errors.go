@@ -29,7 +29,7 @@ var (
 	ErrPhoneIsNotValid      = status.Error(codes.InvalidArgument, "phone must contain 7 to 15 digits with an optional leading plus")
 	ErrBirthDateIsNotValid  = status.Error(codes.InvalidArgument, "birth_date is not a calendar date")
 	ErrBirthDateInFuture    = status.Error(codes.InvalidArgument, "birth_date is in the future")
-	ErrBirthDateIsTooOld    = status.Error(codes.InvalidArgument, "birth_date is more than 120 years ago")
+	ErrBirthDateIsTooOld    = status.Error(codes.InvalidArgument, "birth_date is more than 200 years ago")
 	ErrLimitIsNegative      = status.Error(codes.InvalidArgument, "limit must not be negative")
 	ErrOffsetIsNegative     = status.Error(codes.InvalidArgument, "offset must not be negative")
 )

@@ -23,8 +23,39 @@ services:
     restart: unless-stopped
     networks: [banking-net]
 
+  auth-service:
+    build:
+      context: ../..
+      dockerfile: services/auth-service/Dockerfile
+    image: banking/auth-service:local
+    container_name: auth-service
+    environment:
+      SERVER_HOST: 0.0.0.0
+      JWKS_HOST: 0.0.0.0
+      # База адресуется по имени контейнера и внутреннему порту, а не по 5451.
+      DATABASE_HOST: banking-auth-postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: ${POSTGRES_USER:-banking_auth}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-123}
+      DATABASE_DBNAME: ${POSTGRES_DB:-banking_auth}
+      UPSTREAMS_CUSTOMER: customer-service:50052
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@banking.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+    ports:
+      - "${SERVER_PORT:-50051}:50051"
+      - "${JWKS_PORT:-8081}:8081"
+    volumes:
+      # Ключи подписи переживают пересоздание контейнера, иначе выданные токены перестанут проверяться.
+      - auth-jwt-keys:/app/configs/jwt_keys
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [banking-net]
+
 volumes:
   auth-pgdata:
+  auth-jwt-keys:
 
 networks:
   banking-net:

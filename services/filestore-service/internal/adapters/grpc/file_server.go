@@ -33,9 +33,13 @@ func (s *FileServer) InitUpload(ctx context.Context, in *filestorev1.InitUploadR
 		return nil, domain.ErrUserIDMustBeUUID
 	}
 
+	if in.Type == filestorev1.FileType_FILE_TYPE_UNSPECIFIED {
+		return nil, domain.ErrFileTypeRequired
+	}
+
 	fileType := typeFromProto(in.Type)
 	if fileType == "" {
-		return nil, domain.ErrFileTypeRequired
+		return nil, domain.ErrFileTypeUnknown
 	}
 
 	metadata, upload, err := s.service.Metadata.InitUpload(ctx, userID, fileType, in.Filename)

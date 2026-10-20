@@ -26,6 +26,17 @@ const (
 )
 
 const (
+	DEFAULT_LOGIN_MAX_FAILED_ATTEMPTS = 5
+	DEFAULT_LOGIN_WINDOW              = 15 * time.Minute
+	DEFAULT_LOGIN_LOCK_DURATION       = 15 * time.Minute
+)
+
+const (
+	DEFAULT_PASSWORD_HASHING_MAX_CONCURRENT = 4
+	DEFAULT_PASSWORD_HASHING_MAX_WAIT       = 5 * time.Second
+)
+
+const (
 	ARGON2_TIME        = 3
 	ARGON2_MEMORY      = 64 * 1024
 	ARGON2_THREADS     = 2

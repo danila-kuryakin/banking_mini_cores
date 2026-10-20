@@ -8,6 +8,7 @@ require (
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/minio/minio-go/v7 v7.3.0
+	github.com/stretchr/testify v1.12.1
 	google.golang.org/grpc v1.83.1
 	google.golang.org/protobuf v1.36.12
 )

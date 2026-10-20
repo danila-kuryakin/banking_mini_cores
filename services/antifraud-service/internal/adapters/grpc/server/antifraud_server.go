@@ -43,7 +43,7 @@ func (s *AntifraudServer) CheckTransfer(ctx context.Context, in *antifraudv1.Che
 
 	currency, err := models.ParseCurrency(in.Currency)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, domain.ErrCurrencyIsNotValid
 	}
 
 	check, err := s.service.Checks.CheckTransfer(ctx, models.TransferCheck{
@@ -90,7 +90,7 @@ func (s *AntifraudServer) UpdateRule(ctx context.Context, in *antifraudv1.Update
 
 	params, err := paramsFromProto(in.Params)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, err
 	}
 
 	rule, err := s.service.Rules.UpdateRule(ctx, models.RuleUpdate{

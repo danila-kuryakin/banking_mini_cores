@@ -1,0 +1,31 @@
+name: banking-gateway
+
+# Своего хранилища у гейтвея нет, upstreams адресуются по именам контейнеров в banking-net.
+services:
+  api-gateway:
+    build:
+      context: ../..
+      dockerfile: services/api-gateway/Dockerfile
+    image: banking/api-gateway:local
+    container_name: api-gateway
+    environment:
+      SERVER_HOST: 0.0.0.0
+      GRPC_CLIENT_HOST: 0.0.0.0
+      UPSTREAMS_AUTH: auth-service:50051
+      UPSTREAMS_CUSTOMER: customer-service:50052
+      UPSTREAMS_KYC: kyc-service:50053
+      UPSTREAMS_FILESTORE: filestore-service:50054
+      UPSTREAMS_ACCOUNT: account-service:50055
+      UPSTREAMS_LEDGER: ledger-service:50056
+      UPSTREAMS_ANTIFRAUD: antifraud-service:50057
+      UPSTREAMS_NOTIFICATION: notification-service:50058
+      JWKS_URL: http://auth-service:8081/.well-known/jwks.json
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+      - "${GRPC_CLIENT_PORT:-50059}:50059"
+    restart: unless-stopped
+    networks: [banking-net]
+
+networks:
+  banking-net:
+    external: true

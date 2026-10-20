@@ -35,3 +35,9 @@ services/auth-service/configs/jwt_private_key.pem
 
 CLAUDE.md
 */CLAUDE.md
+
+# Фронтенд
+web/node_modules/
+web/dist/
+web/playwright-report/
+web/test-results/

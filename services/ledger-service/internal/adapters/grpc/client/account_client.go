@@ -42,10 +42,37 @@ func (c *AccountClient) GetAccount(ctx context.Context, id uuid.UUID) (*models.A
 		return nil, fmt.Errorf("get account: user_id: %w", err)
 	}
 
+	return accountInfo(id, userID, resp), nil
+}
+
+func (c *AccountClient) GetAccountByNumber(ctx context.Context, number string) (*models.AccountInfo, error) {
+	resp, err := c.accounts.GetAccountByNumber(ctx, &accountv1.GetAccountByNumberRequest{Number: number})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return nil, fmt.Errorf("%w: number %s", domain.ErrAccountNotFound, number)
+		}
+
+		return nil, fmt.Errorf("get account by number: %w", err)
+	}
+
+	accountID, err := uuid.Parse(resp.Id)
+	if err != nil {
+		return nil, fmt.Errorf("get account by number: id: %w", err)
+	}
+
+	userID, err := uuid.Parse(resp.UserId)
+	if err != nil {
+		return nil, fmt.Errorf("get account by number: user_id: %w", err)
+	}
+
+	return accountInfo(accountID, userID, resp), nil
+}
+
+func accountInfo(accountID, userID uuid.UUID, resp *accountv1.Account) *models.AccountInfo {
 	return &models.AccountInfo{
-		ID:       id,
+		ID:       accountID,
 		UserID:   userID,
 		Currency: models.Currency(resp.Currency),
 		Status:   accountStatuses[resp.Status],
-	}, nil
+	}
 }

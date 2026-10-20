@@ -13,25 +13,31 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/adapters/repository"
-	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/password"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/token"
+	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/config"
 )
 
 type AuthService struct {
 	repo      *repository.Repository
 	tokens    *token.Manager
 	customers interfaces.CustomerProfiles
+	hasher    interfaces.PasswordHasher
+	login     config.Login
 }
 
 func NewAuthService(
 	repo *repository.Repository,
 	tokens *token.Manager,
 	customers interfaces.CustomerProfiles,
+	hasher interfaces.PasswordHasher,
+	login config.Login,
 ) *AuthService {
 	return &AuthService{
 		repo:      repo,
 		tokens:    tokens,
 		customers: customers,
+		hasher:    hasher,
+		login:     login,
 	}
 }
 
@@ -44,7 +50,7 @@ func (s *AuthService) Register(ctx context.Context, email, plainPassword string)
 
 	err = s.customers.CreateProfile(ctx, user.ID)
 	if err != nil && !errors.Is(err, domain.ErrProfileAlreadyExists) {
-		if delErr := s.repo.Auth.DeleteUser(ctx, user.ID); delErr != nil {
+		if delErr := s.repo.Auth.DeleteUser(ctx, user.ID); delErr != nil && !errors.Is(delErr, domain.ErrUserNotFound) {
 			return nil, fmt.Errorf("%w: %w", domain.ErrProfileNotCreated, errors.Join(err, delErr))
 		}
 
@@ -64,8 +70,12 @@ func (s *AuthService) EnsureAdmin(ctx context.Context, email, plainPassword stri
 		return false, err
 	}
 
-	_, err = s.repo.Auth.GetUserByEmail(ctx, normalizedEmail)
+	existing, err := s.repo.Auth.GetUserByEmail(ctx, normalizedEmail)
 	if err == nil {
+		if existing.Role != domain.ROLE_ADMIN {
+			return false, domain.ErrAdminEmailNotAdmin
+		}
+
 		return false, nil
 	}
 
@@ -86,16 +96,35 @@ func (s *AuthService) Login(ctx context.Context, email, plainPassword string) (*
 		return nil, nil, err
 	}
 
+	now := time.Now().UTC()
+
+	lockedUntil, err := s.repo.LoginAttempts.LockedUntil(ctx, email, now)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if lockedUntil != nil {
+		return nil, nil, domain.ErrLoginLocked
+	}
+
 	user, err := s.repo.Auth.GetUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
-			return nil, nil, domain.ErrInvalidCredentials
+			return nil, nil, s.registerLoginFailure(ctx, email, now)
 		}
 		return nil, nil, err
 	}
 
-	if err := password.Verify(user.PasswordHash, plainPassword); err != nil {
-		return nil, nil, domain.ErrInvalidCredentials
+	if err := s.hasher.Verify(ctx, user.PasswordHash, plainPassword); err != nil {
+		if errors.Is(err, domain.ErrPasswordHasherBusy) {
+			return nil, nil, err
+		}
+
+		return nil, nil, s.registerLoginFailure(ctx, email, now)
+	}
+
+	if err := s.repo.LoginAttempts.Reset(ctx, email); err != nil {
+		return nil, nil, err
 	}
 
 	pair, err := s.tokens.NewPair(user)
@@ -114,6 +143,21 @@ func (s *AuthService) Login(ctx context.Context, email, plainPassword string) (*
 	}
 
 	return user, pair, nil
+}
+
+func (s *AuthService) registerLoginFailure(ctx context.Context, email string, now time.Time) error {
+	failure := models.LoginFailure{
+		At:          now,
+		WindowStart: now.Add(-s.login.Window),
+		MaxAttempts: s.login.MaxFailedAttempts,
+		LockUntil:   now.Add(s.login.LockDuration),
+	}
+
+	if err := s.repo.LoginAttempts.RegisterFailure(ctx, email, failure); err != nil {
+		return err
+	}
+
+	return domain.ErrInvalidCredentials
 }
 
 func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*token.Pair, error) {
@@ -182,7 +226,7 @@ func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
 
 	if err := s.repo.Auth.RevokeRefreshToken(ctx, token.Hash(refreshToken)); err != nil {
 		if errors.Is(err, domain.ErrRefreshTokenNotFound) {
-			return domain.ErrInvalidRefreshToken
+			return nil
 		}
 
 		return err
@@ -209,7 +253,7 @@ func (s *AuthService) createUser(ctx context.Context, email, plainPassword strin
 		return nil, err
 	}
 
-	hash, err := password.Hash(plainPassword)
+	hash, err := s.hasher.Hash(ctx, plainPassword)
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
 	}

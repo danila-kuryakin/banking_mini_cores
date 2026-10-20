@@ -174,6 +174,9 @@ func (s *AuthServer) DeleteUser(ctx context.Context, in *authv1.DeleteUserReques
 	}
 
 	if err := s.service.Auth.DeleteUser(ctx, id); err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			return nil, domain.ErrUserDoesNotExist
+		}
 
 		s.log.Error("failed to delete user", "id", in.Id, "error", err)
 

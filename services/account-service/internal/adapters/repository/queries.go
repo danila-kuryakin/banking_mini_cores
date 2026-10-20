@@ -22,6 +22,11 @@ const GET_ACCOUNT_QUERY = `
 	FROM accounts
 	WHERE ($1::uuid IS NULL OR user_id = $1) AND id = $2`
 
+const GET_ACCOUNT_BY_NUMBER_QUERY = `
+	SELECT ` + ACCOUNT_COLUMNS + `
+	FROM accounts
+	WHERE number = $1`
+
 const LIST_ACCOUNTS_QUERY = `
 	SELECT ` + ACCOUNT_COLUMNS + `
 	FROM accounts

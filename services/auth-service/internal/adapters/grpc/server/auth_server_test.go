@@ -12,6 +12,7 @@ import (
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/password"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/service"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/app/token"
+	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/config"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/domain"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/domain/models"
 	"github.com/danila-kuryakin/banking_mini_cores/services/auth-service/internal/mocks"
@@ -33,6 +34,12 @@ const (
 	TEST_ACCESS_TTL    = 15 * time.Minute
 	TEST_REFRESH_TTL   = 720 * time.Hour
 )
+
+// testConfig - конфиг сервиса с лимитами блокировки входа для тестов.
+var testConfig = &config.Config{
+	Login:           config.Login{MaxFailedAttempts: 5, Window: 15 * time.Minute, LockDuration: 15 * time.Minute},
+	PasswordHashing: config.PasswordHashing{MaxConcurrent: 4, MaxWait: time.Second},
+}
 
 // testTime - фиксированное время для моделей из моков.
 var testTime = time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
@@ -56,6 +63,7 @@ func passwordHash(t *testing.T) string {
 type testEnv struct {
 	server    *AuthServer
 	repo      *mocks.AuthRepositoryMock
+	attempts  *mocks.LoginAttemptRepositoryMock
 	customers *mocks.CustomerProfilesMock
 	manager   *token.Manager
 }
@@ -67,11 +75,13 @@ func newTestEnv(t *testing.T) *testEnv {
 	manager, err := token.NewManager("", TEST_ACCESS_TTL, TEST_REFRESH_TTL, logger)
 	require.NoError(t, err)
 	repo := &mocks.AuthRepositoryMock{}
+	attempts := &mocks.LoginAttemptRepositoryMock{}
 	customers := &mocks.CustomerProfilesMock{}
-	svc := service.NewService(&repository.Repository{Auth: repo}, manager, customers)
+	svc := service.NewService(&repository.Repository{Auth: repo, LoginAttempts: attempts}, manager, customers, testConfig)
 	return &testEnv{
 		server:    NewAuthServer(svc, logger, TEST_TIMEOUT),
 		repo:      repo,
+		attempts:  attempts,
 		customers: customers,
 		manager:   manager,
 	}
@@ -81,6 +91,7 @@ func newTestEnv(t *testing.T) *testEnv {
 func (e *testEnv) assertExpectations(t *testing.T) {
 	t.Helper()
 	e.repo.AssertExpectations(t)
+	e.attempts.AssertExpectations(t)
 	e.customers.AssertExpectations(t)
 }
 
@@ -192,7 +203,9 @@ func TestLogin_Success(t *testing.T) {
 	env := newTestEnv(t)
 	defer env.assertExpectations(t)
 	stored := testUser(t, domain.ROLE_CLIENT)
+	env.attempts.On("LockedUntil", mock.Anything, TEST_EMAIL, mock.Anything).Return(nil, nil).Once()
 	env.repo.On("GetUserByEmail", mock.Anything, TEST_EMAIL).Return(stored, nil).Once()
+	env.attempts.On("Reset", mock.Anything, TEST_EMAIL).Return(nil).Once()
 	env.repo.On("AddRefreshToken", mock.Anything, mock.Anything).Return(nil).Once()
 
 	resp, err := env.server.Login(context.Background(), &authv1.LoginRequest{Email: TEST_EMAIL, Password: TEST_PASSWORD})
@@ -216,7 +229,9 @@ func TestLogin_Success(t *testing.T) {
 func TestLogin_InvalidCredentials(t *testing.T) {
 	env := newTestEnv(t)
 	defer env.assertExpectations(t)
+	env.attempts.On("LockedUntil", mock.Anything, TEST_EMAIL, mock.Anything).Return(nil, nil).Once()
 	env.repo.On("GetUserByEmail", mock.Anything, TEST_EMAIL).Return(nil, domain.ErrUserNotFound).Once()
+	env.attempts.On("RegisterFailure", mock.Anything, TEST_EMAIL, mock.Anything).Return(nil).Once()
 
 	_, err := env.server.Login(context.Background(), &authv1.LoginRequest{Email: TEST_EMAIL, Password: TEST_PASSWORD})
 
@@ -227,6 +242,7 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 func TestLogin_RepoError(t *testing.T) {
 	env := newTestEnv(t)
 	defer env.assertExpectations(t)
+	env.attempts.On("LockedUntil", mock.Anything, TEST_EMAIL, mock.Anything).Return(nil, nil).Once()
 	env.repo.On("GetUserByEmail", mock.Anything, TEST_EMAIL).Return(nil, errors.New("db down")).Once()
 
 	_, err := env.server.Login(context.Background(), &authv1.LoginRequest{Email: TEST_EMAIL, Password: TEST_PASSWORD})
@@ -236,17 +252,33 @@ func TestLogin_RepoError(t *testing.T) {
 	assert.Equal(t, "failed to login", status.Convert(err).Message())
 }
 
+func TestLogin_Locked(t *testing.T) {
+	env := newTestEnv(t)
+	defer env.assertExpectations(t)
+	lockedUntil := time.Now().UTC().Add(10 * time.Minute)
+	env.attempts.On("LockedUntil", mock.Anything, TEST_EMAIL, mock.Anything).Return(&lockedUntil, nil).Once()
+
+	_, err := env.server.Login(context.Background(), &authv1.LoginRequest{Email: TEST_EMAIL, Password: TEST_PASSWORD})
+
+	require.ErrorIs(t, err, domain.ErrTooManyLoginAttempts)
+	assert.Equal(t, codes.ResourceExhausted, status.Code(err))
+	assert.Equal(t, "too many failed login attempts, try again later", status.Convert(err).Message())
+	env.repo.AssertNotCalled(t, "GetUserByEmail", mock.Anything, mock.Anything)
+}
+
 func TestLogin_SetsDeadline(t *testing.T) {
 	env := newTestEnv(t)
 	defer env.assertExpectations(t)
 	var gotCtx context.Context
 	var calledAt time.Time
+	env.attempts.On("LockedUntil", mock.Anything, TEST_EMAIL, mock.Anything).Return(nil, nil).Once()
 	env.repo.On("GetUserByEmail", mock.Anything, TEST_EMAIL).
 		Run(func(args mock.Arguments) {
 			gotCtx = args.Get(0).(context.Context)
 			calledAt = time.Now()
 		}).
 		Return(nil, domain.ErrUserNotFound).Once()
+	env.attempts.On("RegisterFailure", mock.Anything, TEST_EMAIL, mock.Anything).Return(nil).Once()
 
 	_, _ = env.server.Login(context.Background(), &authv1.LoginRequest{Email: TEST_EMAIL, Password: TEST_PASSWORD})
 
@@ -308,16 +340,27 @@ func TestLogout_Success(t *testing.T) {
 	assert.NotNil(t, resp)
 }
 
-func TestLogout_Invalid(t *testing.T) {
+func TestLogout_UnknownTokenSucceeds(t *testing.T) {
 	env := newTestEnv(t)
 	defer env.assertExpectations(t)
 	env.repo.On("RevokeRefreshToken", mock.Anything, token.Hash(TEST_REFRESH_TOKEN)).Return(domain.ErrRefreshTokenNotFound).Once()
 
-	_, err := env.server.Logout(context.Background(), &authv1.LogoutRequest{RefreshToken: TEST_REFRESH_TOKEN})
+	resp, err := env.server.Logout(context.Background(), &authv1.LogoutRequest{RefreshToken: TEST_REFRESH_TOKEN})
+
+	require.NoError(t, err)
+	assert.NotNil(t, resp)
+}
+
+func TestLogout_EmptyToken(t *testing.T) {
+	env := newTestEnv(t)
+	defer env.assertExpectations(t)
+
+	_, err := env.server.Logout(context.Background(), &authv1.LogoutRequest{RefreshToken: ""})
 
 	require.Error(t, err)
 	assert.Equal(t, codes.InvalidArgument, status.Code(err))
 	assert.Equal(t, "invalid refresh token", status.Convert(err).Message())
+	env.repo.AssertNotCalled(t, "RevokeRefreshToken", mock.Anything, mock.Anything)
 }
 
 func TestLogout_RepoError(t *testing.T) {
@@ -444,6 +487,18 @@ func TestDeleteUser_RepoError(t *testing.T) {
 
 	require.ErrorIs(t, err, domain.ErrDeleteUserFailed)
 	assert.Equal(t, codes.Internal, status.Code(err))
+}
+
+func TestDeleteUser_NotFound(t *testing.T) {
+	env := newTestEnv(t)
+	defer env.assertExpectations(t)
+	userID := uuid.New()
+	env.repo.On("DeleteUser", mock.Anything, userID).Return(domain.ErrUserNotFound).Once()
+
+	_, err := env.server.DeleteUser(context.Background(), &authv1.DeleteUserRequest{Id: userID.String()})
+
+	require.ErrorIs(t, err, domain.ErrUserDoesNotExist)
+	assert.Equal(t, codes.NotFound, status.Code(err))
 }
 
 // --- Таймауты остальных методов ---

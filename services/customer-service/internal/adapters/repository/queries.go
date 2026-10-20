@@ -34,7 +34,7 @@ const (
 			status_changed_at   = CASE WHEN status <> $7::customer_status THEN now() ELSE status_changed_at END,
 			updated_at          = now()
 		WHERE user_id = $1
-		  AND status = ANY($8::customer_status[])
+		  AND status = $8::customer_status
 		RETURNING ` + CUSTOMER_COLUMNS
 
 	LIST_CUSTOMERS_QUERY = `

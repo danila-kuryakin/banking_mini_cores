@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/danila-kuryakin/banking_mini_cores/services/account-service/internal/app/service"
@@ -60,6 +59,19 @@ func (s *AccountServer) GetAccount(ctx context.Context, in *accountv1.GetAccount
 	account, err := s.service.Account.Get(ctx, userID, accountID)
 	if err != nil {
 		return nil, s.fail("failed to get account", err, domain.ErrGetFailed, "account_id", in.AccountId)
+	}
+
+	return accountToProto(account), nil
+}
+
+func (s *AccountServer) GetAccountByNumber(ctx context.Context, in *accountv1.GetAccountByNumberRequest) (*accountv1.Account, error) {
+	if len(in.Number) != domain.ACCOUNT_NUMBER_LENGTH || strings.Trim(in.Number, "0123456789") != "" {
+		return nil, domain.ErrNumberIsInvalid
+	}
+
+	account, err := s.service.Account.GetByNumber(ctx, in.Number)
+	if err != nil {
+		return nil, s.fail("failed to get account by number", err, domain.ErrGetFailed, "number", in.Number)
 	}
 
 	return accountToProto(account), nil
@@ -189,7 +201,8 @@ func (s *AccountServer) fail(msg string, err error, fallback error, logArgs ...a
 	case errors.Is(err, domain.ErrCustomerNotActive):
 		return domain.ErrCustomerIsNotActive
 	case errors.Is(err, domain.ErrCurrencyNotAllowed):
-		return status.Error(codes.InvalidArgument, err.Error())
+		s.log.Error(msg, append(logArgs, "error", err)...)
+		return domain.ErrCurrencyIsNotValid
 	case errors.Is(err, domain.ErrAccountLimitReached):
 		return domain.ErrAccountLimit
 	case errors.Is(err, domain.ErrStatusConflict):

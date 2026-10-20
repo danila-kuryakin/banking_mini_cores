@@ -47,8 +47,13 @@ func (r *AuthRepo) CreateUser(ctx context.Context, user models.User) (*models.Us
 }
 
 func (r *AuthRepo) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	if _, err := r.db.Exec(ctx, DELETE_USER_QUERY, id); err != nil {
+	deleted, err := r.db.Exec(ctx, DELETE_USER_QUERY, id)
+	if err != nil {
 		return fmt.Errorf("delete user %s: %w", id, err)
+	}
+
+	if deleted.RowsAffected() == 0 {
+		return domain.ErrUserNotFound
 	}
 
 	return nil

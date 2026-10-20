@@ -379,13 +379,14 @@ func (x *Transaction) GetEntries() []*Entry {
 type TransferRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Владелец счёта-источника, гейтвей берёт его из пути после проверки владения.
-	InitiatorId   string `protobuf:"bytes,1,opt,name=initiator_id,json=initiatorId,proto3" json:"initiator_id,omitempty"`
-	FromAccountId string `protobuf:"bytes,2,opt,name=from_account_id,json=fromAccountId,proto3" json:"from_account_id,omitempty"`
-	ToAccountId   string `protobuf:"bytes,3,opt,name=to_account_id,json=toAccountId,proto3" json:"to_account_id,omitempty"`
-	Amount        int64  `protobuf:"varint,4,opt,name=amount,proto3" json:"amount,omitempty"`
-	Currency      string `protobuf:"bytes,5,opt,name=currency,proto3" json:"currency,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	InitiatorId     string `protobuf:"bytes,1,opt,name=initiator_id,json=initiatorId,proto3" json:"initiator_id,omitempty"`
+	FromAccountId   string `protobuf:"bytes,2,opt,name=from_account_id,json=fromAccountId,proto3" json:"from_account_id,omitempty"`
+	ToAccountId     string `protobuf:"bytes,3,opt,name=to_account_id,json=toAccountId,proto3" json:"to_account_id,omitempty"`
+	Amount          int64  `protobuf:"varint,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	Currency        string `protobuf:"bytes,5,opt,name=currency,proto3" json:"currency,omitempty"`
+	ToAccountNumber string `protobuf:"bytes,6,opt,name=to_account_number,json=toAccountNumber,proto3" json:"to_account_number,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *TransferRequest) Reset() {
@@ -449,6 +450,13 @@ func (x *TransferRequest) GetAmount() int64 {
 func (x *TransferRequest) GetCurrency() string {
 	if x != nil {
 		return x.Currency
+	}
+	return ""
+}
+
+func (x *TransferRequest) GetToAccountNumber() string {
+	if x != nil {
+		return x.ToAccountNumber
 	}
 	return ""
 }
@@ -807,13 +815,14 @@ const file_ledger_v1_ledger_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12*\n" +
-	"\aentries\x18\v \x03(\v2\x10.ledger.v1.EntryR\aentries\"\xb4\x01\n" +
+	"\aentries\x18\v \x03(\v2\x10.ledger.v1.EntryR\aentries\"\xe0\x01\n" +
 	"\x0fTransferRequest\x12!\n" +
 	"\finitiator_id\x18\x01 \x01(\tR\vinitiatorId\x12&\n" +
 	"\x0ffrom_account_id\x18\x02 \x01(\tR\rfromAccountId\x12\"\n" +
 	"\rto_account_id\x18\x03 \x01(\tR\vtoAccountId\x12\x16\n" +
 	"\x06amount\x18\x04 \x01(\x03R\x06amount\x12\x1a\n" +
-	"\bcurrency\x18\x05 \x01(\tR\bcurrency\"\x82\x01\n" +
+	"\bcurrency\x18\x05 \x01(\tR\bcurrency\x12*\n" +
+	"\x11to_account_number\x18\x06 \x01(\tR\x0ftoAccountNumber\"\x82\x01\n" +
 	"\x0eDepositRequest\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12\x16\n" +
